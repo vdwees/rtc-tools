@@ -17,7 +17,7 @@ does not want to end up with too much water at the end of the six days. They
 have chosen to use RTC-Tools to calculate how much water to release and when
 to release it.
 
-The folder ``<installation directory>\RTCTools2\examples\example_basic``
+The folder ``<installation directory>\RTCTools2\examples\basic``
 contains a complete RTC-Tools optimization problem. An RTC-Tools
 directory has the following structure:
 
@@ -46,7 +46,7 @@ program. Make sure to load the Deltares libray before loading the example:
 
    * Using the menu bar: *File -> Open Model/Library File(s)*
    * Select ``<installation
-     directory>\RTCTools2\examples\example_basic\model\Example.mo``
+     directory>\RTCTools2\examples\basic\model\Example.mo``
 
 Once loaded, we have an OpenModelica Connection Editor window that looks like
 this:
@@ -74,7 +74,7 @@ and drag between the ports on the elements.
 In text mode, the Modelica model looks as follows (with
 annotation statements removed):
 
-.. literalinclude:: _build/mo/example_basic.mo
+.. literalinclude:: _build/mo/basic.mo
   :language: modelica
   :lineno-match:
 
@@ -125,7 +125,7 @@ package ``run_optimization_problem`` form the ``rtctools.util`` package, and
 any extra packages we want to use. For this example, the import block looks
 like:
 
-.. literalinclude:: ../../case-studies/example_basic/src/example.py
+.. literalinclude:: ../examples/basic/src/example.py
   :language: python
   :lines: 1-5
   :lineno-match:
@@ -139,7 +139,7 @@ parent classes each perform different tasks realted to importing and exporting
 data and solving the optimization problem. Each imported class makes a set of
 methods available to the our optimization class.
 
-.. literalinclude:: ../../case-studies/example_basic/src/example.py
+.. literalinclude:: ../examples/basic/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
@@ -148,7 +148,7 @@ methods available to the our optimization class.
 The next, we define an objective function. This is a class method that returns
 the value that needs to be minimized.
 
-.. literalinclude:: ../../case-studies/example_basic/src/example.py
+.. literalinclude:: ../examples/basic/src/example.py
   :language: python
   :pyobject: Example.objective
   :lineno-match:
@@ -160,7 +160,7 @@ at an individual timestep, we could define it inside the ``constraints`` method.
 Other parent classes also declare this method, so we call the ``super()`` method
 so that we don't overwrite their behaviour.
 
-.. literalinclude:: ../../case-studies/example_basic/src/example.py
+.. literalinclude:: ../examples/basic/src/example.py
   :language: python
   :pyobject: Example.path_constraints
   :lineno-match:
@@ -172,7 +172,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_optimization_problem()`` method we imported on the optimization
 problem class we just created.
 
-.. literalinclude:: ../../case-studies/example_basic/src/example.py
+.. literalinclude:: ../examples/basic/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -182,7 +182,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../../case-studies/example_basic/src/example.py
+.. literalinclude:: ../examples/basic/src/example.py
   :language: python
   :lineno-match:
 

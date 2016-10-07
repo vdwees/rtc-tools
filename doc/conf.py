@@ -364,8 +364,8 @@ texinfo_documents = [
 
 # -- Hack to strip annotations from Modelica files ------------------------
 
-MODELICA_EXAMPLE_BASE_FOLDER = '../../case-studies'
-MODELICA_EXAMPLES = ['example_basic', 'example_ensemble', 'example_goal', 'example_lookuptable_storage', 'example_mixed_integer']
+MODELICA_EXAMPLE_BASE_FOLDER = '../examples'
+MODELICA_EXAMPLES = ['basic', 'ensembles', 'goal_programming', 'mixed_integer', 'lookup_tables']
 
 MODELICA_STRIPPED_EXAMPLE_FOLDER = '_build/mo'
 

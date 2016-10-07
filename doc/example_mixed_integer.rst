@@ -29,7 +29,7 @@ only when necessary.
 The model can be viewed and editied using the OpenModelica Connection Editor
 program. First load the Deltares library into OpenModelica Connection Editor,
 and then load the example model, located at ``<installation
-directory>\RTCTools2\examples\example_mixed_integer\model\Example.mo``. The
+directory>\RTCTools2\examples\mixed_integer\model\Example.mo``. The
 model ``Example.mo`` represents a simple water system with the following
 elements:
 
@@ -50,7 +50,7 @@ elements:
 In text mode, the Modelica model looks as follows (with annotation statements
 removed):
 
-.. literalinclude:: _build/mo/example_mixed_integer.mo
+.. literalinclude:: _build/mo/mixed_integer.mo
   :language: modelica
   :lineno-match:
 
@@ -95,7 +95,7 @@ Importing Packages
 
 For this example, the import block is as follows:
 
-.. literalinclude:: ../../case-studies/example_mixed_integer/src/example.py
+.. literalinclude:: ../examples/mixed_integer/src/example.py
   :language: python
   :lines: 1-6
   :lineno-match:
@@ -109,7 +109,7 @@ Optimization Problem
 Next, we construct the class by declaring it and inheriting the desired parent
 classes.
 
-.. literalinclude:: ../../case-studies/example_mixed_integer/src/example.py
+.. literalinclude:: ../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
@@ -119,7 +119,7 @@ Now we define an objective function. This is a class method that returns the
 value that needs to be minimized. Here we specify that we want to minimize the
 volume pumped:
 
-.. literalinclude:: ../../case-studies/example_mixed_integer/src/example.py
+.. literalinclude:: ../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example.objective
   :lineno-match:
@@ -131,7 +131,7 @@ at an individual timestep, define it inside the ``constraints`` method.
 Other parent classes also declare this method, so we call the ``super()`` method
 so that we don't overwrite their behaviour.
 
-.. literalinclude:: ../../case-studies/example_mixed_integer/src/example.py
+.. literalinclude:: ../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example.path_constraints
   :lineno-match:
@@ -139,7 +139,7 @@ so that we don't overwrite their behaviour.
 Finally, we want to apply some additional configuration, reducing the amount of
 information the solver outputs:
 
-.. literalinclude:: ../../case-studies/example_mixed_integer/src/example.py
+.. literalinclude:: ../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example.solver_options
   :lineno-match:
@@ -151,7 +151,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_optimization_problem()`` method we imported on the optimization
 problem class we just created.
 
-.. literalinclude:: ../../case-studies/example_mixed_integer/src/example.py
+.. literalinclude:: ../examples/mixed_integer/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -161,7 +161,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../../case-studies/example_mixed_integer/src/example.py
+.. literalinclude:: ../examples/mixed_integer/src/example.py
   :language: python
   :lineno-match:
 

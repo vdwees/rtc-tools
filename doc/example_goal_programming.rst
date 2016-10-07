@@ -52,7 +52,7 @@ In OpenModelica Connection Editor, the model looks like this:
 In text mode, the Modelica model looks as follows (with annotation statements
 removed):
 
-.. literalinclude:: _build/mo/example_goal.mo
+.. literalinclude:: _build/mo/goal_programming.mo
   :language: modelica
   :lineno-match:
 
@@ -80,7 +80,7 @@ Importing Packages
 
 For this example, the import block is as follows:
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :lines: 1-8
   :lineno-match:
@@ -94,7 +94,7 @@ components of goals can be found in :doc:`multi_objective`.
 First, we have a high priority goal to keep the water level within a minimum and
 maximum:
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :pyobject: WaterLevelRangeGoal
   :lineno-match:
@@ -102,7 +102,7 @@ maximum:
 We also want to save energy, so we define a goal to minimize ``Q_pump``. This
 goal has a lower priority.
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :pyobject: MinimizeQpumpGoal
   :lineno-match:
@@ -113,7 +113,7 @@ Optimization Problem
 Next, we construct the class by declaring it and inheriting the desired parent
 classes.
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
@@ -126,7 +126,7 @@ at an individual timestep, define it inside the ``constraints()`` method.
 Other parent classes also declare this method, so we call the ``super()`` method
 so that we don't overwrite their behaviour.
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.path_constraints
   :lineno-match:
@@ -135,7 +135,7 @@ Now we pass in the goals. We want to apply our goals to every timestep, so we
 use the ``path_goals()`` method. This is a method that returns a list of the goals
 we defined above.
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.path_goals
   :lineno-match:
@@ -151,7 +151,7 @@ we declare a new ``pre()`` method, call ``super(Example, self).pre()`` to ensure
 that the original method runs unmodified, and add in a variable declaration to
 store our list of intermediate results:
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.pre
   :lineno-match:
@@ -160,7 +160,7 @@ Next, we define the ``priority_completed()`` method to inspect and summerize the
 results. These are appended to our intermediate results variable after each
 priority is completed.
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.priority_completed
   :lineno-match:
@@ -169,7 +169,7 @@ We want some way to output our intermediate results. This is accomplished using
 the ``post()`` method. Again, we nedd to call the ``super()`` method to avoid
 overwiting the internal method.
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.post
   :lineno-match:
@@ -177,7 +177,7 @@ overwiting the internal method.
 Finally, we want to apply some additional configuration, reducing the amount of
 information the solver outputs:
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.solver_options
   :lineno-match:
@@ -189,7 +189,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_optimization_problem()`` method we imported on the optimization
 problem class we just created.
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -199,7 +199,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../../case-studies/example_goal/src/example.py
+.. literalinclude:: ../examples/goal_programming/src/example.py
   :language: python
   :lineno-match:
 
