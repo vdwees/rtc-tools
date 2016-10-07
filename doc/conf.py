@@ -23,22 +23,6 @@ import sys
 sys.path.insert(0, '..')
 import sphinx_rtd_theme
 
-# Fake installation of CasADi and JModelica for use with readthedocs.org
-# Taken from https://github.com/adbuerger/casiopeia/blob/master/doc/conf.py
-# from mock import MagicMock
-
-def return_mx_mock(varname, *args):
-   return "MX(" + str(varname) + ")"
-
-MOCK_MODULES = ['pyjmi', 'pylab', 'numpy', 'scipy', 'matplotlib', '_tkinter']
-sys.modules.update((mod_name, MagicMock()) for mod_name in MOCK_MODULES)
-
-casadi_mock = MagicMock()
-casadi_mock.MX = MagicMock()
-casadi_mock.MX.sym = MagicMock(side_effect = return_mx_mock)
-
-sys.modules.update((mod_name, casadi_mock) for mod_name in ['casadi'])
-
 
 # -- General configuration ------------------------------------------------
 

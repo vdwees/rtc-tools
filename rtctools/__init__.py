@@ -9,3 +9,16 @@ print \
    For more information visit https://www.deltares.nl/en/software/rtc-tools/
 ******************************************************************************
 """.format(__version__)
+
+try:
+	import casadi
+except ImportError:
+	# Don't require casadi for readthedocs.org
+	from mock import MagicMock
+	import warnings
+	import sys
+
+	warnings.warn("CasADi not found.  Building with mock CasADi instead.  This will result in problems.")
+
+	MOCK_MODULES = ['casadi', 'pyfmi', 'pyfmi.fmi', 'pyjmi', 'pylab', 'scipy', 'scipy.interpolate', 'matplotlib']
+	sys.modules.update((mod_name, MagicMock()) for mod_name in MOCK_MODULES)
