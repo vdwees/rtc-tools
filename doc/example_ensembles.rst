@@ -1,0 +1,245 @@
+Using Forecast Ensembles
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+    This example is an extension of :doc:`example_lookuptable_storage`. It
+    assumes prior knowledge of goal programming and the lookuptables components
+    of  RTC-Tools. If you are a first-time user of RTC-Tools, see
+    :doc:`example_basic`.
+
+Then biggest change to RTC-Tools when using ensembles is the structure of the
+directory. The folder ``<installation directory>\RTCTools2\examples\example_ensemble``
+contains a complete RTC-Tools ensemble optimization problem. An RTC-Tools
+ensemble directory has the following structure:
+
+* ``model``: This folder contains the Modelica model. The Modelica model
+  contains the physics of the RTC-Tools model.
+* ``src``: This folder contains a Python file. This file contains the
+  configuration of the model and is used to run the model.
+* ``input``: This folder contains the model input data pertaining to each
+  ensemble member:
+
+  * ``ensemble.csv``: a file where the names and probabilities of the ensembles
+    are defined
+
+  * ``forcast1``
+
+    * the file ``timeseries_import.csv``
+    * the file ``initial_state.csv``
+
+  * ``forcast2``
+
+    * ``timeseries_import.csv``
+    * ``initial_state.csv``
+
+  * ...
+
+* ``output``: The folder where the output is saved:
+
+  * ``forcast1``
+
+    * ``timeseries_export.csv``
+
+  * ``forcast2``
+
+    * ``timeseries_export.csv``
+
+  * ...
+
+The Model
+---------
+
+.. note::
+
+    This example uses the same hydraulic model as the basic example. For a
+    detalied explaination of the hydraulic model, see :doc:`example_basic`.
+
+
+In OpenModelica Connection Editor, the model looks like this:
+
+.. image:: images/simple_storage_openmodelica.png
+
+In text mode, the Modelica model is as follows (with annotation statements
+removed):
+
+.. literalinclude:: _build/mo/example_ensemble.mo
+  :language: modelica
+  :lineno-match:
+
+The Optimization Problem
+------------------------
+
+The python script consists of the following blocks:
+
+* Import of packages
+* Declaration of Goals
+* Declaration of the optimization problem class
+
+  * Constructor
+  * Set ``csv_ensemble_mode = True``
+  * Declaration of a ``pre()`` method
+  * Specification of Goals
+  * Declaration of a ``priority_completed()`` method
+  * Declaration of a ``post()`` method
+  * Additional configuration of the solver
+
+* A run statement
+
+Declaring Goals
+'''''''''''''''
+
+First, we have a high priority goal to keep the water volume within a minimum
+and maximum.
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :pyobject: WaterVolumeRangeGoal
+  :lineno-match:
+
+We also want to save energy, so we define a goal to minimize ``Q_release``. This
+goal has a lower priority.
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :pyobject: MinimizeQreleaseGoal
+  :lineno-match:
+
+Importing Packages
+''''''''''''''''''
+
+For this example, the import block is as follows:
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :lines: 1-11
+  :lineno-match:
+
+Optimization Problem
+''''''''''''''''''''
+
+Next, we construct the class by declaring it and inheriting the desired parent
+classes.
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :pyobject: Example
+  :lineno-match:
+  :end-before: """
+
+We turn on ensemble mode by setting ``csv_ensemble_mode = True``:
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :lines: 50-51
+  :lineno-match:
+
+The method ``pre()`` is already defined in RTC-Tools, but we would like to add
+a line to it to create a variable for storing intermediate results. To do this,
+we declare a new ``pre()`` method, call ``super(Example, self).pre()`` to ensure
+that the original method runs unmodified, and add in a variable declaration to
+store our list of intermediate results. This variable is a dict, reflecting the
+need to store results from multiple ensembles.
+
+Because the timeseries we set will be the same for both ensemble members, we
+also make sure that the timeseries we set are set for both ensemble members
+using for loops.
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :pyobject: Example.pre
+  :lineno-match:
+
+Now we pass in the goals:
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :pyobject: Example.path_goals
+  :lineno-match:
+
+We define the ``priority_completed()`` method. We ensure that it stores the
+results from both ensemble members.
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :pyobject: Example.priority_completed
+  :lineno-match:
+
+We output our intermediate results using the ``post()`` method:
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :pyobject: Example.post
+  :lineno-match:
+
+Finally, we want to apply some additional configuration, reducing the amount of
+information the solver outputs:
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :pyobject: Example.solver_options
+  :lineno-match:
+
+Run the Optimization Problem
+''''''''''''''''''''''''''''
+
+To make our script run, at the bottom of our file we just have to call
+the ``run_optimization_problem()`` method we imported on the optimization
+problem class we just created.
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :lineno-match:
+  :start-after: # Run
+
+The Whole Script
+''''''''''''''''
+
+All together, the whole example script is as follows:
+
+.. literalinclude:: ../../case-studies/example_ensemble/src/example.py
+  :language: python
+  :lineno-match:
+
+Running the Optimization Problem
+--------------------------------
+
+Following the execution of the optimization problem, the  ``post()`` method
+should print out the following lines::
+
+    Results for Ensemble Member 0:
+
+    After finishing goals of priority 1:
+    Level goal satisfied at 9 of 12 time steps
+    Integral of Q_release = 45.59
+
+    After finishing goals of priority 2:
+    Level goal satisfied at 9 of 12 time steps
+    Integral of Q_release = 42.36
+
+
+    Results for Ensemble Member 1:
+
+    After finishing goals of priority 1:
+    Level goal satisfied at 12 of 12 time steps
+    Integral of Q_release = 19.49
+
+    After finishing goals of priority 2:
+    Level goal satisfied at 12 of 12 time steps
+    Integral of Q_release = 16.26
+
+This is the same output as the output for :doc:`example_mixed_integer`, except
+now the output for each ensemble is printed.
+
+Extracting Results
+------------------
+
+The results from the run are found in ``output/timeseries_export.csv``. Any
+CSV-reading software can import it, but this is what the results look like when
+plotted in Microsoft Excel:
+
+.. note::
+
+    TODO: Plot these results
+
+.. image:: images/lookuptable_example_resultplot.png

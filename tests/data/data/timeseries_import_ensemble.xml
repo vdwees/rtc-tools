@@ -1,0 +1,51 @@
+<pi:TimeSeries xmlns:pi="http://www.wldelft.nl/fews/PI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="http://www.wldelft.nl/fews/PI ../../xsd/pi_timeseries.xsd">
+	<pi:timeZone>0.0</pi:timeZone>
+	<pi:series>
+		<pi:header>
+			<pi:type>instantaneous</pi:type>
+			<pi:locationId>Reservoir</pi:locationId>
+			<pi:parameterId>QI</pi:parameterId>
+			<pi:qualifierId>TEST</pi:qualifierId>
+			<pi:timeStep multiplier="3600" unit="second" />
+			<pi:startDate date="2013-05-19" time="22:00:00" />
+			<pi:endDate date="2013-05-20" time="09:00:00" />
+			<pi:missVal>-999.0</pi:missVal>
+			<pi:units>m3/s</pi:units>
+			<pi:ensembleMemberIndex>0</pi:ensembleMemberIndex>
+		</pi:header>
+		<pi:event date="2013-05-19" flag="0" time="22:00:00" value="0.0" />
+		<pi:event date="2013-05-19" flag="0" time="23:00:00" value="1.0" />
+		<pi:event date="2013-05-20" flag="0" time="00:00:00" value="2.0" />
+		<pi:event date="2013-05-20" flag="0" time="01:00:00" value="-999.0" />
+		<pi:event date="2013-05-20" flag="0" time="02:00:00" value="5.4175" />
+		<pi:event date="2013-05-20" flag="0" time="03:00:00" value="5.4175" />
+		<pi:event date="2013-05-20" flag="0" time="04:00:00" value="5.4175" />
+		<pi:event date="2013-05-20" flag="0" time="05:00:00" value="5.4175" />
+		<pi:event date="2013-05-20" flag="0" time="06:00:00" value="5.4175" />
+		<pi:event date="2013-05-20" flag="0" time="07:00:00" value="5.4175" />
+	</pi:series>
+	<pi:series>
+		<pi:header>
+			<pi:type>instantaneous</pi:type>
+			<pi:locationId>Reservoir</pi:locationId>
+			<pi:parameterId>QI</pi:parameterId>
+			<pi:qualifierId>TEST</pi:qualifierId>
+			<pi:timeStep multiplier="3600" unit="second" />
+			<pi:startDate date="2013-05-19" time="22:00:00" />
+			<pi:endDate date="2013-05-20" time="09:00:00" />
+			<pi:missVal>-999.0</pi:missVal>
+			<pi:units>m3/s</pi:units>
+			<pi:ensembleMemberIndex>1</pi:ensembleMemberIndex>
+		</pi:header>
+		<pi:event date="2013-05-19" flag="0" time="22:00:00" value="0.0" />
+		<pi:event date="2013-05-19" flag="0" time="23:00:00" value="1.0" />
+		<pi:event date="2013-05-20" flag="0" time="00:00:00" value="3.0" />
+		<pi:event date="2013-05-20" flag="0" time="01:00:00" value="-999.0" />
+		<pi:event date="2013-05-20" flag="0" time="02:00:00" value="5.4175" />
+		<pi:event date="2013-05-20" flag="0" time="03:00:00" value="5.4175" />
+		<pi:event date="2013-05-20" flag="0" time="04:00:00" value="5.4175" />
+		<pi:event date="2013-05-20" flag="0" time="05:00:00" value="5.4175" />
+		<pi:event date="2013-05-20" flag="0" time="06:00:00" value="5.4175" />
+		<pi:event date="2013-05-20" flag="0" time="07:00:00" value="5.4175" />
+	</pi:series>
+</pi:TimeSeries>

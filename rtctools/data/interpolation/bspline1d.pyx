@@ -1,0 +1,140 @@
+# cython: embedsignature=True
+
+import numpy as np
+from casadi import if_else, logic_and, SXFunction, NlpSolver, SX, vertcat, inf, sumCols
+from bspline import BSpline
+
+
+class BSpline1D(BSpline):
+    """
+    Arbitrary order, one-dimensional, non-uniform B-Spline implementation using Cox-de Boor recursion.
+    """
+
+    def __init__(self, t, w, k=3):
+        """
+        Create a new 1D B-Spline object.
+
+        :param t: Knot vector.
+        :param w: Weight vector.
+        :param k: Spline order.
+        """
+
+        # Store arguments
+        self._t = t
+        self._w = w
+        self._k = k
+
+    def __call__(self, x):
+        """
+        Evaluate the B-Spline at point x.
+
+        The support of this function is the half-open interval [t[0], t[-1]).
+
+        :param x: The point at which to evaluate.
+
+        :returns: The spline evaluated at the given point.
+        """
+        y = 0.0
+        for i in range(len(self._t) - self._k - 1):
+            y += if_else(logic_and(x >= self._t[i], x <= self._t[i + self._k + 1]), self._w[
+                         i] * self.basis(self._t, x, self._k, i), 0.0)
+        return y
+
+    @classmethod
+    def fit(cls, x, y, k=3, monotonicity=0, curvature=0, num_test_points=100, epsilon=1e-7, delta=1e-4):
+        """
+        fit() returns a tck tuple like scipy.interpolate.splrep, but adjusts
+        the weights to meet the desired constraints to the curvature of the spline curve.
+
+        :param monotonicity:
+            - is an integer, magnitude is ignored
+            - if positive, causes spline to be monotonically increasing
+            - if negative, causes spline to be monotonically decreasing
+            - if 0, leaves spline monotonicity unconstrained
+
+        :param curvature:
+            - is an integer, magnitude is ignored
+            - if positive, causes spline curvature to be positive (convex)
+            - if negative, causes spline curvature to be negative (concave)
+            - if 0, leaves spline curvature unconstrained
+
+        :param num_test_points:
+            - sets the number of points that the constraints will be applied at across
+              the range of the spline
+
+        :param epsilon:
+            - offset of monotonicity and curvature constraints from zero, ensuring strict
+              monotonicity
+            - if epsilon is set to less than the tolerance of the solver, errors will result
+
+        :param delta:
+            - amount the first and last knots are extended outside the range of the splined points
+            - ensures that the spline evaluates correctly at the first and last nodes, as
+              well as the distance delta beyond these nodes
+
+        :returns: A tuple of spline knots, weights, and order.
+        """
+        x = np.asarray(x)
+        y = np.asarray(y)
+        N = len(x)
+
+        # Generate knots: This algorithm is based on the Fitpack algorithm by p.dierckx
+        # The original code lives here: http://www.netlib.org/dierckx/
+        if k % 2 == 1:
+            interior_pts = x[k // 2 + 1:-k // 2]
+        else:
+            interior_pts = (x[k // 2 + 1:-k // 2] + x[k // 2:-k // 2 - 1]) / 2
+        t = np.concatenate(
+            (np.full(k + 1, x[0] - delta), interior_pts, np.full(k + 1, x[-1] + delta)))
+        num_knots = len(t)
+
+        # Casadi Variable Symbols
+        c = SX.sym('c', num_knots)
+        x_sym = SX.sym('x')
+
+        # Casadi Representation of Spline Function & Derivatives
+        bspline = SXFunction('bspline', [c, x_sym], [cls(t, c, k)(x_sym)])
+        bspline_prime = bspline.jacobian(1)
+        bspline_prime_prime = bspline_prime.jacobian(1)
+
+        # Objective Function
+        xpt = SX.sym('xpt')
+        ypt = SX.sym('ypt')
+        sq_diff = SXFunction('sq_diff', [xpt, ypt], [
+                             (ypt - bspline([c, xpt])[0])**2])
+        sq_diff = sq_diff.map('sq_diff', N)
+        f = sumCols(sq_diff([SX(x), SX(y)])[0])
+
+        # Setup Curvature Constraints
+        delta_c_max = np.full(num_knots - 1, inf)
+        delta_c_min = np.full(num_knots - 1, -inf)
+        max_slope_slope = np.full(num_test_points, inf)
+        min_slope_slope = np.full(num_test_points, -inf)
+        if monotonicity != 0:
+            if monotonicity < 0:
+                delta_c_max = np.full(num_knots - 1, -epsilon)
+            else:
+                delta_c_min = np.full(num_knots - 1, epsilon)
+        if curvature != 0:
+            if curvature < 0:
+                max_slope_slope = np.full(num_test_points, -epsilon)
+            else:
+                min_slope_slope = np.full(num_test_points, epsilon)
+        monotonicity_constraints = vertcat(
+            [c[i + 1] - c[i] for i in range(num_knots - 1)])
+        x_linspace = np.linspace(x[0], x[-1], num_test_points)
+        curvature_constraints = vertcat(
+            [bspline_prime_prime([c, SX(x)])[0] for x in x_linspace])
+        g = vertcat([monotonicity_constraints, curvature_constraints])
+        lbg = np.concatenate((delta_c_min, min_slope_slope))
+        ubg = np.concatenate((delta_c_max, max_slope_slope))
+
+        # Perform mini-optimization problem to calculate the the values of c
+        nlp = {'x': c, 'f': f, 'g': g}
+        my_solver = "ipopt"
+        solver = NlpSolver("solver", my_solver, nlp, {
+                           'print_time': 0, 'print_level': 0})
+        sol = solver(lbg=lbg, ubg=ubg)
+
+        # Return the new tck tuple
+        return (t, sol['x'].get(), k)

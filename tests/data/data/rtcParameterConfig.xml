@@ -1,0 +1,16 @@
+<pi:parameters xmlns:pi="http://www.wldelft.nl/fews/PI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.5" xsi:schemaLocation="http://www.wldelft.nl/fews/PI http://fews.wldelft.nl/schemas/version1.0/pi-schemas/pi_modelparameters.xsd">
+    <pi:group id="group" name="group" readonly="false">
+        <pi:locationId>Location1</pi:locationId>
+        <pi:model>Model</pi:model>
+        <pi:parameter id="parameter">
+            <pi:dblValue>1.0</pi:dblValue>
+        </pi:parameter>
+    </pi:group>
+    <pi:group id="group" name="group" readonly="false">
+        <pi:locationId>Location2</pi:locationId>
+        <pi:model>Model</pi:model>
+        <pi:parameter id="parameter">
+            <pi:dblValue>2.0</pi:dblValue>
+        </pi:parameter>
+    </pi:group>
+</pi:parameters>

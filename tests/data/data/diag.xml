@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<Diag xmlns="http://www.wldelft.nl/fews/PI" version="1.2">
+
+  <line description="rtcToolsRuntime: RTC-Tools, version 1.02.865/828 (Deltares Proprietary License)" level="3"/>
+
+  <line description="rtcToolsRuntime: model execution started at 2015-Sep-28 12:10:41 UTC time" level="3"/>
+
+  <line description="rtcToolsRuntime: simulation period = 2013-09-11 07:00:00 - 2013-09-22 07:00:00, dt[ms] = 3600000" eventCode="RTCTools.runtime.rtcToolsRuntime" level="3"/>
+
+  <line description="rtcToolsRuntime: objective function value = 0.000000" level="3"/>
+
+  <line description="rtcToolsRuntime: CPU time (simulation) = 2 ms" level="3"/>
+
+  <line description="rtcToolsIPOPT: optimization stops with Infeasible_Problem_Detected" eventCode="RTCTools.runtime.rtcToolsIPOPT" level="1"/>
+
+  <line description="rtcToolsRuntime: objective function value = 133117.879654" eventCode="RTCTools.runtime.rtcToolsRuntime" level="3"/>
+
+  <line description="rtcToolsRuntime: CPU time (model predictive control) = 68362 ms" eventCode="RTCTools.runtime.rtcToolsRuntime" level="3"/>
+
+  <line description="void rtcToolsRuntime::finish(void) - constraint violation: equalityConstraintIHR@193: lower bound is violated (-20.0235124676 &lt; 0 beyond tolerance of 0.01)" eventCode="RTCTools.runtime.rtcToolsRuntime" level="1"/>
+
+</Diag>
