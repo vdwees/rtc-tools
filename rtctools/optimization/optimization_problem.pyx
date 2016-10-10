@@ -227,7 +227,7 @@ class OptimizationProblem(object):
         """
         Returns a dictionary of CasADi optimization problem solver options.
 
-        The default solver for continuous problems is Ipopt.  The default solver for mixed integer problems is Bonmin.
+        The default solver for continuous problems is `Ipopt <https://projects.coin-or.org/Ipopt/>`_.  The default solver for mixed integer problems is `Bonmin <http://projects.coin-or.org/Bonmin/>`_.
 
         :returns: A dictionary of CasADi :class:`NlpSolver` options.  See the CasADi, Ipopt, and Bonmin documentation for details.
         """

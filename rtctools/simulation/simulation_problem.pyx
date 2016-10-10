@@ -12,9 +12,9 @@ logger = logging.getLogger("rtctools")
 
 class SimulationProblem:
     """
-    FMU simulation runner. 
+    `FMU <https://fmi-standard.org/>`_ simulation runner.
     
-    Implements the BMI Interface.
+    Implements the `BMI <http://csdms.colorado.edu/wiki/BMI_Description>`_ Interface.
     """
 
     def __init__(self, model_folder, model_name):

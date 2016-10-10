@@ -14,7 +14,7 @@ logger = logging.getLogger("rtctools")
 
 class ModelicaMixin(OptimizationProblem):
     """
-    Adds a Modelica model to your optimization problem.
+    Adds a `Modelica <http://www.modelica.org/>`_ model to your optimization problem.
 
     During preprocessing, the Modelica files located inside the ``model`` subfolder are loaded.
 
@@ -157,7 +157,7 @@ class ModelicaMixin(OptimizationProblem):
 
     def compiler_options(self):
         """
-        Subclasses can configure the JModelica.org compiler options here.
+        Subclasses can configure the `JModelica.org <http://www.jmodelica.org/>`_ compiler options here.
 
         :returns: A dictionary of JModelica.org compiler options.  See the JModelica.org documentation for details.
         """
