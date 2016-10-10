@@ -365,6 +365,6 @@ for example in MODELICA_EXAMPLES:
     with open(mo_in, 'r') as f_in:
         with open(mo_out, 'w') as f_out:
             s = f_in.read()
-            s = re.sub(r'[\r\n][ \t]*annotation\(.*\);[\r\n]', '', s)
+            s = re.sub(r'[\r\n]+[ \t]*annotation\(.*\);([\r\n]+)', r'\1', s)
             s = re.sub(r' annotation\(.*\)', '', s)
             f_out.write(s)
