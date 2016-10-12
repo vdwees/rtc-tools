@@ -39,6 +39,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         self.dae_variables['free_variables'] = self.dae_variables[
             'states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
 
+        # Cache names of states
+        self._differentiated_states = [variable.getName() for variable in self.dae_variables['states']]
+        self._algebraic_states = [variable.getName() for variable in self.dae_variables['algebraics']]
+        self._controls = [variable.getName() for variable in self.dae_variables['control_inputs']]
+
     @abstractmethod
     def times(self, variable=None):
         pass
@@ -110,6 +115,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             repr(integrated_variables)))
         logger.debug("Collocating variables {}".format(
             repr(collocated_variables)))
+
+        self._path_variable_names = [variable.getName() for variable in self.path_variables]
 
         # Initialize control discretization
         control_size, discrete_control, lbx_control, ubx_control, x0_control = self.discretize_controls()
@@ -380,8 +387,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     value *= nominal
                 initial_state.append(value)
             [res] = initial_residual_with_params([vertcat(initial_state
-                                                          + [self.der(variable.getName(), t0, ensemble_member=ensemble_member)
-                                                             for variable in self.dae_variables['states']]
+                                                          + [self.der(variable, t0, ensemble_member=ensemble_member)
+                                                             for variable in self.differentiated_states]
                                                           + [constant_inputs[variable.getName()][0] for variable in self.dae_variables[
                                                               'constant_inputs']]
                                                           + [0.0])], False, True)
@@ -646,8 +653,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 in_values = None
                 out_times = None
                 out_values = None
-                for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.dae_variables['control_inputs']):
-                    variable = variable.getName()
+                for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.controls):
                     for alias in self.variable_aliases(variable):
                         if alias.name == in_variable_name:
                             in_times = self.times(variable)
@@ -799,15 +805,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
     @property
     def controls(self):
-        return [variable.getName() for variable in self.dae_variables['control_inputs']]
+        return self._controls
 
     def discretize_controls(self):
         # Default implementation: One single set of control inputs for all
         # ensembles
         count = 0
-        for variable in self.dae_variables['control_inputs']:
-            variable = variable.getName()
-
+        for variable in self.controls:
             times = self.times(variable)
             n_times = len(times)
 
@@ -827,9 +831,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         x0 = np.zeros(count)
 
         offset = 0
-        for variable in self.dae_variables['control_inputs']:
-            variable = variable.getName()
-
+        for variable in self.controls:
             times = self.times(variable)
             n_times = len(times)
 
@@ -877,8 +879,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Extract control inputs
         results = {}
         offset = 0
-        for variable in self.dae_variables['control_inputs']:
-            variable = variable.getName()
+        for variable in self.controls:
             n_times = len(self.times(variable))
             results[variable] = np.array(self.variable_nominal(
                 variable) * X[offset:offset + n_times, 0]).ravel()
@@ -899,8 +900,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Return array of indexes for control
         offset = 0
-        for control_input in self.dae_variables['control_inputs']:
-            control_input = control_input.getName()
+        for control_input in self.controls:
             times = self.times(control_input)
             n_times = len(times)
             if control_input == variable:
@@ -916,8 +916,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         X = self.solver_input
 
         offset = 0
-        for control_input in self.dae_variables['control_inputs']:
-            control_input = control_input.getName()
+        for control_input in self.controls:
             times = self.times(control_input)
             for alias in self.variable_aliases(control_input):
                 if alias.name == variable:
@@ -963,22 +962,22 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
     @property
     def differentiated_states(self):
-        return [variable.getName() for variable in self.dae_variables['states']]
+        return self._differentiated_states
 
     @property
     def algebraic_states(self):
-        return [variable.getName() for variable in self.dae_variables['algebraics']]
+        return self._algebraic_states
 
     def discretize_states(self):
         # Default implementation: States for all ensemble members
         ensemble_member_size = 0
 
         # Space for collocated states
-        for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.path_variables):
-            if variable.getName() in self.integrated_states:
+        for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
+            if variable in self.integrated_states:
                 ensemble_member_size += 1  # Initial state
             else:
-                ensemble_member_size += len(self.times(variable.getName()))
+                ensemble_member_size += len(self.times(variable))
 
         # Space for extra variables
         ensemble_member_size += len(self.extra_variables)
@@ -1000,9 +999,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Types
         for ensemble_member in range(self.ensemble_size):
             offset = ensemble_member * ensemble_member_size
-            for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.path_variables):
-                variable = variable.getName()
-
+            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
                 if variable in self.integrated_states:
                     discrete[offset] = self.variable_is_discrete(variable)
 
@@ -1026,9 +1023,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         for ensemble_member in range(self.ensemble_size):
             offset = ensemble_member * ensemble_member_size
-            for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.path_variables):
-                variable = variable.getName()
-
+            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
                 if variable in self.integrated_states:
                     for alias in self.variable_aliases(variable):
                         try:
@@ -1098,9 +1093,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             seed = self.seed(ensemble_member)
 
             offset = ensemble_member * ensemble_member_size
-            for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.path_variables):
-                variable = variable.getName()
-
+            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
                 if variable in self.integrated_states:
                     try:
                         seed_k = seed[variable]
@@ -1166,8 +1159,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Extract collocated variables
         offset = control_size + ensemble_member * ensemble_member_size
-        for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics']):
-            variable = variable.getName()
+        for variable in itertools.chain(self.differentiated_states, self.algebraic_states):
             if variable in self.integrated_states:
                 offset += 1
             else:
@@ -1204,8 +1196,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Return array of indexes for state
         offset = control_size + ensemble_member * ensemble_member_size
-        for free_variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.path_variables):
-            free_variable = free_variable.getName()
+        for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
             times = self.times(free_variable)
             n_times = len(times)
             if free_variable == variable:
@@ -1241,8 +1232,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             found = False
             if not found:
                 offset = control_size + ensemble_member * ensemble_member_size
-                for free_variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics']):
-                    free_variable = free_variable.getName()
+                for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states):
                     for alias in self.variable_aliases(free_variable):
                         if alias.name == variable:
                             times = self.times(free_variable)
@@ -1355,8 +1345,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Compute position in state vector
         offset = control_size + ensemble_member * ensemble_member_size
-        for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics']):
-            variable = variable.getName()
+        for variable in itertools.chain(self.differentiated_states, self.algebraic_states):
             if variable in self.integrated_states:
                 offset += 1
             else:
@@ -1476,8 +1465,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             X = self.solver_input
             control_size = self._control_size
             ensemble_member_size = self._state_size / self.ensemble_size
-            for i, state in enumerate(self.dae_variables['states']):
-                for alias in self.variable_aliases(state.getName()):
+            for i, state in enumerate(self.differentiated_states):
+                for alias in self.variable_aliases(state):
                     if alias.name == variable:
                         return X[control_size + (ensemble_member + 1) * ensemble_member_size - len(self.dae_variables['derivatives']) + i]
             raise KeyError(variable)
