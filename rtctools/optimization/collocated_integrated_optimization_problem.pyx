@@ -646,7 +646,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 in_values = None
                 out_times = None
                 out_values = None
-                for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics']) + self.dae_variables['control_inputs']:
+                for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.dae_variables['control_inputs']):
                     variable = variable.getName()
                     for alias in self.variable_aliases(variable):
                         if alias.name == in_variable_name:
