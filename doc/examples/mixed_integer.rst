@@ -5,7 +5,7 @@ Mixed Integer Optimization: Pumps and Orifices
 
     This example focuses on how to incorporate mixed integer components into a
     hydraulic model, and assumes basic exposure to RTC-Tools. To start with
-    basics, see :doc:`example_basic`.
+    basics, see :doc:`basic`.
 
 
 The Model
@@ -45,12 +45,12 @@ elements:
   * a pump,
   * an orifice.
 
-.. image:: images/orifice_vs_pump_openmodelica.png
+.. image:: ../images/orifice_vs_pump_openmodelica.png
 
 In text mode, the Modelica model looks as follows (with annotation statements
 removed):
 
-.. literalinclude:: _build/mo/mixed_integer.mo
+.. literalinclude:: ../_build/mo/mixed_integer.mo
   :language: modelica
   :lineno-match:
 
@@ -65,10 +65,11 @@ element only. It extends the ``HQOnePort`` which again inherits from the
 connector ``HQPort``.
 
 In addition to elements, the input variables ``Q_in``, ``H_sea``, ``Q_pump``,
-and ``Q_orifice`` are also defined. Because we want to view the water level in
-the storage element in the output file, we also define an output
-variable ``water_level``. In the ``equation`` section, equations defined to
-relate the inputs to the appropriate water system elements.
+and ``Q_orifice`` are also defined. Because we want to view the water levels in
+the storage element in the output file, we also define output
+variables ``storage_level`` and ``sea_level``. In the ``equation`` section,
+equations are defined to relate the inputs and outputs  to the appropriate water
+system elements.
 
 To maintain the linearity of the model, we input the Boolean ``is_downhill`` as
 a way to keep track of whether water can flow by gravity to the sea. This
@@ -95,7 +96,7 @@ Importing Packages
 
 For this example, the import block is as follows:
 
-.. literalinclude:: ../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../examples/mixed_integer/src/example.py
   :language: python
   :lines: 1-6
   :lineno-match:
@@ -109,7 +110,7 @@ Optimization Problem
 Next, we construct the class by declaring it and inheriting the desired parent
 classes.
 
-.. literalinclude:: ../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
@@ -119,7 +120,7 @@ Now we define an objective function. This is a class method that returns the
 value that needs to be minimized. Here we specify that we want to minimize the
 volume pumped:
 
-.. literalinclude:: ../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example.objective
   :lineno-match:
@@ -131,7 +132,7 @@ at an individual timestep, define it inside the ``constraints`` method.
 Other parent classes also declare this method, so we call the ``super()`` method
 so that we don't overwrite their behaviour.
 
-.. literalinclude:: ../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example.path_constraints
   :lineno-match:
@@ -139,7 +140,7 @@ so that we don't overwrite their behaviour.
 Finally, we want to apply some additional configuration, reducing the amount of
 information the solver outputs:
 
-.. literalinclude:: ../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example.solver_options
   :lineno-match:
@@ -151,7 +152,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_optimization_problem()`` method we imported on the optimization
 problem class we just created.
 
-.. literalinclude:: ../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../examples/mixed_integer/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -161,7 +162,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../examples/mixed_integer/src/example.py
   :language: python
   :lineno-match:
 
@@ -175,12 +176,8 @@ Extracting Results
 ------------------
 
 The results from the run are found in ``output/timeseries_export.csv``. Any
-CSV-reading software can import it, but this is what the results look like when
-plotted in Microsoft Excel:
+CSV-reading software can import it, but this is how results can be plotted using
+the python library matplotlib:
 
-.. note::
-
-    The results are ugly- perhaps we should tweak the example. There is funny
-    hydraulics going on. Then we can insert an image of results.
-
-.. image:: images/milp_example_resultplot.png
+.. plot:: examples/pyplots/mixed_integer_results.py
+   :include-source:

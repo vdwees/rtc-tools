@@ -6,8 +6,8 @@ This section provides examples demonstrating key features of RTC-Tools.
 .. toctree::
    :maxdepth: 2
 
-   example_basic
-   example_mixed_integer
-   example_goal_programming
-   example_lookuptable_storage
-   example_ensembles
+   examples/basic
+   examples/mixed_integer
+   examples/goal_programming
+   examples/lookup_table
+   examples/ensemble

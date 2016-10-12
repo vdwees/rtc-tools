@@ -39,11 +39,22 @@ class MinimizeQpumpGoal(Goal):
 
     # Every goal needs a rough (over)estimate (enclosure) of the range of the
     # function defined above.
-    function_range = (0, 10.0)
+    function_range = (0, 5.0)
     # The lower the number returned by this function, the higher the priority.
     priority = 2
     # The penalty variable is taken to the order'th power.
     order = 1
+
+class MinimizeChangeInQpumpGoal(Goal):
+    # To reduce pump power cycles, we add a third goal to minimize changes in
+    # Q_pump.
+    def __init__(self, time):
+        self.time = time
+    def function(self, optimization_problem, ensemble_member):
+        return optimization_problem.der('Q_pump', self.time)
+    function_range = (-100.0, 100.0)
+    priority = 3
+    order = 2
 
 
 class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
@@ -70,12 +81,32 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
         constraints.append((self.state('H_sea') - self.state('storage.HQ.H') +
                            self.state('is_downhill') * M, 0.0, inf))
 
+        # Orifice flow constraint. Uses the equation:
+        # Q(HUp, HDown, d) = width * C * d * (2 * g * (HUp - HDown)) ^ 0.5
+        # Note that this equation is only valid for orifices that are submerged
+                  # units:  description:
+        w = 3.0   # m       width of orifice
+        d = 0.8   # m       hight of orifice
+        C = 1.0   # none    orifice constant
+        g = 9.8   # m/s^2   gravitational acceleration
+        constraints.append(
+            (((self.state('Q_orifice') / (w * C * d)) ** 2) / (2 * g) +
+             self.state('orifice.HQDown.H') - self.state('orifice.HQUp.H') -
+             M * (1 - self.state('is_downhill')),
+            -inf, 0.0))
+
         return constraints
 
     def path_goals(self):
         # Sorting goals on priority is done in the goal programming mixin. We
         # do not have to worry about order here.
         return [WaterLevelRangeGoal(), MinimizeQpumpGoal()]
+
+    def goals(self):
+        goals = []
+        for time in self.times():
+            goals.append(MinimizeChangeInQpumpGoal(time))
+        return goals
 
     def priority_completed(self, priority):
         # We want to show that the results of our highest priority goal (water

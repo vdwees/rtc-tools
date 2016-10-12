@@ -51,7 +51,7 @@ program. Make sure to load the Deltares libray before loading the example:
 Once loaded, we have an OpenModelica Connection Editor window that looks like
 this:
 
-.. image:: images/simple_storage_openmodelica.png
+.. image:: ../images/simple_storage_openmodelica.png
 
 
 The model ``Example.mo`` represents a simple system with the following
@@ -74,7 +74,7 @@ and drag between the ports on the elements.
 In text mode, the Modelica model looks as follows (with
 annotation statements removed):
 
-.. literalinclude:: _build/mo/basic.mo
+.. literalinclude:: ../_build/mo/basic.mo
   :language: modelica
   :lineno-match:
 
@@ -125,7 +125,7 @@ package ``run_optimization_problem`` form the ``rtctools.util`` package, and
 any extra packages we want to use. For this example, the import block looks
 like:
 
-.. literalinclude:: ../examples/basic/src/example.py
+.. literalinclude:: ../../examples/basic/src/example.py
   :language: python
   :lines: 1-5
   :lineno-match:
@@ -139,7 +139,7 @@ parent classes each perform different tasks realted to importing and exporting
 data and solving the optimization problem. Each imported class makes a set of
 methods available to the our optimization class.
 
-.. literalinclude:: ../examples/basic/src/example.py
+.. literalinclude:: ../../examples/basic/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
@@ -148,7 +148,7 @@ methods available to the our optimization class.
 The next, we define an objective function. This is a class method that returns
 the value that needs to be minimized.
 
-.. literalinclude:: ../examples/basic/src/example.py
+.. literalinclude:: ../../examples/basic/src/example.py
   :language: python
   :pyobject: Example.objective
   :lineno-match:
@@ -160,7 +160,7 @@ at an individual timestep, we could define it inside the ``constraints`` method.
 Other parent classes also declare this method, so we call the ``super()`` method
 so that we don't overwrite their behaviour.
 
-.. literalinclude:: ../examples/basic/src/example.py
+.. literalinclude:: ../../examples/basic/src/example.py
   :language: python
   :pyobject: Example.path_constraints
   :lineno-match:
@@ -172,7 +172,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_optimization_problem()`` method we imported on the optimization
 problem class we just created.
 
-.. literalinclude:: ../examples/basic/src/example.py
+.. literalinclude:: ../../examples/basic/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -182,7 +182,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../examples/basic/src/example.py
+.. literalinclude:: ../../examples/basic/src/example.py
   :language: python
   :lineno-match:
 
@@ -201,7 +201,7 @@ The results from the run are found in ``output/timeseries_export.csv``. Any
 CSV-reading software can import it, but this is what the results look like when
 plotted in Microsoft Excel:
 
-.. image:: images/basic_example_resultplot.png
+.. image:: ../images/basic_resultplot.png
 
 This plot shows that the operator is able to keep the water level within the
 bounds over the entire time horizon and end with a full reservoir.

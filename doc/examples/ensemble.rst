@@ -1,15 +1,15 @@
-Using Forecast Ensembles
-~~~~~~~~~~~~~~~~~~~~~~~~
+Using an Ensemble Forecast
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. note::
 
-    This example is an extension of :doc:`example_lookuptable_storage`. It
+    This example is an extension of :doc:`lookup_table`. It
     assumes prior knowledge of goal programming and the lookuptables components
     of  RTC-Tools. If you are a first-time user of RTC-Tools, see
-    :doc:`example_basic`.
+    :doc:`basic`.
 
-Then biggest change to RTC-Tools when using ensembles is the structure of the
-directory. The folder ``<installation directory>\RTCTools2\examples\ensembles``
+Then biggest change to RTC-Tools when using an ensemble is the structure of the
+directory. The folder ``<installation directory>\RTCTools2\examples\ensemble``
 contains a complete RTC-Tools ensemble optimization problem. An RTC-Tools
 ensemble directory has the following structure:
 
@@ -20,8 +20,8 @@ ensemble directory has the following structure:
 * ``input``: This folder contains the model input data pertaining to each
   ensemble member:
 
-  * ``ensemble.csv``: a file where the names and probabilities of the ensembles
-    are defined
+  * ``ensemble.csv``: a file where the names and probabilities of the ensemble
+    members are defined
 
   * ``forcast1``
 
@@ -53,17 +53,17 @@ The Model
 .. note::
 
     This example uses the same hydraulic model as the basic example. For a
-    detalied explaination of the hydraulic model, see :doc:`example_basic`.
+    detalied explaination of the hydraulic model, see :doc:`basic`.
 
 
 In OpenModelica Connection Editor, the model looks like this:
 
-.. image:: images/simple_storage_openmodelica.png
+.. image:: ../images/simple_storage_openmodelica.png
 
 In text mode, the Modelica model is as follows (with annotation statements
 removed):
 
-.. literalinclude:: _build/mo/ensembles.mo
+.. literalinclude:: ../_build/mo/ensemble.mo
   :language: modelica
   :lineno-match:
 
@@ -92,7 +92,7 @@ Declaring Goals
 First, we have a high priority goal to keep the water volume within a minimum
 and maximum.
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :pyobject: WaterVolumeRangeGoal
   :lineno-match:
@@ -100,7 +100,7 @@ and maximum.
 We also want to save energy, so we define a goal to minimize ``Q_release``. This
 goal has a lower priority.
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :pyobject: MinimizeQreleaseGoal
   :lineno-match:
@@ -110,7 +110,7 @@ Importing Packages
 
 For this example, the import block is as follows:
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :lines: 1-11
   :lineno-match:
@@ -121,7 +121,7 @@ Optimization Problem
 Next, we construct the class by declaring it and inheriting the desired parent
 classes.
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
@@ -129,7 +129,7 @@ classes.
 
 We turn on ensemble mode by setting ``csv_ensemble_mode = True``:
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :lines: 50-51
   :lineno-match:
@@ -139,20 +139,20 @@ a line to it to create a variable for storing intermediate results. To do this,
 we declare a new ``pre()`` method, call ``super(Example, self).pre()`` to ensure
 that the original method runs unmodified, and add in a variable declaration to
 store our list of intermediate results. This variable is a dict, reflecting the
-need to store results from multiple ensembles.
+need to store results from multiple ensemble.
 
 Because the timeseries we set will be the same for both ensemble members, we
 also make sure that the timeseries we set are set for both ensemble members
 using for loops.
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.pre
   :lineno-match:
 
 Now we pass in the goals:
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.path_goals
   :lineno-match:
@@ -160,14 +160,14 @@ Now we pass in the goals:
 We define the ``priority_completed()`` method. We ensure that it stores the
 results from both ensemble members.
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.priority_completed
   :lineno-match:
 
 We output our intermediate results using the ``post()`` method:
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.post
   :lineno-match:
@@ -175,7 +175,7 @@ We output our intermediate results using the ``post()`` method:
 Finally, we want to apply some additional configuration, reducing the amount of
 information the solver outputs:
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.solver_options
   :lineno-match:
@@ -187,7 +187,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_optimization_problem()`` method we imported on the optimization
 problem class we just created.
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -197,7 +197,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../examples/ensembles/src/example.py
+.. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :lineno-match:
 
@@ -228,7 +228,7 @@ should print out the following lines::
     Level goal satisfied at 12 of 12 time steps
     Integral of Q_release = 16.26
 
-This is the same output as the output for :doc:`example_mixed_integer`, except
+This is the same output as the output for :doc:`mixed_integer`, except
 now the output for each ensemble is printed.
 
 Extracting Results
@@ -242,4 +242,4 @@ plotted in Microsoft Excel:
 
     TODO: Plot these results
 
-.. image:: images/lookuptable_example_resultplot.png
+.. image:: ../images/lookuptable_resultplot.png

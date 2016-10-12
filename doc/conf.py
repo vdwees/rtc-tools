@@ -32,7 +32,9 @@ import sphinx_rtd_theme
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
 extensions = [
+    'matplotlib.sphinxext.plot_directive',
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
@@ -348,7 +350,7 @@ texinfo_documents = [
 # -- Hack to strip annotations from Modelica files ------------------------
 
 MODELICA_EXAMPLE_BASE_FOLDER = '../examples'
-MODELICA_EXAMPLES = ['basic', 'ensembles', 'goal_programming', 'mixed_integer', 'lookup_tables']
+MODELICA_EXAMPLES = ['basic', 'ensemble', 'goal_programming', 'mixed_integer', 'lookup_table']
 
 MODELICA_STRIPPED_EXAMPLE_FOLDER = '_build/mo'
 

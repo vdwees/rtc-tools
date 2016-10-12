@@ -6,9 +6,10 @@ model Example
   Deltares.ChannelFlow.Hydraulic.Structures.Pump orifice annotation(Placement(visible = true, transformation(origin = {0, 20}, extent = {{10, -10}, {-10, 10}}, rotation = 0)));
   input Modelica.SIunits.VolumeFlowRate Q_in(fixed=true);
   input Modelica.SIunits.Position H_sea(fixed=true);
-  input Modelica.SIunits.VolumeFlowRate Q_pump(fixed=false, min=0.0, max=10.0);
+  input Modelica.SIunits.VolumeFlowRate Q_pump(fixed=false, min=0.0, max=5.0);
   input Modelica.SIunits.VolumeFlowRate Q_orifice(fixed=false, min=0.0, max=10.0);
   input Boolean is_downhill;
+  input Boolean pump_on;
   output Modelica.SIunits.Position storage_level;
   output Modelica.SIunits.Position sea_level;
 equation
