@@ -378,10 +378,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 if nominal != 1:
                     value *= nominal
                 initial_state.append(value)
+
             [res] = initial_residual_with_params([vertcat(initial_state
                                                           + [self.der(variable.getName(), t0, ensemble_member=ensemble_member)
                                                              for variable in self.dae_variables['states']]
-                                                          + [constant_inputs[variable.getName()][0] for variable in self.dae_variables[
+                                                          + [float(constant_inputs[variable.getName()][0]) for variable in self.dae_variables[
                                                               'constant_inputs']]
                                                           + [0.0])], False, True)
             g.append(res)
@@ -722,7 +723,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         variable, ensemble_member=ensemble_member)
                     initial_path_variables.append(values[0])
                 initial_path_constraints = path_constraints_function([vertcat(initial_state
-                                                                              + [constant_inputs[variable.getName()][0] for variable in self.dae_variables[
+                                                                              + [float(constant_inputs[variable.getName()][0]) for variable in self.dae_variables[
                                                                                   'constant_inputs']]
                                                                               + [0.0]
                                                                               + initial_path_variables)], False, True)
