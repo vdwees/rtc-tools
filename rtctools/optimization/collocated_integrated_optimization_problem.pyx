@@ -1377,7 +1377,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         if t0 < times[0]:
             history = self.history(ensemble_member)
             try:
-                htimes = history[variable].times
+                htimes = history[variable].times[:-1]
             except KeyError:
                 htimes = []
             history_and_times = np.hstack((htimes, times))
@@ -1413,7 +1413,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         if t0 < times[0]:
             history = self.history(ensemble_member)
             try:
-                htimes = history[variable].times
+                htimes = history[variable].times[:-1]
             except KeyError:
                 htimes = []
             history_and_times = np.hstack((htimes, times))
@@ -1445,21 +1445,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         return sumRows(x_avg * dt)
 
     def der(self, variable, t, ensemble_member=0):
-        # Time stamps for this variale
-        times = self.times(variable)
-
-        # Compute combined points
-        if t < times[0]:
-            history = self.history(ensemble_member)
-            try:
-                htimes = history[variable].times
-            except KeyError:
-                htimes = []
-            history_and_times = np.hstack((htimes, times))
-        else:
-            history_and_times = times
-
-        # Special case t being t0
+        # Special case t being t0 for differentiated states
         if t == self.initial_time:
             # We have a special symbol for t0 derivatives
             X = self.solver_input
@@ -1469,9 +1455,28 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 for alias in self.variable_aliases(state):
                     if alias.name == variable:
                         return X[control_size + (ensemble_member + 1) * ensemble_member_size - len(self.dae_variables['derivatives']) + i]
-            raise KeyError(variable)
+            # Fall through, in case 'variable' is not a differentiated state.
 
-        # Handle t being an interior point
+        # Time stamps for this variale
+        times = self.times(variable)
+
+        if t <= self.initial_time:
+            # Derivative requested for t0 or earlier.  We need the history.
+            history = self.history(ensemble_member)
+            try:
+                htimes = history[variable].times[:-1]
+            except KeyError:
+                htimes = []
+            history_and_times = np.hstack((htimes, times))
+        else:
+            history_and_times = times
+
+        # Special case t being the initial available point.  In this case, we have
+        # no derivative information available.
+        if t == history_and_times[0]:
+            return 0.0
+
+        # Handle t being an interior point, or t0 for a non-differentiated state
         for i in range(len(history_and_times)):
             # Use finite differences when between collocation points, and
             # backward finite differences when on one.
