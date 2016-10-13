@@ -153,8 +153,7 @@ class ControlTreeMixin(OptimizationProblem):
         # (variable, (ensemble member, step)) -> control_index
         self._control_indices = {}
         count = 0
-        for control_input in self.dae_variables['control_inputs']:
-            control_input = control_input.getName()
+        for control_input in self.controls:
             times = self.times(control_input)
             self._control_indices[control_input] = np.zeros(
                 (self.ensemble_size, len(times)), dtype=np.int16)
@@ -186,9 +185,7 @@ class ControlTreeMixin(OptimizationProblem):
         for ensemble_member in range(self.ensemble_size):
             seed = self.seed(ensemble_member)
 
-            for variable in self.dae_variables['control_inputs']:
-                variable = variable.getName()
-
+            for variable in self.controls:
                 times = self.times(variable)
 
                 discrete[self._control_indices[variable][
@@ -234,8 +231,7 @@ class ControlTreeMixin(OptimizationProblem):
 
         # Extract control inputs
         results = {}
-        for variable in self.dae_variables['control_inputs']:
-            variable = variable.getName()
+        for variable in self.controls:
             results[variable] = np.array(self.variable_nominal(
                 variable) * X[self._control_indices[variable][ensemble_member, :], 0]).ravel()
 
@@ -255,8 +251,7 @@ class ControlTreeMixin(OptimizationProblem):
         t0 = self.initial_time
         X = self.solver_input
 
-        for control_input in self.dae_variables['control_inputs']:
-            control_input = control_input.getName()
+        for control_input in self.controls:
             times = self.times(control_input)
             for alias in self.variable_aliases(control_input):
                 if alias.name == variable:

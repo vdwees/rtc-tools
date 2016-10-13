@@ -303,7 +303,11 @@ class ModelicaMixin(OptimizationProblem):
         try:
             return self._aliases[variable]
         except KeyError:
-            return [Alias(variable, False)]
+            # We do not use setdefault() here, as we would then always allocate
+            # the alias and the list, even if they would not be required.
+            l = [Alias(variable, False)]
+            self._aliases[variable] = l
+            return l
 
     def variable_nominal(self, variable):
         return self._nominals.get(variable, 1)
