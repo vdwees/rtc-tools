@@ -342,3 +342,53 @@ class TestGoalProgrammingEnsemble(TestGoalProgramming):
         ), self.problem.extract_results(0)['x']), 0.1, objective_value_tol)
         self.assertAlmostGreaterThan(self.problem.interpolate(0.7, self.problem.times(
         ), self.problem.extract_results(1)['x']), 0.1, objective_value_tol)
+
+
+class PathGoalSmoothing(Goal):
+
+    def function(self, optimization_problem, ensemble_member):
+        return optimization_problem.der('u')
+
+    function_range = (-1e1, 1e1)
+    priority = 3
+
+
+class TestProblemPathGoalsSmoothing(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
+
+    def __init__(self):
+        super(TestProblemPathGoalsSmoothing, self).__init__(input_folder=data_path(
+        ), output_folder=data_path(), model_name='TestModelWithInitial', model_folder=data_path())
+
+    def times(self, variable=None):
+        # Collocation points
+        return np.linspace(0.0, 1.0, 21)
+
+    def delayed_feedback(self):
+        # Delayed feedback
+        return [('x', 'x_delayed', 0.1)]
+
+    def constant_inputs(self, ensemble_member):
+        # Constant inputs
+        return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
+
+    def bounds(self):
+        bounds = super(TestProblemPathGoalsSmoothing, self).bounds()
+        bounds['u'] = (-2.0, 2.0)
+        return bounds
+
+    def path_goals(self):
+        return [PathGoal1(), PathGoal2(), PathGoalSmoothing()]
+
+
+class TestGoalProgrammingSmoothing(TestCase):
+
+    def setUp(self):
+        self.problem = TestProblemPathGoalsSmoothing()
+        self.problem.optimize()
+        self.tolerance = 1e-6
+
+    def test_x(self):
+        value_tol = 1e-3
+        for x in self.problem.extract_results()['x']:
+            self.assertAlmostGreaterThan(x, 0.0, value_tol)
+            self.assertAlmostLessThan(x, 1.1, value_tol)

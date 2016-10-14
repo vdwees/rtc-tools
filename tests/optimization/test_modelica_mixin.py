@@ -256,12 +256,12 @@ class TestModelicaMixin(TestCase):
         self.assertEqual(repr(states), repr(verify))
 
     def test_der(self):
-        der = self.problem.der('x', 0.05)
+        der = self.problem.der_at('x', 0.05)
         verify = (self.problem.state_at('x', 0.05) -
                   self.problem.state_at('x', 0.0)) / 0.05
         self.assertEqual(repr(der), repr(verify))
 
-        der = self.problem.der('x', 0.051)
+        der = self.problem.der_at('x', 0.051)
         verify = (self.problem.state_at('x', 0.1) -
                   self.problem.state_at('x', 0.05)) / 0.05
         self.assertEqual(repr(der), repr(verify))

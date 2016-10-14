@@ -40,9 +40,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             'states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
 
         # Cache names of states
-        self._differentiated_states = [variable.getName() for variable in self.dae_variables['states']]
-        self._algebraic_states = [variable.getName() for variable in self.dae_variables['algebraics']]
-        self._controls = [variable.getName() for variable in self.dae_variables['control_inputs']]
+        self._differentiated_states = [
+            variable.getName() for variable in self.dae_variables['states']]
+        self._algebraic_states = [variable.getName()
+                                  for variable in self.dae_variables['algebraics']]
+        self._controls = [variable.getName()
+                          for variable in self.dae_variables['control_inputs']]
 
     @abstractmethod
     def times(self, variable=None):
@@ -116,7 +119,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         logger.debug("Collocating variables {}".format(
             repr(collocated_variables)))
 
-        self._path_variable_names = [variable.getName() for variable in self.path_variables]
+        self._path_variable_names = [variable.getName()
+                                     for variable in self.path_variables]
 
         # Initialize control discretization
         control_size, discrete_control, lbx_control, ubx_control, x0_control = self.discretize_controls()
@@ -148,15 +152,18 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Split derivatives into "integrated" and "collocated" lists.
         integrated_derivatives = []
         collocated_derivatives = []
-        for k in range(len(self.dae_variables['states'])):
-            if self.dae_variables['states'][k].getName() in self.integrated_states:
+        for k, var in enumerate(self.dae_variables['states']):
+            if var.getName() in self.integrated_states:
                 integrated_derivatives.append(
                     self.dae_variables['derivatives'][k])
             else:
                 collocated_derivatives.append(
                     self.dae_variables['derivatives'][k])
-        for k in range(len(self.dae_variables['algebraics'] + self.dae_variables['control_inputs'])):
-            collocated_derivatives.append(MX.sym('dummy{}'.format(k)))
+        self._algebraic_and_control_derivatives = []
+        for k, var in enumerate(itertools.chain(self.dae_variables['algebraics'], self.dae_variables['control_inputs'])):
+            sym = MX.sym('der({})'.format(var.getName()))
+            self._algebraic_and_control_derivatives.append(sym)
+            collocated_derivatives.append(sym)
 
         # Delayed feedback
         delayed_feedback = self.delayed_feedback()
@@ -370,14 +377,15 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             constant_inputs = constant_inputs_interpolated
 
             # Add constraints for initial conditions
-            initial_residual_with_params = MXFunction('initial_residual', [vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs'] + self.dae_variables[
-                                                      'derivatives'] + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat([dae_residual_with_params, initial_residual_with_params])])
+            initial_residual_with_params = MXFunction('initial_residual', [vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
+                                                      'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat([dae_residual_with_params, initial_residual_with_params])])
             # Expand to SX for improved performance
             initial_residual_with_params = initial_residual_with_params.expand()
 
             # Compute initial residual, avoiding the use of expensive
             # state_at().
             initial_state = []
+            initial_derivatives = []
             for variable in integrated_variables + collocated_variables:
                 variable = variable.getName()
                 value = self.state_vector(
@@ -386,9 +394,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 if nominal != 1:
                     value *= nominal
                 initial_state.append(value)
+                initial_derivatives.append(self.der_at(
+                    variable, t0, ensemble_member=ensemble_member))
             [res] = initial_residual_with_params([vertcat(initial_state
-                                                          + [self.der(variable, t0, ensemble_member=ensemble_member)
-                                                             for variable in self.differentiated_states]
+                                                          + initial_derivatives
                                                           + [constant_inputs[variable.getName()][0] for variable in self.dae_variables[
                                                               'constant_inputs']]
                                                           + [0.0])], False, True)
@@ -528,12 +537,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             # Add path constraints to map()
             path_constraints = self.path_constraints(ensemble_member)
             path_constraints_function = MXFunction('path_constraints',
-                                                   [vertcat(integrated_variables + collocated_variables + self.dae_variables[
+                                                   [vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
                                                             'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
                                                    [vertcat([f_constraint for (f_constraint, lb, ub) in path_constraints])])
             path_constraints_function = path_constraints_function.expand()
             accumulated_Y.extend(path_constraints_function([vertcat([integrated_states_1,
                                                                      collocated_states_1,
+                                                                     integrated_finite_differences,
+                                                                     collocated_finite_differences,
                                                                      constant_inputs_1,
                                                                      collocation_time_1 - t0,
                                                                      path_variables_1])],
@@ -729,6 +740,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         variable, ensemble_member=ensemble_member)
                     initial_path_variables.append(values[0])
                 initial_path_constraints = path_constraints_function([vertcat(initial_state
+                                                                              + initial_derivatives
                                                                               + [constant_inputs[variable.getName()][0] for variable in self.dae_variables[
                                                                                   'constant_inputs']]
                                                                               + [0.0]
@@ -1444,7 +1456,19 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         dt = t[1:] - t[:x.size1() - 1]
         return sumRows(x_avg * dt)
 
-    def der(self, variable, t, ensemble_member=0):
+    def der(self, variable):
+        # Look up the derivative variable for the given non-derivative variable
+        for i, variable in enumerate(self.differentiated_states):
+            for alias in self.variable_aliases(variable):
+                if alias.name == variable:
+                    return self.dae_variables['derivatives'][i]
+        for i, variable in enumerate(itertools.chain(self.algebraic_states, self.controls)):
+            for alias in self.variable_aliases(variable):
+                if alias.name == variable:
+                    return self._algebraic_and_control_derivatives[i]
+        raise KeyError
+
+    def der_at(self, variable, t, ensemble_member=0):
         # Special case t being t0 for differentiated states
         if t == self.initial_time:
             # We have a special symbol for t0 derivatives
@@ -1476,7 +1500,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         if t == history_and_times[0]:
             return 0.0
 
-        # Handle t being an interior point, or t0 for a non-differentiated state
+        # Handle t being an interior point, or t0 for a non-differentiated
+        # state
         for i in range(len(history_and_times)):
             # Use finite differences when between collocation points, and
             # backward finite differences when on one.
