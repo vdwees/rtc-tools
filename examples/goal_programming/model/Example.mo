@@ -9,7 +9,8 @@ model Example
   input Modelica.SIunits.VolumeFlowRate Q_pump(fixed=false, min=0.0, max=10.0);
   input Modelica.SIunits.VolumeFlowRate Q_orifice(fixed=false, min=0.0, max=10.0);
   input Boolean is_downhill;
-  output Modelica.SIunits.Position water_level;
+  output Modelica.SIunits.Position storage_level;
+  output Modelica.SIunits.Position sea_level;
 equation
   connect(orifice.HQDown, level.HQ) annotation(Line(visible = true, origin = {-33.025, 10}, points = {{25.025, 10}, {-6.675, 10}, {-6.675, -10}, {-11.675, -10}}, color = {0, 0, 255}));
   connect(storage.HQ, orifice.HQUp) annotation(Line(visible = true, origin = {43.737, 48.702}, points = {{-3.715, -48.702}, {-3.737, -28.702}, {-35.737, -28.702}}, color = {0, 0, 255}));
@@ -20,6 +21,7 @@ equation
   level.H = H_sea;
   pump.Q = Q_pump;
   orifice.Q = Q_orifice;
-  water_level = storage.HQ.H;
+  storage_level = storage.HQ.H;
+  sea_level = H_sea;
   annotation(Diagram(coordinateSystem(extent = {{-148.5, -105}, {148.5, 105}}, preserveAspectRatio = true, initialScale = 0.1, grid = {5, 5})));
 end Example;
