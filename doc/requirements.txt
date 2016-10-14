@@ -3,3 +3,4 @@ numpy >= 1.11.0
 mock >= 2.0.0
 sphinx
 sphinx_rtd_theme
+matplotlib
