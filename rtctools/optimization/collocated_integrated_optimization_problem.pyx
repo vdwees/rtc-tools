@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, jacobian, vertcat, horzcat, substitute, sumRows, sumCols, IMatrix, interp1d, transpose
+from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, jacobian, vertcat, horzcat, substitute, sumRows, sumCols, IMatrix, interp1d, transpose, dependsOn, densify
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools
@@ -93,16 +93,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         return 1.0
 
     def transcribe(self):
-        # TODO Hack for now:  Reduce the number of states here, rather than immediately on loading model.
-        # This way, we do not eliminate variables for which bounds are specified in the data files.
-        # TODO there is guarantee that we do not eliminate variables which we later access with state()...
-        self.condense_dae()
-        self.dae_variables['free_variables'] = self.dae_variables[
-            'states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
-        self._differentiated_states = [variable.getName() for variable in self.dae_variables['states']]
-        self._algebraic_states = [variable.getName() for variable in self.dae_variables['algebraics']]
-        self._controls = [variable.getName() for variable in self.dae_variables['control_inputs']]
-
         # DAE residual
         dae_residual = self.dae_residual
 
@@ -190,18 +180,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         self._symbol_cache = {}
 
         # Transcribe DAE using theta method collocation
-        def contains_symbol(mx, sym):
-            try:
-                if mx.getName() == sym.getName():
-                    return True
-            except:
-                pass
-            for dep_index in range(mx.getNdeps()):
-                dep = mx.getDep(dep_index)
-                if contains_symbol(dep, sym):
-                    return True
-            return False
-
         f = MX(0)
         g = []
         lbg = []
@@ -275,7 +253,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
                 contains = False
                 for derivative in integrated_derivatives:
-                    if contains_symbol(output, derivative):
+                    if dependsOn(output, derivative):
                         contains = True
                         break
 
@@ -346,6 +324,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 else:
                     dae_residual_integrated = (
                         1 - theta) * dae_residual_integrated_0 + theta * dae_residual_integrated_1
+
+                # ImplicitFunction needs a dense MX
+                dae_residual_integrated = densify(dae_residual_integrated)
 
                 dae_residual_function_integrated = MXFunction('dae_residual_function_integrated', [I, I0, vertcat([C0[i] for i in range(len(collocated_variables))] + [CI0[i] for i in range(len(
                     self.dae_variables['constant_inputs']))] + [dt_sym] + collocated_variables + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_integrated])
