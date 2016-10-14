@@ -151,9 +151,7 @@ priority is completed.
   :lineno-match:
 
 We output our intermediate results using the ``post()`` method. Again, we nedd
-to call the ``super()`` method to avoid overwiting the internal method. We can
-convert volmes back into water levels using an inverted version of the lookup
-table.
+to call the ``super()`` method to avoid overwiting the internal method.
 
 .. literalinclude:: ../../examples/lookup_table/src/example.py
   :language: python
@@ -196,11 +194,11 @@ Following the execution of the optimization problem, the  ``post()`` method
 should print out the following lines::
 
     After finishing goals of priority 1:
-    Level goal satisfied at 6 of 12 time steps
+    Volume goal satisfied at 12 of 12 time steps
     Integral of Q_release = 47.69
 
     After finishing goals of priority 2:
-    Level goal satisfied at 7 of 12 time steps
+    Volume goal satisfied at 12 of 12 time steps
     Integral of Q_release = 42.58
 
 As the output indicates, while optimizing for the priority 1 goal, no attempt
@@ -215,11 +213,8 @@ Extracting Results
 ------------------
 
 The results from the run are found in ``output/timeseries_export.csv``. Any
-CSV-reading software can import it, but this is what the results look like when
-plotted in Microsoft Excel:
+CSV-reading software can import it, but this is how results can be plotted using
+the python library matplotlib:
 
-.. note::
-
-    TODO: Plot these results
-
-.. image:: ../images/lookuptable_resultplot.png
+.. plot:: examples/pyplots/lookup_table_results.py
+   :include-source:
