@@ -164,18 +164,17 @@ class Goal(object):
         """
         return (self.has_target_min or self.has_target_max)
 
-    @classmethod
-    def get_dependency_key(cls):
+    def get_dependency_key(self):
         """
         Returns the "dependency key".  Goals with same dependency key are assumed to determine the same states.  This
         is used to eliminate linearly dependent constraints from the optimization problem.
         """
-        if hasattr(cls, 'dependency_key'):
-            return cls.dependency_key
+        if hasattr(self, 'dependency_key'):
+            return self.dependency_key
 
-        cls.dependency_key = uuid.uuid4()
+        self.dependency_key = uuid.uuid4()
 
-        return cls.dependency_key
+        return self.dependency_key
 
 
 class GoalProgrammingMixin(OptimizationProblem):
