@@ -25,6 +25,8 @@ class Example(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
     def path_constraints(self, ensemble_member):
         # Call super to get default constraints
         constraints = super(Example, self).path_constraints(ensemble_member)
+        # M is a handy big number
+        M = 1e10
 
         # Release through orifice downhill only. This constraint enforces the
         # fact that water only flows downhill.
@@ -34,11 +36,24 @@ class Example(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
         # Make sure is_downhill is true only when the sea is lower than the
         # water level in the storage.
-        M = 1e10  # M is a handy big number
         constraints.append((self.state('H_sea') - self.state('storage.HQ.H') -
                             (1 - self.state('is_downhill')) * M, -inf, 0.0))
         constraints.append((self.state('H_sea') - self.state('storage.HQ.H') +
                             self.state('is_downhill') * M, 0.0, inf))
+
+        # Orifice flow constraint. Uses the equation:
+        # Q(HUp, HDown, d) = width * C * d * (2 * g * (HUp - HDown)) ^ 0.5
+        # Note that this equation is only valid for orifices that are submerged
+                  # units:  description:
+        w = 3.0   # m       width of orifice
+        d = 0.8   # m       hight of orifice
+        C = 1.0   # none    orifice constant
+        g = 9.8   # m/s^2   gravitational acceleration
+        constraints.append(
+            (((self.state('Q_orifice') / (w * C * d)) ** 2) / (2 * g) +
+             self.state('orifice.HQDown.H') - self.state('orifice.HQUp.H') -
+             M * (1 - self.state('is_downhill')),
+            -inf, 0.0))
 
         return constraints
 

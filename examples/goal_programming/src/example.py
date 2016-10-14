@@ -102,7 +102,7 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
     def path_goals(self):
         # Sorting goals on priority is done in the goal programming mixin. We
         # do not have to worry about order here.
-        return [WaterLevelRangeGoal(),]# MinimizeChangeInQpumpGoal()]
+        return [WaterLevelRangeGoal(), MinimizeChangeInQpumpGoal()]
 
     def priority_completed(self, priority):
         # We want to show that the results of our highest priority goal (water

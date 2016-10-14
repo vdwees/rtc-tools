@@ -396,6 +396,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 initial_state.append(value)
                 initial_derivatives.append(self.der_at(
                     variable, t0, ensemble_member=ensemble_member))
+
             [res] = initial_residual_with_params([vertcat(initial_state
                                                           + initial_derivatives
                                                           + [float(constant_inputs[variable.getName()][0]) for variable in self.dae_variables[

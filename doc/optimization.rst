@@ -6,11 +6,11 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   basics
-   time_discretization
-   modelica_models
-   csv_io
-   fews_io
-   lookup_tables
-   multi_objective
-   forecast_uncertainty
+   optimization/basics
+   optimization/time_discretization
+   optimization/modelica_models
+   optimization/csv_io
+   optimization/fews_io
+   optimization/lookup_tables
+   optimization/multi_objective
+   optimization/forecast_uncertainty

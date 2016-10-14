@@ -1,12 +1,12 @@
-Defining Multiple Objectives
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Goal Programming: Defining Multiple Objectives
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. note::
 
     This example focuses on how to implement multiobjective optimization in
     RTC-Tools using Goal Programming. It assumes basic exposure to
     RTC-Tools. If you are a first-time user of RTC-Tools, see
-    :doc:`example_basic`.
+    :doc:`basic`.
 
 Goal programming is a way to satisfy (sometimes conflicting) goals by ranking
 the goals by priority. The optimization algorithm will attempt to optimize each
@@ -34,7 +34,7 @@ The Model
 
     This example uses the same hydraulic model as the MILP example. For a
     detalied explaination of the hydraulic model, including how to to formulate
-    mixed integers in your model, see :doc:`example_mixed_integer`.
+    mixed integers in your model, see :doc:`mixed_integer`.
 
 For this example, the model represents a typical setup for the dewatering of
 lowland areas. Water is routed from the hinterland (modeled as discharge
@@ -47,12 +47,12 @@ weir). If the sea water level is higher than in the canal, water must be pumped.
 
 In OpenModelica Connection Editor, the model looks like this:
 
-.. image:: images/orifice_vs_pump_openmodelica.png
+.. image:: ../images/orifice_vs_pump_openmodelica.png
 
 In text mode, the Modelica model looks as follows (with annotation statements
 removed):
 
-.. literalinclude:: _build/mo/goal_programming.mo
+.. literalinclude:: ../_build/mo/goal_programming.mo
   :language: modelica
   :lineno-match:
 
@@ -80,31 +80,47 @@ Importing Packages
 
 For this example, the import block is as follows:
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :lines: 1-8
   :lineno-match:
+
+.. _goal-programming-declaring-goals:
 
 Declaring Goals
 '''''''''''''''
 
 Goals are defined as classes that inherit the ``Goal`` parent class. The
-components of goals can be found in :doc:`multi_objective`.
+components of goals can be found in :doc:`../optimization/multi_objective`.
 
 First, we have a high priority goal to keep the water level within a minimum and
 maximum:
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: WaterLevelRangeGoal
   :lineno-match:
 
-We also want to save energy, so we define a goal to minimize ``Q_pump``. This
-goal has a lower priority.
+We also want to save energy, so we define a goal to minimize the integral
+of ``Q_pump``. This goal has a lower priority than the water level range goal.
+With non-path goals, the function range must be large enough to enclose the
+integral of the variable over all the timesteps.
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: MinimizeQpumpGoal
+  :lineno-match:
+
+We add a third goal minimizing the derivative of ``Q_pump``, and give it the
+least priority. This goal smoothes out the operation of the pump so that it
+changes state as few times as possible. To get an idea of what the pump would
+have done without this goal, see Mixed Integer: :ref:`mixed-integer-results`.
+The order of this goal must be 2, so that it penalizes both positive and
+negative derivatives.
+
+.. literalinclude:: ../../examples/goal_programming/src/example.py
+  :language: python
+  :pyobject: MinimizeChangeInQpumpGoal
   :lineno-match:
 
 Optimization Problem
@@ -113,29 +129,44 @@ Optimization Problem
 Next, we construct the class by declaring it and inheriting the desired parent
 classes.
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
   :end-before: """
 
-Constraints can be declared by declairing the ``path_constraints()`` method. Path
-constraints are constraints that are applied every timestep. To set a constraint
-at an individual timestep, define it inside the ``constraints()`` method.
+Constraints can be declared by declairing the ``path_constraints()`` method.
+Path constraints are constraints that are applied every timestep. To set a
+constraint at an individual timestep, define it inside the ``constraints()``
+method.
 
 Other parent classes also declare this method, so we call the ``super()`` method
 so that we don't overwrite their behaviour.
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.path_constraints
   :lineno-match:
 
-Now we pass in the goals. We want to apply our goals to every timestep, so we
-use the ``path_goals()`` method. This is a method that returns a list of the goals
-we defined above.
+Now we pass in the goals. There are path goals and normal goals, so we have to
+pass them in using separate methods. A path goal is a specific kind of goal that
+applies to a particular variable at an individual time step, but that we want to
+set for all the timesteps.
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+Non-path goals are more general goals that are not iteratively applied at every
+timestep. We use the ``goals()`` method to pass a list of these goals to the
+optimizer.
+
+.. literalinclude:: ../../examples/goal_programming/src/example.py
+  :language: python
+  :pyobject: Example.goals
+  :lineno-match:
+
+For the goals that want to apply our goals to every timestep, so we use
+the ``path_goals()`` method. This is a method that returns a list of the path
+goals we defined above.
+
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.path_goals
   :lineno-match:
@@ -151,7 +182,7 @@ we declare a new ``pre()`` method, call ``super(Example, self).pre()`` to ensure
 that the original method runs unmodified, and add in a variable declaration to
 store our list of intermediate results:
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.pre
   :lineno-match:
@@ -160,7 +191,7 @@ Next, we define the ``priority_completed()`` method to inspect and summerize the
 results. These are appended to our intermediate results variable after each
 priority is completed.
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.priority_completed
   :lineno-match:
@@ -169,7 +200,7 @@ We want some way to output our intermediate results. This is accomplished using
 the ``post()`` method. Again, we nedd to call the ``super()`` method to avoid
 overwiting the internal method.
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.post
   :lineno-match:
@@ -177,7 +208,7 @@ overwiting the internal method.
 Finally, we want to apply some additional configuration, reducing the amount of
 information the solver outputs:
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.solver_options
   :lineno-match:
@@ -189,7 +220,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_optimization_problem()`` method we imported on the optimization
 problem class we just created.
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -199,7 +230,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../examples/goal_programming/src/example.py
+.. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :lineno-match:
 
@@ -229,11 +260,8 @@ Extracting Results
 ------------------
 
 The results from the run are found in ``output/timeseries_export.csv``. Any
-CSV-reading software can import it, but this is what the results look like when
-plotted in Microsoft Excel:
+CSV-reading software can import it, but this is how results can be plotted using
+the python library matplotlib:
 
-.. note::
-
-    TODO: Plot these results
-
-.. image:: images/goal_example_resultplot.png
+.. plot:: examples/pyplots/goal_programming_results.py
+   :include-source:
