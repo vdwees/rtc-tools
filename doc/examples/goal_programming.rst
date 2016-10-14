@@ -1,5 +1,5 @@
-Defining Multiple Objectives
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Goal Programming: Defining Multiple Objectives
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. note::
 
@@ -85,6 +85,8 @@ For this example, the import block is as follows:
   :lines: 1-8
   :lineno-match:
 
+.. _goal-programming-declaring-goals:
+
 Declaring Goals
 '''''''''''''''
 
@@ -99,12 +101,26 @@ maximum:
   :pyobject: WaterLevelRangeGoal
   :lineno-match:
 
-We also want to save energy, so we define a goal to minimize ``Q_pump``. This
-goal has a lower priority.
+We also want to save energy, so we define a goal to minimize the integral
+of ``Q_pump``. This goal has a lower priority than the water level range goal.
+With non-path goals, the function range must be large enough to enclose the
+integral of the variable over all the timesteps.
 
 .. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: MinimizeQpumpGoal
+  :lineno-match:
+
+We add a third goal minimizing the derivative of ``Q_pump``, and give it the
+least priority. This goal smoothes out the operation of the pump so that it
+changes state as few times as possible. To get an idea of what the pump would
+have done without this goal, see Mixed Integer: :ref:`mixed-integer-results`.
+The order of this goal must be 2, so that it penalizes both positive and
+negative derivatives.
+
+.. literalinclude:: ../../examples/goal_programming/src/example.py
+  :language: python
+  :pyobject: MinimizeChangeInQpumpGoal
   :lineno-match:
 
 Optimization Problem
@@ -119,9 +135,10 @@ classes.
   :lineno-match:
   :end-before: """
 
-Constraints can be declared by declairing the ``path_constraints()`` method. Path
-constraints are constraints that are applied every timestep. To set a constraint
-at an individual timestep, define it inside the ``constraints()`` method.
+Constraints can be declared by declairing the ``path_constraints()`` method.
+Path constraints are constraints that are applied every timestep. To set a
+constraint at an individual timestep, define it inside the ``constraints()``
+method.
 
 Other parent classes also declare this method, so we call the ``super()`` method
 so that we don't overwrite their behaviour.
@@ -131,9 +148,23 @@ so that we don't overwrite their behaviour.
   :pyobject: Example.path_constraints
   :lineno-match:
 
-Now we pass in the goals. We want to apply our goals to every timestep, so we
-use the ``path_goals()`` method. This is a method that returns a list of the goals
-we defined above.
+Now we pass in the goals. There are path goals and normal goals, so we have to
+pass them in using separate methods. A path goal is a specific kind of goal that
+applies to a particular variable at an individual time step, but that we want to
+set for all the timesteps.
+
+Non-path goals are more general goals that are not iteratively applied at every
+timestep. We use the ``goals()`` method to pass a list of these goals to the
+optimizer.
+
+.. literalinclude:: ../../examples/goal_programming/src/example.py
+  :language: python
+  :pyobject: Example.goals
+  :lineno-match:
+
+For the goals that want to apply our goals to every timestep, so we use
+the ``path_goals()`` method. This is a method that returns a list of the path
+goals we defined above.
 
 .. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python

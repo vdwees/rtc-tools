@@ -35,24 +35,23 @@ class MinimizeQpumpGoal(Goal):
     # If we do not specify any minimum or maximum value in this class, the
     # goal programming mixin will try to minimize the following function.
     def function(self, optimization_problem, ensemble_member):
-        return optimization_problem.state('Q_pump')
+        return optimization_problem.integral('Q_pump')
 
     # Every goal needs a rough (over)estimate (enclosure) of the range of the
     # function defined above.
-    function_range = (0, 5.0)
+    function_range = (0, 540000.0)
     # The lower the number returned by this function, the higher the priority.
     priority = 2
     # The penalty variable is taken to the order'th power.
     order = 1
 
+
 class MinimizeChangeInQpumpGoal(Goal):
     # To reduce pump power cycles, we add a third goal to minimize changes in
     # Q_pump.
-    def __init__(self, time):
-        self.time = time
     def function(self, optimization_problem, ensemble_member):
-        return optimization_problem.der('Q_pump', self.time)
-    function_range = (-100.0, 100.0)
+        return optimization_problem.der('Q_pump')
+    function_range = (-10.0, 10.0)
     priority = 3
     order = 2
 
@@ -97,16 +96,13 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
 
         return constraints
 
+    def goals(self):
+        return [MinimizeQpumpGoal()]
+
     def path_goals(self):
         # Sorting goals on priority is done in the goal programming mixin. We
         # do not have to worry about order here.
-        return [WaterLevelRangeGoal(), MinimizeQpumpGoal()]
-
-    def goals(self):
-        goals = []
-        for time in self.times():
-            goals.append(MinimizeChangeInQpumpGoal(time))
-        return goals
+        return [WaterLevelRangeGoal(), MinimizeChangeInQpumpGoal()]
 
     def priority_completed(self, priority):
         # We want to show that the results of our highest priority goal (water

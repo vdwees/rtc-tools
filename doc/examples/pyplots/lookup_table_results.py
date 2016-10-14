@@ -39,7 +39,7 @@ f.autofmt_xdate()
 for i in range(len(axarr)):
     box = axarr[i].get_position()
     axarr[i].set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    axarr[i].legend(loc='lower left', bbox_to_anchor=(1, 0.5), frameon=False)
+    axarr[i].legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
 
 # Output Plot
 plt.show()

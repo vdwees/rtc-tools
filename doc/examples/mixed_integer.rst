@@ -172,6 +172,7 @@ Running the Optimization Problem
 .. note:: An explaination of bonmin behaviour and output goes here.
 
 
+
 Extracting Results
 ------------------
 
@@ -179,5 +180,18 @@ The results from the run are found in ``output/timeseries_export.csv``. Any
 CSV-reading software can import it, but this is how results can be plotted using
 the python library matplotlib:
 
+
 .. plot:: examples/pyplots/mixed_integer_results.py
    :include-source:
+
+
+.. _mixed-integer-results:
+
+Observations
+------------
+
+Note that in the results plotted above, the pump runs with a constantly varying
+throughput. To smooth out the flow through the pump, consider using goal
+programming to apply a path goal minimizing the derivative of the pump at each
+timestep. For an example, see the third goal in
+:ref:`goal-programming-declaring-goals`.

@@ -42,9 +42,8 @@ class Example(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
                             self.state('is_downhill') * M, 0.0, inf))
 
         # Restrict Q_pump to two states: 5.0 and 0.0
-        constraints.append(
-            (self.state('Q_pump') + self.state('pump_on') * 5.0,
-             5.0, 5.0))
+        # constraints.append(
+        #     (self.state('Q_pump') - self.state('pump_on') * 5.0, 0.0, 0.0))
 
         # Orifice flow constraint. Uses the equation:
         # Q(HUp, HDown, d) = width * C * d * (2 * g * (HUp - HDown)) ^ 0.5
