@@ -164,18 +164,11 @@ class ModelicaMixin(OptimizationProblem):
 
         logger.debug("ModelicaMixin: Condensing DAE")
 
-        # Determine candidates for elimination and path constraints.
-        # An algebraic variable becomes an elimination candidate if it is prefixed with an underscore ('_').
         # An algebraic variable becomes a constraint residual candidate if it A) has numerical bounds and B) internal causality.
-        elimination_candidates = []
         constraint_residual_candidates = []
-
         for var in self._jm_model.getVariables(self._jm_model.REAL_ALGEBRAIC):
             sym = var.getVar()
-            name = sym.getName()
-            if name.startswith('_'):
-                elimination_candidates.append(sym)
-            elif var.getCausality() == var.INTERNAL:
+            if var.getCausality() == var.INTERNAL:
                 m, M = -np.inf, np.inf
                 if var.hasAttributeSet('min'):
                     m = var.getAttribute('min')
@@ -192,7 +185,7 @@ class ModelicaMixin(OptimizationProblem):
                 if np.isfinite(m) or np.isfinite(M):
                     constraint_residual_candidates.append((sym, m, M))
 
-        # Eliminate equations of the form x = y or z = f(x), where z is an elimination candidate.
+        # Eliminate equations of the form x = y or z = f(x), where z is prefixed with an underscore.
         dae = []
         dae_eq = []
         substitutions = {}
@@ -208,23 +201,21 @@ class ModelicaMixin(OptimizationProblem):
                         logger.debug("ModelicaMixin: Aliased {} to {}".format(rhs.getName(), lhs.getName()))
                         self.variable_aliases(lhs.getName()).extend(self.variable_aliases(rhs.getName()))
                         substitutions[rhs] = lhs
+                        skip = True
                     elif lhs.getName() in algebraics_names:
                         logger.debug("ModelicaMixin: Aliased {} to {}".format(lhs.getName(), rhs.getName()))
                         self.variable_aliases(rhs.getName()).extend(self.variable_aliases(lhs.getName()))
                         substitutions[lhs] = rhs
-                    skip = True
+                        skip = True
 
-            # Look for equations of the form z = f(x), where z is an elimination candidate.
+            # Look for equations of the form z = f(x), where z is prefixed with an underscore.
             if not skip:
-                for i, elimination_candidate in enumerate(elimination_candidates):
-                    if lhs.isSymbolic() and (lhs.getName() == elimination_candidate.getName()):
-                        substitutions[lhs] = rhs
-                        skip = True
-                        break
-                    if rhs.isSymbolic() and (rhs.getName() == elimination_candidate.getName()):
-                        substitutions[rhs] = lhs
-                        skip = True
-                        break
+                if lhs.isSymbolic() and lhs.getName().startswith('_'):
+                    substitutions[lhs] = rhs
+                    skip = True
+                elif rhs.isSymbolic() and rhs.getName().startswith('_'):
+                    substitutions[rhs] = lhs
+                    skip = True
 
             # Add equation, if it is not to be skipped.
             if skip:
@@ -260,11 +251,15 @@ class ModelicaMixin(OptimizationProblem):
                     break
             if matches == 1:
                 if constraint_function is not None:
-                    constraint = (constraint_function, constraint_residual_candidate[1], constraint_residual_candidate[2])
-                    logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
+                    # Remove from DAE
                     index = dae_eq.index(constraint_eq)
                     del dae[index]
                     del dae_eq[index]
+                    self._mx['algebraics'].remove(constraint_residual_candidate[0])
+
+                    # Add to constraints
+                    constraint = (constraint_function, constraint_residual_candidate[1], constraint_residual_candidate[2])
+                    logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
                     self._path_constraints.append(constraint)
 
         # Store condensed DAE residual
