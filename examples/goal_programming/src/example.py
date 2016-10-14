@@ -46,6 +46,16 @@ class MinimizeQpumpGoal(Goal):
     order = 1
 
 
+class MinimizeChangeInQpumpGoal(Goal):
+    # To reduce pump power cycles, we add a third goal to minimize changes in
+    # Q_pump.
+    def function(self, optimization_problem, ensemble_member):
+        return optimization_problem.der('Q_pump')
+    function_range = (-100.0, 100.0)
+    priority = 3
+    order = 2
+
+
 class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
               CollocatedIntegratedOptimizationProblem):
     """
