@@ -93,6 +93,16 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         return 1.0
 
     def transcribe(self):
+        # TODO Hack for now:  Reduce the number of states here, rather than immediately on loading model.
+        # This way, we do not eliminate variables for which bounds are specified in the data files.
+        # TODO there is guarantee that we do not eliminate variables which we later access with state()...
+        self.condense_dae()
+        self.dae_variables['free_variables'] = self.dae_variables[
+            'states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
+        self._differentiated_states = [variable.getName() for variable in self.dae_variables['states']]
+        self._algebraic_states = [variable.getName() for variable in self.dae_variables['algebraics']]
+        self._controls = [variable.getName() for variable in self.dae_variables['control_inputs']]
+
         # DAE residual
         dae_residual = self.dae_residual
 

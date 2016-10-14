@@ -1,9 +1,10 @@
 # cython: embedsignature=True
 
-from casadi import MXFunction, MX, substitute
+from casadi import MXFunction, MX, substitute, sumCols, IMatrix, jacobian, vertcat
 import numpy as np
 import logging
 import pyjmi
+import sets
 import os
 
 from timeseries import Timeseries
@@ -155,6 +156,110 @@ class ModelicaMixin(OptimizationProblem):
         # Call parent class first for default behaviour.
         super(ModelicaMixin, self).__init__(**kwargs)
 
+    def condense_dae(self):
+        # Borrowed from
+        # https://gist.github.com/jgillis/5aebf6b09ada29355418783e8f60e8ef
+        def classify_linear(e, v):
+            """
+            Takes vector expression e, and symbolic primitives v
+            Returns classification vector
+            For each element in e, determines if:
+              - element is nonlinear in v               (2)
+              - element is    linear in v               (1)
+              - element does not depend on v at all     (0)
+
+            This method can be sped up a lot with JacSparsityTraits::sp
+            """
+
+            f = MXFunction("f", [v], [jacobian(e, v)])
+            ret = ((sumCols(IMatrix(f.outputSparsity(0), 1))
+                    == 0) == 0).nonzeros()
+            pattern = IMatrix(f.jacSparsity(
+                0, 0), 1).reshape((e.shape[0], -1))
+            for k in sumCols(pattern).row():
+                ret[k] = 2
+            return ret
+
+        # Determine candidates for elimination and path constraints.
+        # An algebraic variable becomes an elimination candidate if it A) has no bounds and B) internal causality.
+        # An algebraic variable becomes a constraint residual candidate if it A) has bounds and B) internal causality.
+        elimination_candidates = []
+        elimination_candidate_replacements = []
+        constraint_residual_candidates = []
+
+        bounds = self.bounds() # TODO pre needs to have run here
+        for var in self._jm_model.getVariables(self._jm_model.REAL_ALGEBRAIC):
+            sym = var.getVar()
+            if sym.getName() in bounds:
+                constraint_residual_candidates.append(sym)
+            elif var.getCausality() != var.INTERNAL:
+                # TODO move outputs to post-processing
+                pass
+            else:
+                elimination_candidates.append(sym)
+                elimination_candidate_replacements.append(sym)
+
+        # Eliminate equations of the form z = f(x) or vice versa, where z is an elimination candidate.
+        dae = []
+        eliminated_variables = sets.Set()
+        eq_indices_in_dae = {}
+        for eq in self._jm_model.getDaeEquations():
+            lhs, rhs = eq.getLhs(), eq.getRhs()
+
+            # TODO only eliminate from linear equations
+            #if np.any(classify_linear(lhs, self._mx['free_variables']) == 2) or np.any(classify_linear(rhs, self._mx['free_variables'])) == 2):
+            #    dae.append(lhs - rhs)
+            #    continue
+
+            # Look for algebraic variables
+            removed = False
+            for i, elimination_candidate in enumerate(elimination_candidates):
+                if lhs.isSymbolic() and (lhs.getName() == elimination_candidate.getName()):
+                    elimination_candidate_replacements[i] = rhs
+                    eliminated_variables.add(elimination_candidate)
+                    removed = True
+                    break
+                if rhs.isSymbolic() and (rhs.getName() == elimination_candidate.getName()):
+                    elimination_candidate_replacements[i] = lhs
+                    eliminated_variables.add(elimination_candidate)
+                    removed = True
+                    break
+            if not removed:
+                eq_indices_in_dae[eq] = len(dae)
+                dae.append(lhs - rhs)
+
+        # Substitute eliminated variables z with f(x) in rest of DAE.
+        self._mx['algebraics'] = list(sets.Set(self._mx['algebraics']) - eliminated_variables)
+
+        dae = substitute(dae, elimination_candidates, elimination_candidate_replacements)
+
+        # Add path constraints for bounded, orphan algebraic residuals.
+        self._path_constraints = []
+        for i, constraint_residual_candidate in enumerate(constraint_residual_candidates):
+            matches = 0
+            constraint_function = None
+            eq_index = None
+            for eq in self._jm_model.getDaeEquations():
+                lhs, rhs = eq.getLhs(), eq.getRhs()
+                if lhs.isSymbolic() and (lhs.getName() == constraint_residual_candidate.getName()):
+                    constraint_function = rhs
+                    eq_index = eq_indices_in_dae[eq]
+                    matches += 1
+                if rhs.isSymbolic() and (rhs.getName() == constraint_residual_candidate.getName()):
+                    constraint_function = lhs
+                    eq_index = eq_indices_in_dae[eq]
+                    matches += 1
+                if matches > 1:
+                    break
+            if matches == 1:
+                if constraint_function is not None:
+                    del dae[eq_index]
+                    b = bounds[constraint_residual_candidate.getName()]
+                    self._path_constraints.append((constraint_function, b[0], b[1]))
+
+        # Store condensed DAE residual
+        self._dae_residual = vertcat(dae)
+
     def compiler_options(self):
         """
         Subclasses can configure the `JModelica.org <http://www.jmodelica.org/>`_ compiler options here.
@@ -193,8 +298,7 @@ class ModelicaMixin(OptimizationProblem):
 
     @property
     def dae_residual(self):
-        # Extract the DAE residual
-        return self._jm_model.getDaeResidual()
+        return self._dae_residual
 
     @property
     def dae_variables(self):
@@ -288,13 +392,19 @@ class ModelicaMixin(OptimizationProblem):
             if var.getType() == var.BOOLEAN:
                 m, M = 0, 1
             else:
-                m, M = None, None
+                m, M = -np.inf, np.inf
             if var.hasAttributeSet('min'):
                 m = substitute_parameters(var.getAttribute('min'))
             if var.hasAttributeSet('max'):
                 M = substitute_parameters(var.getAttribute('max'))
-            bounds[variable] = (m, M)
+            if np.isfinite(m) or np.isfinite(M):
+                bounds[variable] = (m, M)
         return bounds
+
+    def path_constraints(self, ensemble_member):
+        path_constraints = super(ModelicaMixin, self).path_constraints(ensemble_member)
+        path_constraints.extend(self._path_constraints)
+        return path_constraints
 
     def variable_is_discrete(self, variable):
         var = self._jm_model.getVariable(variable)

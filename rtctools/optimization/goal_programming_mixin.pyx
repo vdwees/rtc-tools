@@ -241,7 +241,7 @@ class GoalProgrammingMixin(OptimizationProblem):
         return acc_objective / len(self._subproblem_objectives)
 
     def constraints(self, ensemble_member):
-        constraints = []
+        constraints = super(GoalProgrammingMixin, self).constraints(ensemble_member)
         for l in self._subproblem_constraints[ensemble_member].values():
             constraints.extend(map(lambda constraint: (
                 constraint.function(self), constraint.min, constraint.max), l))
@@ -252,7 +252,7 @@ class GoalProgrammingMixin(OptimizationProblem):
         return constraints
 
     def path_constraints(self, ensemble_member):
-        path_constraints = []
+        path_constraints = super(GoalProgrammingMixin, self).path_constraints(ensemble_member)
         for l in self._subproblem_path_constraints[ensemble_member].values():
             path_constraints.extend(map(lambda constraint: (
                 constraint.function(self), constraint.min, constraint.max), l))
