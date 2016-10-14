@@ -842,9 +842,22 @@ class OptimizationProblem(object):
         pass
 
     @abstractmethod
-    def der(self, variable, t, ensemble_member=0):
+    def der(self, variable):
         """
-        Returns an expression for the derivative of the specified variable at time t.
+        Returns an :class:`MX` symbol for the time derivative given state, not bound to any time.
+
+        :param variable: Variable name.
+
+        :returns: :class:`MX` symbol for given state.
+
+        :raises: KeyError
+        """
+        pass
+
+    @abstractmethod
+    def der_at(self, variable, t, ensemble_member=0):
+        """
+        Returns an expression for the time derivative of the specified variable at time t.
 
         :param variable:        Variable name.
         :param t:               Time.
