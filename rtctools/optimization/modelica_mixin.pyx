@@ -165,27 +165,41 @@ class ModelicaMixin(OptimizationProblem):
         logger.debug("ModelicaMixin: Condensing DAE")
 
         # An algebraic variable becomes a constraint residual candidate if it A) has numerical bounds and B) internal causality.
+        # An algebraic variable is marked as private if it A) is unbounded, B) has internal causality, and C) starts with an underscore ('_').
         constraint_residual_candidates = []
+        private_variables = []
         for var in self._jm_model.getVariables(self._jm_model.REAL_ALGEBRAIC):
             sym = var.getVar()
             if var.getCausality() == var.INTERNAL:
-                m, M = -np.inf, np.inf
+                m, M = None, None
                 if var.hasAttributeSet('min'):
                     m = var.getAttribute('min')
-                    if m.isConstant():
-                        m = float(m)
-                    else:
-                        m = np.inf
                 if var.hasAttributeSet('max'):
                     M = var.getAttribute('max')
-                    if M.isConstant():
-                        M = float(M)
-                    else:
-                        M = np.inf
-                if np.isfinite(m) or np.isfinite(M):
-                    constraint_residual_candidates.append((sym, m, M))
+                if m is not None or M is not None:
+                    logger.debug("ModelicaMixin: Marking {} as a potential constraint residual.".format(sym.getName()))
 
-        # Eliminate equations of the form x = y or z = f(x), where z is prefixed with an underscore.
+                    if m is not None and m.isConstant() and M is not None and M.isConstant():
+                        constraint_residual_candidates.append((sym, float(m), float(M)))
+                    else:
+                        if m is not None:
+                            if m.isConstant():
+                                constraint_residual_candidates.append((sym, float(m), np.inf))
+                            else:
+                                constraint_residual_candidates.append((sym - m, 0.0, np.inf))
+                        if M is not None:
+                            if M.isConstant():
+                                constraint_residual_candidates.append((sym, -np.inf, float(M)))
+                            else:
+                                constraint_residual_candidates.append((sym - M, -np.inf, 0.0))
+                else:
+                    name = sym.getName()
+                    if name.startswith('_'):
+                        logger.debug("ModelicaMixin: Marking {} as a private variable to be eliminated.".format(name))
+
+                        private_variables.append(name)
+
+        # Eliminate equations of the form x = y or z = f(x), where z is a private variable.
         dae = []
         dae_eq = []
         substitutions = {}
@@ -208,12 +222,12 @@ class ModelicaMixin(OptimizationProblem):
                         substitutions[lhs] = rhs
                         skip = True
 
-            # Look for equations of the form z = f(x), where z is prefixed with an underscore.
+            # Look for equations of the form z = f(x), where z is a private variable.
             if not skip:
-                if lhs.isSymbolic() and lhs.getName().startswith('_'):
+                if lhs.isSymbolic() and lhs.getName() in private_variables:
                     substitutions[lhs] = rhs
                     skip = True
-                elif rhs.isSymbolic() and rhs.getName().startswith('_'):
+                elif rhs.isSymbolic() and rhs.getName() in private_variables:
                     substitutions[rhs] = lhs
                     skip = True
 
