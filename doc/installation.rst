@@ -28,6 +28,10 @@ If the installation was succesful, you should see that the solver succeeds:
 From Source
 -----------
 
+Although not required, it is recommended to build and install RTC-Tools and
+JModelica (see `dependencies`_) in a `virtual environment
+<https://virtualenv.pypa.io/en/stable/>`_.
+
 Dependencies
 ~~~~~~~~~~~~
 
@@ -64,25 +68,15 @@ The latest RTC-Tools source can be downloaded using git::
 Ubuntu / Debian
 ~~~~~~~~~~~~~~~
 
-Building RTC-Tools requires a few Python packages. Although not required, it
-is recommended to install python packages in a virtual environment::
+Building RTC-Tools requires one additional Python package over JMmodelica::
 
     # Change directory to where RTC-Tools was downloaded
     cd rtc-tools
 
-    # Make a virtual environment
-    virtualenv venv
-
-    # Activate the virtual environment
-    source venv/bin/activate
-
-    # Install dependencies of JModelica / CasADi...
-    pip install cython numpy scipy matplotlib jpype1 jcc lxml
-
-    # ...and dependencies of RTC itself
+    # Install additional dependencies of RTC-Tools
     pip install mock
 
-Now all that remains is to build and install RTC-Tools itself::
+Now all that remains is to actually build and install RTC-Tools::
 
     python setup.py install
 
