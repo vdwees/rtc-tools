@@ -12,11 +12,11 @@
 RTC-Tools documentation
 =======================
 
-This is the documentation for RTC-Tools 2.0, a toolbox for control and optimization of environmental systems.
+This is the documentation for RTC-Tools 2.0, the `Deltares <https://www.deltares.nl/>`_ toolbox for control and optimization of environmental systems.
 
 Visit the `RTC-Tools website <https://www.deltares.nl/en/software/rtc-tools/>`_ for a general product description and information on available services.
 
-This first two chapters of this documentation describe the RTC-Tools Python API.  The third and final chapter discusses several illustrative examples, including the use of goal programming for multi-objective optimization, as well as the use of forecast ensembles.
+This first chapter covers installation of the software.  The subsequent two chapters describe the RTC-Tools Python API.  The fourth and final chapter discusses several illustrative examples, including the use of goal programming for multi-objective optimization, as well as the use of forecast ensembles.
 
 
 Contents
