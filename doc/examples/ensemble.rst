@@ -234,12 +234,10 @@ now the output for each ensemble is printed.
 Extracting Results
 ------------------
 
-The results from the run are found in ``output/timeseries_export.csv``. Any
-CSV-reading software can import it, but this is what the results look like when
-plotted in Microsoft Excel:
+The results from the run are found in ``output/forcast1/timeseries_export.csv``
+and ``output/forcast2/timeseries_export.csv``. Any CSV-reading software can
+import it, but this is how results can be plotted using the python library
+matplotlib:
 
-.. note::
-
-    TODO: Plot these results
-
-.. image:: ../images/lookuptable_resultplot.png
+.. plot:: examples/pyplots/ensemble_results.py
+   :include-source:

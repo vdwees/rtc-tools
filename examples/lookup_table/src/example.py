@@ -89,14 +89,14 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
 
         _max = self.get_timeseries('V_max').values
         _min = self.get_timeseries('V_min').values
-        values = self.get_timeseries('storage_V').values
+        storage_V = self.get_timeseries('storage_V').values
 
         # A little bit of tolerance when checking for acceptance.
         tol = 10
         _max += tol
         _min -= tol
         n_level_satisfied = sum(
-            np.logical_and(_min <= values, values <= _max))
+            np.logical_and(_min <= storage_V, storage_V <= _max))
         q_release_integral = sum(results['Q_release'])
         self.intermediate_results.append(
             (priority, n_level_satisfied, q_release_integral))
@@ -104,11 +104,11 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
     def post(self):
         # Call super() class to not overwrite default behaviour
         super(Example, self).post()
-        for priority, n_level_satisfied, q_pump_integral in self.intermediate_results:
+        for priority, n_level_satisfied, q_release_integral in self.intermediate_results:
             print("\nAfter finishing goals of priority {}:".format(priority))
             print("Volume goal satisfied at {} of {} time steps".format(
                 n_level_satisfied, len(self.times())))
-            print("Integral of Q_release = {:.2f}".format(q_pump_integral))
+            print("Integral of Q_release = {:.2f}".format(q_release_integral))
 
     # Any solver options can be set here
     def solver_options(self):
