@@ -4,7 +4,7 @@ Using Lookup Tables
 .. note::
 
     This example focuses on how to implement non-linear storage elements in
-    RTC-Tools using lookup tables . It assumes basic exposure to
+    RTC-Tools using lookup tables. It assumes basic exposure to
     RTC-Tools. If you are a first-time user of RTC-Tools, see
     :doc:`basic`.
 
