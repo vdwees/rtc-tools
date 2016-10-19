@@ -62,25 +62,27 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
         # Cache lookup tables for convenience and code legibility
         _lookup_tables = self.lookup_tables(ensemble_member=0)
         self.lookup_storage_V = _lookup_tables['storage_V']
-        self.lookup_storage_H = _lookup_tables['storage_H']
 
         # Non-varrying goals can be implemented as a timeseries
-        for ensemble_member in range(self.ensemble_size):
-            self.set_timeseries('H_min',
-                                np.ones_like(self.times()) * 0.44,
-                                ensemble_member=ensemble_member)
-            self.set_timeseries('H_max',
-                                np.ones_like(self.times()) * 0.46,
-                                ensemble_member=ensemble_member)
+        for e_m in range(self.ensemble_size):
+            self.set_timeseries('H_min', np.ones_like(self.times()) * 0.44,
+                                ensemble_member=e_m)
+            self.set_timeseries('H_max', np.ones_like(self.times()) * 0.46,
+                                ensemble_member=e_m)
 
-        # Convert our water level goals into volume goals
-        for ensemble_member in range(self.ensemble_size):
+            # Q_in is a varying input and is defined in each timeseries_import.csv
+            # However, if we set it again here, it will be added to the output files
+            self.set_timeseries('Q_in',
+                                self.get_timeseries('Q_in', ensemble_member=e_m),
+                                ensemble_member=e_m)
+
+            # Convert our water level goals into volume goals
             self.set_timeseries('V_max',
                                 self.lookup_storage_V(self.get_timeseries('H_max')),
-                                ensemble_member=ensemble_member)
+                                ensemble_member=e_m)
             self.set_timeseries('V_min',
                                 self.lookup_storage_V(self.get_timeseries('H_min')),
-                                ensemble_member=ensemble_member)
+                                ensemble_member=e_m)
 
     def path_goals(self):
         g = []
@@ -93,41 +95,31 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
         # We want to print some information about our goal programming problem.
         # We store the useful numbers temporarily, and print information at the
         # end of our run.
-        for ensemble_member in range(self.ensemble_size):
-            results = self.extract_results(ensemble_member)
-            self.set_timeseries('H_storage',
-                                self.lookup_storage_H(Timeseries(self.times(),
-                                                      results['storage.V'])),
-                                ensemble_member=ensemble_member)
-            self.set_timeseries('V_storage',
-                                results['storage.V'],
-                                ensemble_member=ensemble_member)
-            H_storage = self.get_timeseries('H_storage',
-                                            ensemble_member=ensemble_member).values
+        for e_m in range(self.ensemble_size):
+            results = self.extract_results(e_m)
+            self.set_timeseries('V_storage',  results['storage.V'], ensemble_member=e_m)
 
-            _max = self.get_timeseries('H_max',
-                                       ensemble_member=ensemble_member).values
-            _min = self.get_timeseries('H_min',
-                                       ensemble_member=ensemble_member).values
+            _max = self.get_timeseries('V_max', ensemble_member=e_m).values
+            _min = self.get_timeseries('V_min', ensemble_member=e_m).values
+            V_storage = self.get_timeseries('V_storage', ensemble_member=e_m).values
 
             # A little bit of tolerance when checking for acceptance. This
             # tolerance must be set greater than the tolerance of the solver.
-            tol = 1e-3
+            tol = 10
             _max += tol
             _min -= tol
             n_level_satisfied = sum(
-                np.logical_and(_min <= H_storage, H_storage <= _max))
+                np.logical_and(_min <= V_storage, V_storage <= _max))
             q_release_integral = sum(results['Q_release'])
-            self.intermediate_results[ensemble_member].append((priority,
-                                                               n_level_satisfied,
-                                                               q_release_integral))
+            self.intermediate_results[e_m].append((priority, n_level_satisfied,
+                                                   q_release_integral))
 
     def post(self):
         super(Example, self).post()
-        for ensemble_member in range(self.ensemble_size):
-            print('\n\nResults for Ensemble Member {}:'.format(ensemble_member))
+        for e_m in range(self.ensemble_size):
+            print('\n\nResults for Ensemble Member {}:'.format(e_m))
             for priority, n_level_satisfied, q_release_integral in \
-                    self.intermediate_results[ensemble_member]:
+                    self.intermediate_results[e_m]:
                 print("\nAfter finishing goals of priority {}:".format(priority))
                 print("Level goal satisfied at {} of {} time steps".format(
                     n_level_satisfied, len(self.times())))
