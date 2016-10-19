@@ -2,43 +2,51 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime
+from pylab import get_cmap
 
-
-data_path = '../../../examples/mixed_integer/output/timeseries_export.csv'
+output_dir = '../../../examples/ensemble/output/'
+forecast_names = ['forecast1', 'forecast2']
 delimiter = ','
 
 # Import Data
-ncols = len(np.genfromtxt(data_path, max_rows=1, delimiter=delimiter))
-datefunc = lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
-results = np.genfromtxt(data_path, converters={0: datefunc}, delimiter=delimiter,
-                        dtype='object' + ',float' * (ncols - 1), names=True)
+def get_results(forecast_name):
+    data_path = output_dir + forecast_name + '/timeseries_export.csv'
+    ncols = len(np.genfromtxt(data_path, max_rows=1, delimiter=delimiter))
+    datefunc = lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
+    return np.genfromtxt(data_path, converters={0: datefunc}, delimiter=delimiter,
+                            dtype='object' + ',float' * (ncols - 1), names=True)
 
 # Generate Plot
-f, axarr = plt.subplots(2, sharex=True)
-axarr[0].set_title('Water Level and Discharge')
+n_subplots = 2
+f, axarr = plt.subplots(n_subplots, sharex=True, figsize=(8, 4 * n_subplots))
+axarr[0].set_title('Water Volume and Discharge')
+cmaps = ['Blues', 'Greens']
+shades = [0.5, 0.8]
+f.autofmt_xdate()
 
 # Upper subplot
-axarr[0].set_ylabel('Water Level [m]')
-axarr[0].plot(results['time'], results['storage_level'], label='Storage',
-              linewidth=2, color='b')
-axarr[0].plot(results['time'], results['sea_level'], label='Sea',
-              linewidth=2, color='m')
-axarr[0].plot(results['time'], 0.5 * np.ones_like(results['time']), label='Storage Max',
-              linewidth=2, color='r', linestyle='--')
+for idx, forecast in enumerate(forecast_names):
+    results = get_results(forecast)
+    axarr[0].set_ylabel('Water Volume in Storage [m3]')
+    if idx == 0:
+        axarr[0].plot(results['time'], results['V_max'], label='Max',
+        linewidth=2, color='r', linestyle='--')
+        axarr[0].plot(results['time'], results['V_min'], label='Min',
+        linewidth=2, color='g', linestyle='--')
+    axarr[0].plot(results['time'], results['V_storage'], label=forecast,
+                        linewidth=2, color=get_cmap(cmaps[idx])(shades[1]))
 
-# Lower Subplot
-axarr[1].set_ylabel('Flow Rate [m3/s]')
-axarr[1].plot(results['time'], results['Q_orifice'], label='Orifice',
-              linewidth=2, color='g')
-axarr[1].plot(results['time'], results['Q_pump'], label='Pump',
-              linewidth=2, color='r')
-axarr[1].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-f.autofmt_xdate()
+    # Lower Subplot
+    axarr[1].set_ylabel('Flow Rate [m3/s]')
+    axarr[1].plot(results['time'], results['Q_in'], label='{}:Inflow'.format(forecast),
+                            linewidth=2, color=get_cmap(cmaps[idx])(shades[0]))
+    axarr[1].plot(results['time'], results['Q_release'], label='{}:Release'.format(forecast),
+                            linewidth=2, color=get_cmap(cmaps[idx])(shades[1]))
 
 # Shrink each axis by 20% and put a legend to the right of the axis
 for i in range(len(axarr)):
     box = axarr[i].get_position()
-    axarr[i].set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    axarr[i].set_position([box.x0, box.y0, box.width * 0.7, box.height])
     axarr[i].legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
 
 # Output Plot
