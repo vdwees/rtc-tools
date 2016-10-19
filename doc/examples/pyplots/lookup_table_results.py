@@ -17,6 +17,7 @@ results = np.genfromtxt(data_path, converters={0: datefunc}, delimiter=delimiter
 n_subplots = 2
 f, axarr = plt.subplots(n_subplots, sharex=True, figsize=(8, 3 * n_subplots))
 axarr[0].set_title('Water Volume and Discharge')
+f.autofmt_xdate()
 
 # Upper subplot
 axarr[0].set_ylabel('Water Volume [m3]')
@@ -33,8 +34,6 @@ axarr[1].plot(results['time'], results['Q_in'], label='Inflow',
               linewidth=2, color='g')
 axarr[1].plot(results['time'], results['Q_release'], label='Release',
               linewidth=2, color='r')
-axarr[1].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-f.autofmt_xdate()
 
 # Shrink each axis by 20% and put a legend to the right of the axis
 for i in range(n_subplots):
