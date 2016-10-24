@@ -352,7 +352,8 @@ class GoalProgrammingMixin(OptimizationProblem):
 
         # Check goal consistency
         if goal.has_target_min and goal.has_target_max:
-            assert(goal.target_min <= goal.target_max)
+            if goal.target_min > goal.target_max:
+                raise Exception("Target minimum exceeds target maximum for goal {}".format(goal))
 
         if isinstance(epsilon, MX):
             if goal.has_target_bounds:
@@ -475,7 +476,8 @@ class GoalProgrammingMixin(OptimizationProblem):
         if goal.has_target_min and goal.has_target_max:
             indices = np.where(np.logical_and(
                 np.isfinite(goal_m), np.isfinite(goal_M)))
-            assert(np.all(goal_m[indices] <= goal_M[indices]))
+            if np.any(goal_m[indices] > goal_M[indices]):
+                raise Exception("Target minimum exceeds target maximum for goal {}".format(goal))
 
         if isinstance(epsilon, MX):
             if goal.has_target_bounds:
@@ -575,7 +577,10 @@ class GoalProgrammingMixin(OptimizationProblem):
         subproblems = []
         goals = self.goals()
         path_goals = self.path_goals()
-        priorities = Set([goal.priority for goal in goals + path_goals])
+        for goal in itertools.chain(goals, path_goals):
+            if not np.isfinite(goal.function_range[0]) or not np.isfinite(goal.function_range[1]):
+                raise Exception("No function range specified for goal {}".format(goal))
+        priorities = Set([goal.priority for goal in itertools.chain(goals, path_goals)])
         for priority in sorted(priorities):
             subproblems.append((priority, [goal for goal in goals if goal.priority == priority], [
                                goal for goal in path_goals if goal.priority == priority]))
@@ -604,7 +609,8 @@ class GoalProgrammingMixin(OptimizationProblem):
 
             for j, goal in enumerate(goals):
                 if goal.critical:
-                    assert(goal.has_target_bounds)
+                    if not goal.has_target_bounds:
+                        raise Exception("Minimization goals cannot be critical")
                     epsilon = 0.0
                 else:
                     epsilon = MX.sym('eps_{}_{}'.format(i, j))
@@ -619,7 +625,8 @@ class GoalProgrammingMixin(OptimizationProblem):
 
             for j, goal in enumerate(path_goals):
                 if goal.critical:
-                    assert(goal.has_target_bounds)
+                    if not goal.has_target_bounds:
+                        raise Exception("Minimization goals cannot be critical")
                     epsilon = 0.0
                 else:
                     epsilon = MX.sym('path_eps_{}_{}'.format(i, j))
