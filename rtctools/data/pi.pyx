@@ -319,7 +319,7 @@ class Timeseries:
     PI timeseries wrapper.
     """
 
-    def __init__(self, data_config, folder, basename, binary=True, double_precision=False):
+    def __init__(self, data_config, folder, basename, binary=True):
         """
         Load the timeseries from disk.
 
@@ -327,7 +327,6 @@ class Timeseries:
         :param folder:           The folder in which the time series is located.
         :param basename:         The basename of the time series file.
         :param binary:           True if the time series data is stored in a separate binary file.
-        :param double_precision: True if the binary data is stored in double precision.
         """
         self._data_config = data_config
 
@@ -336,10 +335,8 @@ class Timeseries:
 
         self._path_xml = os.path.join(self._folder, basename + '.xml')
 
-        if double_precision:
-            self._dtype = np.float64
-        else:
-            self._dtype = np.float32
+        self._internal_dtype = np.float64
+        self._pi_dtype = np.float32
 
         self._tree = ET.parse(self._path_xml)
         self._xml_root = self._tree.getroot()
@@ -453,15 +450,15 @@ class Timeseries:
             if self._binary:
                 if f != None:
                     self._values[ensemble_member][variable] = np.fromstring(
-                        f.read(self._dtype(0).itemsize * n_values), dtype=self._dtype)
+                        f.read(self._pi_dtype(0).itemsize * n_values), dtype=self._pi_dtype)
                 else:
                     self._values[ensemble_member][variable] = np.empty(
-                        n_values, dtype=self._dtype)
+                        n_values, dtype=self._internal_dtype)
                     self._values[ensemble_member][variable].fill(np.nan)
             else:
                 evenstart_datetime = series.findall('pi:event', ns)
                 self._values[ensemble_member][variable] = np.empty(
-                    n_values, dtype=self._dtype)
+                    n_values, dtype=self._internal_dtype)
                 self._values[ensemble_member][variable].fill(np.nan)
                 for i in range(min(n_values, len(evenstart_datetime))):
                     self._values[ensemble_member][variable][
@@ -474,7 +471,7 @@ class Timeseries:
             # Prepend empty space, if start_datetime > self._start_datetime.
             if start_datetime > self._start_datetime:
                 filler = np.empty(int(round(
-                    (start_datetime - self._start_datetime).total_seconds() / dt.total_seconds())), dtype=self._dtype)
+                    (start_datetime - self._start_datetime).total_seconds() / dt.total_seconds())), dtype=self._internal_dtype)
                 filler.fill(np.nan)
                 self._values[ensemble_member][variable] = np.hstack(
                     (filler, self._values[ensemble_member][variable]))
@@ -482,7 +479,7 @@ class Timeseries:
             # Append empty space, if end_datetime < self._end_datetime
             if end_datetime < self._end_datetime:
                 filler = np.empty(int(round(
-                    (self._end_datetime - end_datetime).total_seconds() / dt.total_seconds())), dtype=self._dtype)
+                    (self._end_datetime - end_datetime).total_seconds() / dt.total_seconds())), dtype=self._internal_dtype)
                 filler.fill(np.nan)
                 self._values[ensemble_member][variable] = np.hstack(
                     (self._values[ensemble_member][variable], filler))
@@ -525,7 +522,7 @@ class Timeseries:
 
                 # Wriend_datetime output
                 if self._binary:
-                    f.write(l.astype(self._dtype).tostring())
+                    f.write(l.astype(self._pi_dtype).tostring())
                 else:
                     events = series.findall('pi:event', ns)
 
@@ -624,7 +621,7 @@ class Timeseries:
 
         :param target_dtype: Target numpy dtype.
         """
-        self._dtype = target_dtype
+        self._internal_dtype = target_dtype
         for ensemble_member in range(len(self._values)):
             for key in self._values[ensemble_member].keys():
                 self._values[ensemble_member][key] = self._values[
@@ -672,7 +669,4 @@ class Timeseries:
         """
         The path for the binary data .bin file.
         """
-        if self._dtype == np.float64:
-            return os.path.join(self._folder, self._basename + '_double.bin')
-        else:
-            return os.path.join(self._folder, self._basename + '.bin')
+        return os.path.join(self._folder, self._basename + '.bin')
