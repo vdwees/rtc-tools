@@ -8,7 +8,7 @@ model Example
   input Modelica.SIunits.Position H_sea(fixed=true);
   input Modelica.SIunits.VolumeFlowRate Q_pump(fixed=false, min=0.0, max=7.0);
   input Modelica.SIunits.VolumeFlowRate Q_orifice(fixed=false, min=0.0, max=10.0);
-  input Boolean is_downhill;
+  /*input Boolean is_downhill;*/
   output Modelica.SIunits.Position storage_level;
   output Modelica.SIunits.Position sea_level;
 equation

@@ -19,18 +19,18 @@ axarr[0].set_title('Water Level and Discharge')
 
 # Upper subplot
 axarr[0].set_ylabel('Water Level [m]')
-axarr[0].plot(results['time'], results['storage_level'], label='Storage',
+axarr[0].step(results['time'], results['storage_level'], label='Storage',
               linewidth=2, color='b')
-axarr[0].plot(results['time'], results['sea_level'], label='Sea',
+axarr[0].step(results['time'], results['sea_level'], label='Sea',
               linewidth=2, color='m')
-axarr[0].plot(results['time'], 0.5 * np.ones_like(results['time']), label='Storage Max',
+axarr[0].step(results['time'], 0.5 * np.ones_like(results['time']), label='Storage Max',
               linewidth=2, color='r', linestyle='--')
 
 # Lower Subplot
 axarr[1].set_ylabel('Flow Rate [m3/s]')
-axarr[1].plot(results['time'], results['Q_orifice'], label='Orifice',
+axarr[1].step(results['time'], results['Q_orifice'], label='Orifice',
               linewidth=2, color='g')
-axarr[1].plot(results['time'], results['Q_pump'], label='Pump',
+axarr[1].step(results['time'], results['Q_pump'], label='Pump',
               linewidth=2, color='r')
 axarr[1].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 f.autofmt_xdate()
