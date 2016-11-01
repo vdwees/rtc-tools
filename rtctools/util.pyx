@@ -53,17 +53,23 @@ def run_optimization_problem(optimization_problem_class, base_folder=None, log_l
     output_folder = os.path.join(base_folder, 'output')
 
     # Set up logging
+    logger = logging.getLogger("rtctools")
+
+    # Add pi.DiagHandler, if using PIMixin
     if issubclass(optimization_problem_class, PIMixin):
         handler = pi.DiagHandler(output_folder)
-    else:
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-        handler.setFormatter(formatter)
-    logger = logging.getLogger("rtctools")
+        logger.addHandler(handler)
+
+    # Add stream handler
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+    # Set log level
     logger.setLevel(log_level)
 
+    # Log version info
     logger.info(
         "Using RTC-Tools {}, released as open source software under the GNU General Public License.".format(__version__))
 
