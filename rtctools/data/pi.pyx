@@ -456,13 +456,13 @@ class Timeseries:
                         n_values, dtype=self._internal_dtype)
                     self._values[ensemble_member][variable].fill(np.nan)
             else:
-                evenstart_datetime = series.findall('pi:event', ns)
+                events = series.findall('pi:event', ns)
                 self._values[ensemble_member][variable] = np.empty(
                     n_values, dtype=self._internal_dtype)
                 self._values[ensemble_member][variable].fill(np.nan)
-                for i in range(min(n_values, len(evenstart_datetime))):
+                for i in range(min(n_values, len(events))):
                     self._values[ensemble_member][variable][
-                        i] = float(evenstart_datetime[i].get('value'))
+                        i] = float(events[i].get('value'))
 
             miss_val = float(header.find('pi:missVal', ns).text)
             self._values[ensemble_member][variable][self._values[
