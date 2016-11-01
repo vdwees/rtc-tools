@@ -18,8 +18,7 @@ class HomotopyMixin(OptimizationProblem):
         else:
             # Seed with previous results
             seed = {}
-            results = self.extract_results(ensemble_member)
-            for key in results.keys():
+            for key in self._results[ensemble_member].keys():
                 seed[key] = Timeseries(self.times(key), self._results[
                                        ensemble_member][key])
         return seed
@@ -29,7 +28,7 @@ class HomotopyMixin(OptimizationProblem):
 
         options = self.homotopy_options()
         parameters[options['homotopy_parameter']] = self._theta
-        
+
         return parameters
 
     def homotopy_options(self):
@@ -47,10 +46,12 @@ class HomotopyMixin(OptimizationProblem):
             logger.info("Solving with homotopy parameter theta = {}.".format(self._theta))
 
             success = super(HomotopyMixin, self).optimize()
-            if not success:
+            if success:
+                self._results = [self.extract_results(ensemble_member) for ensemble_member in range(self.ensemble_size)]
+            else:
                 if self._theta == 0.0:
                     return False
-                    
+
                 self._theta -= delta_theta
                 delta_theta /= 2
 
