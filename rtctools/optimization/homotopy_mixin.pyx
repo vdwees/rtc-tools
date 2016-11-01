@@ -36,7 +36,9 @@ class HomotopyMixin(OptimizationProblem):
                 'delta_theta_min'   : 0.01,
                 'homotopy_parameter': 'theta'}
 
-    def optimize(self):
+    def optimize(self, preprocessing=True, postprocessing=True):
+        self.pre()
+
         self._theta = 0.0 # Homotopy parameter
 
         options = self.homotopy_options()
@@ -45,19 +47,21 @@ class HomotopyMixin(OptimizationProblem):
         while self._theta <= 1.0:
             logger.info("Solving with homotopy parameter theta = {}.".format(self._theta))
 
-            success = super(HomotopyMixin, self).optimize()
+            success = super(HomotopyMixin, self).optimize(preprocessing=False, postprocessing=False)
             if success:
                 self._results = [self.extract_results(ensemble_member) for ensemble_member in range(self.ensemble_size)]
             else:
                 if self._theta == 0.0:
-                    return False
+                    break
 
                 self._theta -= delta_theta
                 delta_theta /= 2
 
                 if delta_theta < options['delta_theta_min']:
-                    return False
+                    break
 
             self._theta += delta_theta
 
-        return True
+        self.post()
+
+        return success
