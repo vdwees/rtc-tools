@@ -615,21 +615,9 @@ class Timeseries:
         """
         self._values[ensemble_member][variable] = new_values
 
-    def convert(self, target_dtype):
-        """
-        Convert the timeseries to the specified dtype (inline).
-
-        :param target_dtype: Target numpy dtype.
-        """
-        self._internal_dtype = target_dtype
-        for ensemble_member in range(len(self._values)):
-            for key in self._values[ensemble_member].keys():
-                self._values[ensemble_member][key] = self._values[
-                    ensemble_member][key].astype(target_dtype)
-
     def resize(self, start_datetime, end_datetime):
         """
-        Resize the timeseries to stretch from start_datetime to te.
+        Resize the timeseries to stretch from start_datetime to end_datetime.
 
         :param start_datetime: Start date and time.
         :param end_datetime:   End date and time.
