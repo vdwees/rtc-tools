@@ -585,19 +585,13 @@ class GoalProgrammingMixin(OptimizationProblem):
 
             if goal.target_min:
                 if isinstance(goal.target_min, Timeseries):
-                    if np.any(np.isnan(goal.target_min.values)):
+                    if np.any(np.isfinite(goal.target_min.values)) and np.any(np.isnan(goal.target_min.values)):
                         raise Exception("target_min time series contains NaN for goal {}".format(goal))
-                else:
-                    if np.isnan(goal.target_min):
-                        raise Exception("target_min is NaN")
 
             if goal.target_max:
                 if isinstance(goal.target_max, Timeseries):
-                    if np.any(np.isnan(goal.target_max.values)):
+                    if np.any(np.isfinite(goal.target_max.values)) and np.any(np.isnan(goal.target_max.values)):
                         raise Exception("target_max time series contains NaN for goal {}".format(goal))
-                else:
-                    if np.isnan(goal.target_max):
-                        raise Exception("target_max is NaN")
 
         priorities = Set([goal.priority for goal in itertools.chain(goals, path_goals)])
         for priority in sorted(priorities):
