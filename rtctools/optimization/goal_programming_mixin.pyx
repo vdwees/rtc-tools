@@ -577,9 +577,28 @@ class GoalProgrammingMixin(OptimizationProblem):
         subproblems = []
         goals = self.goals()
         path_goals = self.path_goals()
+
+        # Validate goal definitions
         for goal in itertools.chain(goals, path_goals):
             if not np.isfinite(goal.function_range[0]) or not np.isfinite(goal.function_range[1]):
                 raise Exception("No function range specified for goal {}".format(goal))
+
+            if goal.target_min:
+                if isinstance(goal.target_min, Timeseries):
+                    if np.any(np.isnan(goal.target_min.values)):
+                        raise Exception("target_min time series contains NaN for goal {}".format(goal))
+                else:
+                    if np.isnan(goal.target_min):
+                        raise Exception("target_min is NaN")
+
+            if goal.target_max:
+                if isinstance(goal.target_max, Timeseries):
+                    if np.any(np.isnan(goal.target_max.values)):
+                        raise Exception("target_max time series contains NaN for goal {}".format(goal))
+                else:
+                    if np.isnan(goal.target_max):
+                        raise Exception("target_max is NaN")
+
         priorities = Set([goal.priority for goal in itertools.chain(goals, path_goals)])
         for priority in sorted(priorities):
             subproblems.append((priority, [goal for goal in goals if goal.priority == priority], [
