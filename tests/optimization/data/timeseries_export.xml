@@ -1,0 +1,55 @@
+<pi:TimeSeries xmlns:pi="http://www.wldelft.nl/fews/PI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="http://www.wldelft.nl/fews/PI ../../xsd/pi_timeseries.xsd">
+	<pi:timeZone>0.0</pi:timeZone>
+	<pi:series>
+		<pi:header>
+			<pi:type>instantaneous</pi:type>
+			<pi:locationId>States</pi:locationId>
+			<pi:parameterId>X</pi:parameterId>
+			<pi:timeStep multiplier="3600" unit="second" />
+			<pi:startDate date="2013-05-19" time="22:00:00" />
+			<pi:forecastDate date="2013-05-19" time="22:00:00" />
+			<pi:endDate date="2013-05-20" time="19:00:00" />
+			<pi:missVal>-999.0</pi:missVal>
+			<pi:units>m3/s</pi:units>
+		</pi:header>
+	<pi:event date="2013-05-19" time="22:00:00" value="1.01999998093" /><pi:event date="2013-05-19" time="23:00:00" value="-0.000280605221713" /><pi:event date="2013-05-20" time="00:00:00" value="7.71953842401e-08" /><pi:event date="2013-05-20" time="01:00:00" value="-2.12366944281e-11" /><pi:event date="2013-05-20" time="02:00:00" value="5.84228182342e-15" /><pi:event date="2013-05-20" time="03:00:00" value="-1.60723021277e-18" /><pi:event date="2013-05-20" time="04:00:00" value="4.42154116306e-22" /><pi:event date="2013-05-20" time="05:00:00" value="-1.21637995738e-25" /><pi:event date="2013-05-20" time="06:00:00" value="3.34634933436e-29" /><pi:event date="2013-05-20" time="07:00:00" value="-8.66792448541e-33" /><pi:event date="2013-05-20" time="08:00:00" value="5.12060214558e-34" /><pi:event date="2013-05-20" time="09:00:00" value="5.30769341918e-34" /><pi:event date="2013-05-20" time="10:00:00" value="5.09529624792e-34" /><pi:event date="2013-05-20" time="11:00:00" value="4.67066327486e-34" /><pi:event date="2013-05-20" time="12:00:00" value="5.09547149685e-34" /><pi:event date="2013-05-20" time="13:00:00" value="4.10440802147e-34" /><pi:event date="2013-05-20" time="14:00:00" value="5.66188248075e-34" /><pi:event date="2013-05-20" time="15:00:00" value="5.37832641197e-34" /><pi:event date="2013-05-20" time="16:00:00" value="4.81214923276e-34" /><pi:event date="2013-05-20" time="17:00:00" value="5.37852560195e-34" /><pi:event date="2013-05-20" time="18:00:00" value="1.13172022985e-34" /><pi:event date="2013-05-20" time="19:00:00" value="2.81407653476e-36" /></pi:series>
+	<pi:series>
+		<pi:header>
+			<pi:type>instantaneous</pi:type>
+			<pi:locationId>Controls</pi:locationId>
+			<pi:parameterId>U</pi:parameterId>
+			<pi:timeStep multiplier="3600" unit="second" />
+			<pi:startDate date="2013-05-19" time="22:00:00" />
+			<pi:forecastDate date="2013-05-19" time="22:00:00" />
+			<pi:endDate date="2013-05-20" time="19:00:00" />
+			<pi:missVal>-999.0</pi:missVal>
+			<pi:units>m3/s</pi:units>
+		</pi:header>
+	<pi:event date="2013-05-19" time="22:00:00" value="0.0" /><pi:event date="2013-05-19" time="23:00:00" value="5.4210062554e-28" /><pi:event date="2013-05-20" time="00:00:00" value="-3.46944701754e-26" /><pi:event date="2013-05-20" time="01:00:00" value="1.69406591145e-21" /><pi:event date="2013-05-20" time="02:00:00" value="7.88460751872e-31" /><pi:event date="2013-05-20" time="03:00:00" value="-3.83585759762e-34" /><pi:event date="2013-05-20" time="04:00:00" value="-4.28869138979e-34" /><pi:event date="2013-05-20" time="05:00:00" value="-4.9996090718e-34" /><pi:event date="2013-05-20" time="06:00:00" value="-5.00712894832e-34" /><pi:event date="2013-05-20" time="07:00:00" value="-5.432188442e-34" /><pi:event date="2013-05-20" time="08:00:00" value="-5.14630820954e-34" /><pi:event date="2013-05-20" time="09:00:00" value="-5.36071838359e-34" /><pi:event date="2013-05-20" time="10:00:00" value="-5.14630820962e-34" /><pi:event date="2013-05-20" time="11:00:00" value="-4.71748786122e-34" /><pi:event date="2013-05-20" time="12:00:00" value="-5.14630820954e-34" /><pi:event date="2013-05-20" time="13:00:00" value="-4.14572739709e-34" /><pi:event date="2013-05-20" time="14:00:00" value="-5.71806867377e-34" /><pi:event date="2013-05-20" time="15:00:00" value="-5.43218844166e-34" /><pi:event date="2013-05-20" time="16:00:00" value="-4.86042799653e-34" /><pi:event date="2013-05-20" time="17:00:00" value="-5.4321535312e-34" /><pi:event date="2013-05-20" time="18:00:00" value="-1.14421710031e-34" /><pi:event date="2013-05-20" time="19:00:00" value="-2.87287228523e-36" /></pi:series>
+	<pi:series>
+		<pi:header>
+			<pi:type>instantaneous</pi:type>
+			<pi:locationId>Inputs</pi:locationId>
+			<pi:parameterId>I</pi:parameterId>
+			<pi:timeStep multiplier="3600" unit="second" />
+			<pi:startDate date="2013-05-19" time="22:00:00" />
+			<pi:forecastDate date="2013-05-19" time="22:00:00" />
+			<pi:endDate date="2013-05-20" time="19:00:00" />
+			<pi:missVal>-999.0</pi:missVal>
+			<pi:units>m3/s</pi:units>
+		</pi:header>
+	<pi:event date="2013-05-19" time="22:00:00" value="-999.0" /><pi:event date="2013-05-19" time="23:00:00" value="-999.0" /><pi:event date="2013-05-20" time="00:00:00" value="-999.0" /><pi:event date="2013-05-20" time="01:00:00" value="-999.0" /><pi:event date="2013-05-20" time="02:00:00" value="-999.0" /><pi:event date="2013-05-20" time="03:00:00" value="-999.0" /><pi:event date="2013-05-20" time="04:00:00" value="-999.0" /><pi:event date="2013-05-20" time="05:00:00" value="-999.0" /><pi:event date="2013-05-20" time="06:00:00" value="-999.0" /><pi:event date="2013-05-20" time="07:00:00" value="-999.0" /><pi:event date="2013-05-20" time="08:00:00" value="-999.0" /><pi:event date="2013-05-20" time="09:00:00" value="-999.0" /><pi:event date="2013-05-20" time="10:00:00" value="-999.0" /><pi:event date="2013-05-20" time="11:00:00" value="-999.0" /><pi:event date="2013-05-20" time="12:00:00" value="-999.0" /><pi:event date="2013-05-20" time="13:00:00" value="-999.0" /><pi:event date="2013-05-20" time="14:00:00" value="-999.0" /><pi:event date="2013-05-20" time="15:00:00" value="-999.0" /><pi:event date="2013-05-20" time="16:00:00" value="-999.0" /><pi:event date="2013-05-20" time="17:00:00" value="-999.0" /><pi:event date="2013-05-20" time="18:00:00" value="-999.0" /><pi:event date="2013-05-20" time="19:00:00" value="-999.0" /></pi:series>
+	<pi:series>
+		<pi:header>
+			<pi:type>instantaneous</pi:type>
+			<pi:locationId>Parameters</pi:locationId>
+			<pi:parameterId>K</pi:parameterId>
+			<pi:timeStep multiplier="3600" unit="second" />
+			<pi:startDate date="2013-05-19" time="22:00:00" />
+			<pi:forecastDate date="2013-05-19" time="22:00:00" />
+			<pi:endDate date="2013-05-20" time="19:00:00" />
+			<pi:missVal>-999.0</pi:missVal>
+			<pi:units>m3/s</pi:units>
+		</pi:header>
+	<pi:event date="2013-05-19" time="22:00:00" value="1.01" /><pi:event date="2013-05-19" time="23:00:00" value="1.01" /><pi:event date="2013-05-20" time="00:00:00" value="1.01" /><pi:event date="2013-05-20" time="01:00:00" value="1.01" /><pi:event date="2013-05-20" time="02:00:00" value="1.01" /><pi:event date="2013-05-20" time="03:00:00" value="1.01" /><pi:event date="2013-05-20" time="04:00:00" value="1.01" /><pi:event date="2013-05-20" time="05:00:00" value="1.01" /><pi:event date="2013-05-20" time="06:00:00" value="1.01" /><pi:event date="2013-05-20" time="07:00:00" value="1.01" /><pi:event date="2013-05-20" time="08:00:00" value="1.01" /><pi:event date="2013-05-20" time="09:00:00" value="1.01" /><pi:event date="2013-05-20" time="10:00:00" value="1.01" /><pi:event date="2013-05-20" time="11:00:00" value="1.01" /><pi:event date="2013-05-20" time="12:00:00" value="1.01" /><pi:event date="2013-05-20" time="13:00:00" value="1.01" /><pi:event date="2013-05-20" time="14:00:00" value="1.01" /><pi:event date="2013-05-20" time="15:00:00" value="1.01" /><pi:event date="2013-05-20" time="16:00:00" value="1.01" /><pi:event date="2013-05-20" time="17:00:00" value="1.01" /><pi:event date="2013-05-20" time="18:00:00" value="1.01" /><pi:event date="2013-05-20" time="19:00:00" value="1.01" /></pi:series>
+</pi:TimeSeries>
