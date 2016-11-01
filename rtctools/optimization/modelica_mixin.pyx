@@ -276,7 +276,11 @@ class ModelicaMixin(OptimizationProblem):
                         values.append(alias.sign * parameters[alias.name])
                         break
             [val] = substitute([attr], symbols, values)
-            return float(val)
+            if val.isConstant():
+                return float(val)
+            else:
+                deps = [val.getDep(i).getName() for i in range(val.getNdeps())]
+                raise Exception("Parameters with names {} not set.".format(deps))
 
         for sym in self._mx['states'] + self._mx['algebraics'] + self._mx['control_inputs']:
             variable = sym.getName()
