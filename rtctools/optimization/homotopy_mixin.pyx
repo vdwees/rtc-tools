@@ -24,11 +24,9 @@ class HomotopyMixin(OptimizationProblem):
     """
 
     def seed(self, ensemble_member):
-        if self._theta == 0.0:
-            seed = super(HomotopyMixin, self).seed(ensemble_member)
-        else:
-            # Seed with previous results
-            seed = {}
+        seed = super(HomotopyMixin, self).seed(ensemble_member)
+        if self._theta > 0:
+            # Add previous results to seed
             for key in self._results[ensemble_member].keys():
                 seed[key] = Timeseries(self.times(key), self._results[
                                        ensemble_member][key])
