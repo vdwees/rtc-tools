@@ -9,7 +9,12 @@ logger = logging.getLogger("rtctools")
 
 class HomotopyMixin(OptimizationProblem):
     """
-    Homotopy.
+    Adds homotopy to your optimization problem.  A homotopy is a continuous transformation between
+    two optimization problems, parametrized by a single parameter :math:`\\theta \\in [0, 1]`.
+
+    Homotopy may be used to solve non-convex optimization problems, by starting with a convex 
+    approximation at :math:`\\theta = 0.0` and ending with the non-convex problem at 
+    :math:`\\theta = 1.0`.
     """
 
     def seed(self, ensemble_member):
@@ -32,14 +37,40 @@ class HomotopyMixin(OptimizationProblem):
         return parameters
 
     def homotopy_options(self):
+        """
+        Returns a dictionary of options controlling the homotopy process.
+
+        +------------------------+------------+---------------+
+        | Option                 | Type       | Default value |
+        +========================+============+===============+
+        | ``delta_theta_0``      | ``float``  | ``1.0``       |
+        +------------------------+------------+---------------+
+        | ``delta_theta_min``    | ``float``  | ``0.01``      |
+        +------------------------+------------+---------------+
+        | ``homotopy_parameter`` | ``string`` | ``theta``     |
+        +------------------------+------------+---------------+
+
+        The homotopy process is controlled by the homotopy parameter in the model, specified
+        by the option ``homotopy_parameter``.  The homotopy parameter is initialized to ``0.0``,
+        and increases to a value of ``1.0`` with a dynamically changing step size.  This step
+        size is initialized with the value of the option ``delta_theta_0``.  If this step
+        size is too large, i.e., if the problem with the increased homotopy parameter fails to
+        converge, the step size is halved.  The process of halving terminates when the step size falls
+        below the minimum value specified by the option ``delta_theta_min``.
+
+        :returns: A dictionary of homotopy options.
+        """
+
         return {'delta_theta_0'     : 1.0,
                 'delta_theta_min'   : 0.01,
                 'homotopy_parameter': 'theta'}
 
     def optimize(self, preprocessing=True, postprocessing=True):
+        # Pre-processing
         self.pre()
 
-        self._theta = 0.0 # Homotopy parameter
+        # Homotopy loop
+        self._theta = 0.0
 
         options = self.homotopy_options()
         delta_theta = options['delta_theta_0']
@@ -62,6 +93,7 @@ class HomotopyMixin(OptimizationProblem):
 
             self._theta += delta_theta
 
+        # Post-processing
         self.post()
 
         return success
