@@ -15,6 +15,12 @@ class HomotopyMixin(OptimizationProblem):
     Homotopy may be used to solve non-convex optimization problems, by starting with a convex 
     approximation at :math:`\\theta = 0.0` and ending with the non-convex problem at 
     :math:`\\theta = 1.0`.
+
+    .. note::
+
+        It is advised to look for convex reformulations of your problem, before resorting to a use
+        of the (potentially expensive) homotopy process.
+
     """
 
     def seed(self, ensemble_member):
