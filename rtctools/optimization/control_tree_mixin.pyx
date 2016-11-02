@@ -2,7 +2,6 @@
 
 from optimization_problem import OptimizationProblem
 from timeseries import Timeseries
-from sets import Set
 from casadi import vertcat
 import numpy as np
 import logging
@@ -30,7 +29,7 @@ class ControlTreeMixin(OptimizationProblem):
         | ``k``                  | ``int``             | ``2``                 |
         +------------------------+---------------------+-----------------------+
 
-        A ``k``-ary tree is generated, branching at every interior branching time. 
+        A ``k``-ary tree is generated, branching at every interior branching time.
         Ensemble members are clustered to paths through the tree based on average
         distance over all forecast variables.
 
@@ -108,7 +107,7 @@ class ControlTreeMixin(OptimizationProblem):
 
             # Keep track of ensemble members that have not yet been allocated
             # to a new branch
-            available = Set(branches[current_branch])
+            available = set(branches[current_branch])
 
             sum_distances = [sum(distances[i, j] for j in range(
                 n_branch_members) if j != i) for i in range(n_branch_members)]

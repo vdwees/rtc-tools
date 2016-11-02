@@ -9,7 +9,6 @@ import logging
 import cython
 import uuid
 import sys
-from sets import Set
 
 from optimization_problem import OptimizationProblem
 from timeseries import Timeseries
@@ -216,7 +215,7 @@ class GoalProgrammingMixin(OptimizationProblem):
         else:
             # Seed with previous results
             seed = {}
-            epsilons = Set(map(lambda sym: sym.getName(
+            epsilons = set(map(lambda sym: sym.getName(
             ), self._subproblem_epsilons + self._subproblem_path_epsilons))
             for key in self._results[ensemble_member].keys():
                 if key in epsilons:
@@ -593,7 +592,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                     if np.any(np.isfinite(goal.target_max.values)) and np.any(np.isnan(goal.target_max.values)):
                         raise Exception("target_max time series contains NaN for goal {}".format(goal))
 
-        priorities = Set([goal.priority for goal in itertools.chain(goals, path_goals)])
+        priorities = set([goal.priority for goal in itertools.chain(goals, path_goals)])
         for priority in sorted(priorities):
             subproblems.append((priority, [goal for goal in goals if goal.priority == priority], [
                                goal for goal in path_goals if goal.priority == priority]))
