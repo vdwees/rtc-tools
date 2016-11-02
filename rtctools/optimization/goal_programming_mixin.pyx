@@ -582,6 +582,9 @@ class GoalProgrammingMixin(OptimizationProblem):
             if not np.isfinite(goal.function_range[0]) or not np.isfinite(goal.function_range[1]):
                 raise Exception("No function range specified for goal {}".format(goal))
 
+            if goal.function_nominal <= 0:
+                raise Exception("Nonpositive nominal value specified for goal {}".format(goal))
+
             if goal.target_min:
                 if isinstance(goal.target_min, Timeseries):
                     if np.any(np.isfinite(goal.target_min.values)) and np.any(np.isnan(goal.target_min.values)):
