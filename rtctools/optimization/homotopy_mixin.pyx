@@ -2,6 +2,7 @@
 
 from rtctools.optimization.optimization_problem import OptimizationProblem
 from rtctools.optimization.timeseries import Timeseries
+import itertools
 import logging
 
 logger = logging.getLogger("rtctools")
@@ -27,7 +28,8 @@ class HomotopyMixin(OptimizationProblem):
         seed = super(HomotopyMixin, self).seed(ensemble_member)
         if self._theta > 0:
             # Add previous results to seed
-            for key in self._results[ensemble_member].keys():
+            # Do not override any previously seeded non-state values, such as goal programming epsilons.
+            for key in itertools.chain(self.differentiated_states, self.algebraic_states, self.controls):
                 seed[key] = Timeseries(self.times(key), self._results[
                                        ensemble_member][key])
         return seed
