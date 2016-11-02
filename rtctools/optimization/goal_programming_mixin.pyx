@@ -628,8 +628,9 @@ class GoalProgrammingMixin(OptimizationProblem):
                     epsilon = MX.sym('eps_{}_{}'.format(i, j))
                     self._subproblem_epsilons.append(epsilon)
 
-                self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * constpow(
-                    problem.extra_variable(epsilon.getName(), ensemble_member=ensemble_member), goal.order))
+                if not goal.critical:
+                    self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * constpow(
+                        problem.extra_variable(epsilon.getName(), ensemble_member=ensemble_member), goal.order))
 
                 for ensemble_member in range(self.ensemble_size):
                     self._add_goal_constraint(
@@ -657,8 +658,9 @@ class GoalProgrammingMixin(OptimizationProblem):
                 else:
                     max_series = None
 
-                self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * sumRows(
-                    constpow(problem.state_vector(epsilon.getName(), ensemble_member=ensemble_member), goal.order)))
+                if not goal.critical:
+                    self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * sumRows(
+                        constpow(problem.state_vector(epsilon.getName(), ensemble_member=ensemble_member), goal.order)))
 
                 for ensemble_member in range(self.ensemble_size):
                     self._add_path_goal_constraint(
