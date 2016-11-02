@@ -307,6 +307,37 @@ class TestProblemPathGoalsMixed(TestProblemPathGoals):
         return [TestGoalMinU()]
 
 
+class PathGoal1Critical(Goal):
+
+    def function(self, optimization_problem, ensemble_member):
+        return optimization_problem.state('x')
+
+    function_range = (-1e1, 1e1)
+    priority = 1
+    target_min = 0.0
+    critical = True
+
+
+class TestGoalLowerUCritical(Goal):
+
+    def function(self, optimization_problem, ensemble_member):
+        return optimization_problem.integral('u', ensemble_member=ensemble_member)
+
+    function_range = (-1e1, 1e1)
+    priority = 3
+    target_min = 1e-6
+    critical = True
+
+
+class TestProblemPathGoalsMixedCritical(TestProblemPathGoals):
+
+    def path_goals(self):
+        return [PathGoal1Critical(), PathGoal2()]
+
+    def goals(self):
+        return [TestGoalLowerUCritical()]
+
+
 class TestGoalProgrammingPathGoalsMixed(TestGoalProgrammingPathGoals):
 
     def setUp(self):

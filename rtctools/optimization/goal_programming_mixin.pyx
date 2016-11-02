@@ -640,7 +640,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                 if goal.critical:
                     if not goal.has_target_bounds:
                         raise Exception("Minimization goals cannot be critical")
-                    epsilon = 0.0
+                    epsilon = np.zeros(len(self.times()))
                 else:
                     epsilon = MX.sym('path_eps_{}_{}'.format(i, j))
                     self._subproblem_path_epsilons.append(epsilon)
