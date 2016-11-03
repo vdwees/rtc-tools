@@ -8,6 +8,7 @@ import io
 import os
 import logging
 import copy
+import bisect
 
 ns = {'fews': 'http://www.wldelft.nl/fews',
       'pi': 'http://www.wldelft.nl/fews/PI'}
@@ -22,6 +23,8 @@ def _parse_time_step(el):
     # Parse a PI time step element.
     if el.get('unit') == 'second':
         return datetime.timedelta(seconds=int(el.get('multiplier')))
+    elif el.get('unit') == 'nonequidistant':
+        return None
     else:
         raise Exception('Unsupported unit type: ' + el.get('unit'))
 
@@ -409,19 +412,34 @@ class Timeseries:
                         'PI: Not all timeseries share the same forecastDate')
 
         # Define the times, and floor the global forecast_datetime to the
-        # global time step to get istart_datetime index
-        self._len = int(round(
-            (self._end_datetime - self._start_datetime).total_seconds() / self._dt.total_seconds() + 1))
-        self._times = [self._start_datetime + i *
-                       self._dt for i in range(0, self._len)]
+        # global time step to get its index
+        if self._dt:
+            self._len = int(round(
+                (self._end_datetime - self._start_datetime).total_seconds() / self._dt.total_seconds() + 1))
+            self._times = [self._start_datetime + i *
+                           self._dt for i in range(0, self._len)]
+        else: # Timeseries are non-equidistant
+            self._len = 0
+            for series in self._xml_root.findall('pi:series', ns):
+                events = series.findall('pi:event', ns)
+                # We assume that timeseries can differ in length, but always are a complete
+                # 'slice' of datetimes between start and end. The longest timeseries then
+                # containts all datetimes between start and end.
+                if len(events) > self._len:
+                    self._len = len(events)
+                    self._times = []
+                    for i in range(len(events)):
+                        self._times.append(_parse_date_time(events[i]))
+
         if self._forecast_datetime != None:
-            self._forecast_datetime = _floor_date_time(
-                dt=self._forecast_datetime, tdel=self._dt)
+            if self._dt:
+                self._forecast_datetime = _floor_date_time(
+                    dt=self._forecast_datetime, tdel=self._dt)
             try:
                 self._forecast_index = self._times.index(
                     self._forecast_datetime)
             except ValueError:
-                # This may occur if forecast_datetime is oustart_datetimeide of
+                # This may occur if forecast_datetime is outside of
                 # the timeseries' range.  Can be a valid case for historical
                 # timeseries, for instance.
                 self._forecast_index = -1
@@ -444,8 +462,11 @@ class Timeseries:
             else:
                 ensemble_member = 0
 
-            n_values = int(
-                round((end_datetime - start_datetime).total_seconds() / dt.total_seconds() + 1))
+            if self._dt:
+                n_values = int(
+                    round((end_datetime - start_datetime).total_seconds() / dt.total_seconds() + 1))
+            else:
+                n_values = len(self._times)
 
             if self._binary:
                 if f != None:
@@ -456,13 +477,13 @@ class Timeseries:
                         n_values, dtype=self._internal_dtype)
                     self._values[ensemble_member][variable].fill(np.nan)
             else:
-                evenstart_datetime = series.findall('pi:event', ns)
+                events = series.findall('pi:event', ns)
                 self._values[ensemble_member][variable] = np.empty(
                     n_values, dtype=self._internal_dtype)
                 self._values[ensemble_member][variable].fill(np.nan)
-                for i in range(min(n_values, len(evenstart_datetime))):
+                for i in range(min(n_values, len(events))):
                     self._values[ensemble_member][variable][
-                        i] = float(evenstart_datetime[i].get('value'))
+                        i] = float(events[i].get('value'))
 
             miss_val = float(header.find('pi:missVal', ns).text)
             self._values[ensemble_member][variable][self._values[
@@ -478,8 +499,13 @@ class Timeseries:
 
             # Append empty space, if end_datetime < self._end_datetime
             if end_datetime < self._end_datetime:
-                filler = np.empty(int(round(
-                    (self._end_datetime - end_datetime).total_seconds() / dt.total_seconds())), dtype=self._internal_dtype)
+                if self._dt:
+                    filler = np.empty(int(round(
+                        (self._end_datetime - end_datetime).total_seconds() / dt.total_seconds())), dtype=self._internal_dtype)
+                else:
+                    filler = np.empty(int(round(
+                        bisect.bisect_left(self._times, self._end_datetime) - bisect.bisect_left(self._times, end_datetime))), dtype=self._internal_dtype)
+
                 filler.fill(np.nan)
                 self._values[ensemble_member][variable] = np.hstack(
                     (self._values[ensemble_member][variable], filler))
@@ -520,7 +546,7 @@ class Timeseries:
                 nans = np.isnan(l)
                 l[nans] = miss_val
 
-                # Wriend_datetime output
+                # Write output
                 if self._binary:
                     f.write(l.astype(self._pi_dtype).tostring())
                 else:
@@ -535,14 +561,20 @@ class Timeseries:
 
                         # Set the value
                         events[i].set('value', str(l[i]))
-                        t += self.dt
+                        if self.dt:
+                            t += self.dt
+                        else:
+                            t = self.times[i]
                     for i in range(len(events), len(l)):
                         event = ET.Element('pi:event')
                         event.set('date', t.strftime('%Y-%m-%d'))
                         event.set('time', t.strftime('%H:%M:%S'))
                         event.set('value', str(l[i]))
                         series.append(event)
-                        t += self.dt
+                        if self.dt:
+                            t += self.dt
+                        else:
+                            t = self.times[i]
 
                 # Restore NaN
                 l[nans] = np.nan
@@ -622,8 +654,14 @@ class Timeseries:
         :param start_datetime: Start date and time.
         :param end_datetime:   End date and time.
         """
-        n_delta_s = int(round(
-            (start_datetime - self._start_datetime).total_seconds() / self._dt.total_seconds()))
+
+        if self._dt:
+            n_delta_s = int(round(
+                (start_datetime - self._start_datetime).total_seconds() / self._dt.total_seconds()))
+        else:
+            n_delta_s = bisect.bisect_left(self._times, start_datetime) - \
+                bisect.bisect_left(self._times, self._start_datetime)
+
         for ensemble_member in range(len(self._values)):
             if n_delta_s > 0:
                 for key in self._values[ensemble_member].keys():
@@ -637,8 +675,12 @@ class Timeseries:
                         (filler, self._values[ensemble_member][key]))
         self._start_datetime = start_datetime
 
-        n_delta_e = int(round(
-            (end_datetime - self._end_datetime).total_seconds() / self._dt.total_seconds()))
+        if self._dt:
+            n_delta_e = int(round(
+                (end_datetime - self._end_datetime).total_seconds() / self._dt.total_seconds()))
+        else:
+            n_delta_e = bisect.bisect_left(self._times, end_datetime) - \
+                bisect.bisect_left(self._times, self._end_datetime)
         for ensemble_member in range(len(self._values)):
             if n_delta_e > 0:
                 filler = np.empty(n_delta_e)

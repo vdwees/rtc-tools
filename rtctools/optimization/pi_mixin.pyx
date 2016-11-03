@@ -24,11 +24,12 @@ class PIMixin(OptimizationProblem):
 
     During postprocessing, a file named ``timeseries_export.xml`` is written to the ``output`` subfolder.
 
-    :cvar pi_binary_timeseries: Whether to use PI binary timeseries format.  Default is ``False``.
-    :cvar pi_parameter_group:   Group of model parameters in rtcParameterConfig files.  Default is ``parameters``.
-    :cvar pi_parameter_model:   Model ID of model parameters in rtcParameterConfig files.  Default is ``Model``.
-    :cvar pi_solver_group:      Group of solver parameters in rtcParameterConfig files.  Default is ``solver``.
-    :cvar pi_solver_model:      Model ID of solver parameters in rtcParameterConfig files.  Default is ``Solver``.
+    :cvar pi_binary_timeseries:   Whether to use PI binary timeseries format.  Default is ``False``.
+    :cvar pi_parameter_group:     Group of model parameters in rtcParameterConfig files.  Default is ``parameters``.
+    :cvar pi_parameter_model:     Model ID of model parameters in rtcParameterConfig files.  Default is ``Model``.
+    :cvar pi_solver_group:        Group of solver parameters in rtcParameterConfig files.  Default is ``solver``.
+    :cvar pi_solver_model:        Model ID of solver parameters in rtcParameterConfig files.  Default is ``Solver``.
+    :cvar pi_validate_timeseries: Check consistency of timeseries.  Default is ``true``.
     """
 
     #: Whether to use PI binary timeseries format
@@ -41,6 +42,9 @@ class PIMixin(OptimizationProblem):
     #: Location of solver parameters in rtcParameterConfig files
     pi_solver_group = 'solver'
     pi_solver_model = 'Solver'
+
+    #: Check consistency of timeseries
+    pi_validate_timeseries = True
 
     def __init__(self, **kwargs):
         # Check arguments
@@ -98,12 +102,32 @@ class PIMixin(OptimizationProblem):
         self._timeseries_import_times = self._datetime_to_sec(
             self._timeseries_import.times)
 
+        # Timestamp check
+        if self.pi_validate_timeseries:
+            for i in range(len(self._timeseries_import_times) - 1):
+                if self._timeseries_import_times[i] >= self._timeseries_import_times[i + 1]:
+                    raise Exception(
+                        'PIMixin: Time stamps must be strictly increasing.')
+
+        if self.equidistant:
+            # Check if the timeseries are truly equidistant
+            if self.pi_validate_timeseries:
+                dt = self._timeseries_import_times[
+                    1] - self._timeseries_import_times[0]
+                for i in range(len(self._timeseries_import_times) - 1):
+                    if self._timeseries_import_times[i + 1] - self._timeseries_import_times[i] != dt:
+                        raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set equidistant=False if this is intended.'.format(
+                            self._timeseries_import.times[i + 1]))
+
     def times(self, variable=None):
         return self._timeseries_import_times[self._timeseries_import.forecast_index:]
 
     @property
     def equidistant(self):
-        return True
+        if self._timeseries_import._dt:
+            return True
+        else:
+            return False
 
     def solver_options(self):
         # Call parent
