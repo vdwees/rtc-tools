@@ -37,16 +37,10 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
     :param profile_casadi:             Whether or not to enable CasADi profiling.
     """
 
-    if base_folder == None:
-        # Check command line arguments
-        if len(sys.argv) != 2:
-            raise Exception("Usage: {} BASE_FOLDER".format(sys.argv[0]))
 
-        base_folder = sys.argv[1]
-    else:
-        if not os.path.isabs(base_folder):
-            # Resolve base folder relative to script folder
-            base_folder = os.path.join(sys.path[0], base_folder)
+    if not os.path.isabs(base_folder):
+        # Resolve base folder relative to script folder
+        base_folder = os.path.join(sys.path[0], base_folder)
 
     model_folder = os.path.join(base_folder, 'model')
     input_folder = os.path.join(base_folder, 'input')
