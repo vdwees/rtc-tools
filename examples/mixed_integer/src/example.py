@@ -65,4 +65,4 @@ class Example(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
         return options
 
 # Run
-run_optimization_problem(Example)
+run_optimization_problem(Example, base_folder='..')

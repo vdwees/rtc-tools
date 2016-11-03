@@ -23,4 +23,4 @@ class Example(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
         return constraints
 
 # Run
-run_optimization_problem(Example)
+run_optimization_problem(Example, base_folder='..')

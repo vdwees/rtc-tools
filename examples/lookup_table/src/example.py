@@ -116,4 +116,4 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
         return options
 
 # Run
-run_optimization_problem(Example)
+run_optimization_problem(Example, base_folder='..')

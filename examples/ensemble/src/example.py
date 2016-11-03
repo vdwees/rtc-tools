@@ -131,4 +131,4 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
         return options
 
 # Run
-run_optimization_problem(Example)
+run_optimization_problem(Example, base_folder='..')
