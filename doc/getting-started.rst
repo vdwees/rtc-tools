@@ -146,7 +146,7 @@ executable, the RTC-Tools Shell can be started by clicking::
 Once you have started the shell, navigate to the ``src`` directory of the case
 you wish to optimize, e.g.::
 
-    cd \path\to\rtc-tools\examples\basic\src
+    cd \path\to\RTCTools2\examples\basic\src
 
 Then, to run the case with RTC-Tools, run the ``src`` python script, e.g.::
 
