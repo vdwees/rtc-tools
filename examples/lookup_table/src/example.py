@@ -64,7 +64,7 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
 
         # Q_in is a varying input and is defined in timeseries_import.csv
         # However, if we set it again here, it will be added to the output file
-        self.set_timeseries('Q_in',self.get_timeseries('Q_in'))
+        self.set_timeseries('Q_in', self.get_timeseries('Q_in'))
 
         # Convert our water level constraints into volume constraints
         self.set_timeseries('V_max',
@@ -116,4 +116,4 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
         return options
 
 # Run
-run_optimization_problem(Example, base_folder='..')
+run_optimization_problem(Example)

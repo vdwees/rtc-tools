@@ -92,7 +92,7 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
             (((self.state('Q_orifice') / (w * C * d)) ** 2) / (2 * g) +
              self.state('orifice.HQDown.H') - self.state('orifice.HQUp.H') -
              M * (1 - self.state('is_downhill')),
-            -inf, 0.0))
+             -inf, 0.0))
 
         return constraints
 
@@ -145,4 +145,4 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
         return options
 
 # Run
-run_optimization_problem(Example, base_folder='..')
+run_optimization_problem(Example)

@@ -96,7 +96,7 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
         # end of our run.
         for e_m in range(self.ensemble_size):
             results = self.extract_results(e_m)
-            self.set_timeseries('V_storage',  results['storage.V'], ensemble_member=e_m)
+            self.set_timeseries('V_storage', results['storage.V'], ensemble_member=e_m)
 
             _max = self.get_timeseries('V_max', ensemble_member=e_m).values
             _min = self.get_timeseries('V_min', ensemble_member=e_m).values
@@ -131,4 +131,4 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
         return options
 
 # Run
-run_optimization_problem(Example, base_folder='..')
+run_optimization_problem(Example)
