@@ -86,6 +86,16 @@ The python script consists of the following blocks:
 
 * A run statement
 
+Importing Packages
+''''''''''''''''''
+
+For this example, the import block is as follows:
+
+.. literalinclude:: ../../examples/ensemble/src/example.py
+  :language: python
+  :lines: 1-10
+  :lineno-match:
+
 Declaring Goals
 '''''''''''''''
 
@@ -105,16 +115,6 @@ goal has a lower priority.
   :pyobject: MinimizeQreleaseGoal
   :lineno-match:
 
-Importing Packages
-''''''''''''''''''
-
-For this example, the import block is as follows:
-
-.. literalinclude:: ../../examples/ensemble/src/example.py
-  :language: python
-  :lines: 1-11
-  :lineno-match:
-
 Optimization Problem
 ''''''''''''''''''''
 
@@ -131,7 +131,7 @@ We turn on ensemble mode by setting ``csv_ensemble_mode = True``:
 
 .. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
-  :lines: 50-51
+  :lines: 49-50
   :lineno-match:
 
 The method ``pre()`` is already defined in RTC-Tools, but we would like to add

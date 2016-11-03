@@ -51,6 +51,16 @@ The python script consists of the following blocks:
 
 * A run statement
 
+Importing Packages
+''''''''''''''''''
+
+For this example, the import block is as follows:
+
+.. literalinclude:: ../../examples/lookup_table/src/example.py
+  :language: python
+  :lines: 1-9
+  :lineno-match:
+
 Declaring Goals
 '''''''''''''''
 
@@ -78,16 +88,6 @@ goal has a lower priority.
 .. literalinclude:: ../../examples/lookup_table/src/example.py
   :language: python
   :pyobject: MinimizeQreleaseGoal
-  :lineno-match:
-
-Importing Packages
-''''''''''''''''''
-
-For this example, the import block is as follows:
-
-.. literalinclude:: ../../examples/lookup_table/src/example.py
-  :language: python
-  :lines: 1-10
   :lineno-match:
 
 Optimization Problem

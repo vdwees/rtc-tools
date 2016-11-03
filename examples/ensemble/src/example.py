@@ -7,7 +7,6 @@ from rtctools.optimization.csv_mixin import CSVMixin
 from rtctools.optimization.control_tree_mixin import ControlTreeMixin
 from rtctools.optimization.csv_lookup_table_mixin import CSVLookupTableMixin
 from rtctools.util import run_optimization_problem
-from rtctools.optimization.timeseries import Timeseries
 import numpy as np
 
 
