@@ -17,7 +17,7 @@ does not want to end up with too much water at the end of the six days. They
 have chosen to use RTC-Tools to calculate how much water to release and when
 to release it.
 
-The folder ``<installation directory>\RTCTools2\examples\basic``
+The folder ``rtc-tools\examples\basic``
 contains a complete RTC-Tools optimization problem. An RTC-Tools
 directory has the following structure:
 
@@ -189,10 +189,10 @@ All together, the whole example script is as follows:
 Running RTC-Tools
 -----------------
 
-To run this basic example in RTC-Tools, navigate to the ``<installation
-directory>\RTCTools2\examples\basic\src`` directory in the RTC-Tools shell and
-run the example using ``python example.py``. For more details about using
-RTC-Tools, see :ref:`running-rtc-tools`.
+To run this basic example in RTC-Tools, navigate to the basic example ``src``
+directory in the RTC-Tools shell and run the example using ``python
+example.py``. For more details about using RTC-Tools, see
+:ref:`running-rtc-tools`.
 
 Extracting Results
 ------------------
