@@ -29,7 +29,7 @@ only when necessary.
 The model can be viewed and editied using the OpenModelica Connection Editor
 program. First load the Deltares library into OpenModelica Connection Editor,
 and then load the example model, located at
-``rtc-tools\examples\mixed_integer\model\Example.mo``. The model ``Example.mo``
+``RTCTools2\examples\mixed_integer\model\Example.mo``. The model ``Example.mo``
 represents a simple water system with the following elements:
 
 * a canal segment, modelled as storage element

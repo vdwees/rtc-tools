@@ -17,7 +17,7 @@ does not want to end up with too much water at the end of the six days. They
 have chosen to use RTC-Tools to calculate how much water to release and when
 to release it.
 
-The folder ``rtc-tools\examples\basic``
+The folder ``RTCTools2\examples\basic``
 contains a complete RTC-Tools optimization problem. An RTC-Tools
 directory has the following structure:
 
@@ -40,13 +40,12 @@ program. Make sure to load the Deltares libray before loading the example:
 #. Load the Deltares library into OpenModelica Conection Editor
 
    * Using the menu bar: *File -> Open Model/Library File(s)*
-   * Select ``<installation directory>\RTCTools2\mo\Deltares\package.mo``
+   * Select ``RTCTools2\mo\Deltares\package.mo``
 
 #. Load the example model into OpenModelica Conection Editor
 
    * Using the menu bar: *File -> Open Model/Library File(s)*
-   * Select ``<installation
-     directory>\RTCTools2\examples\basic\model\Example.mo``
+   * Select ``RTCTools2\examples\basic\model\Example.mo``
 
 Once loaded, we have an OpenModelica Connection Editor window that looks like
 this:
