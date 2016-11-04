@@ -29,7 +29,7 @@ class PIMixin(OptimizationProblem):
     :cvar pi_parameter_model:     Model ID of model parameters in rtcParameterConfig files.  Default is ``Model``.
     :cvar pi_solver_group:        Group of solver parameters in rtcParameterConfig files.  Default is ``solver``.
     :cvar pi_solver_model:        Model ID of solver parameters in rtcParameterConfig files.  Default is ``Solver``.
-    :cvar pi_validate_timeseries: Check consistency of timeseries.  Default is ``true``.
+    :cvar pi_validate_timeseries: Check consistency of timeseries.  Default is ``True``.
     """
 
     #: Whether to use PI binary timeseries format
@@ -90,13 +90,13 @@ class PIMixin(OptimizationProblem):
 
         try:
             self._timeseries_import = pi.Timeseries(
-                self._data_config, self._input_folder, basename_import, binary=self.pi_binary_timeseries)
+                self._data_config, self._input_folder, basename_import, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
         except IOError:
             raise Exception("PI: {}.xml not found in {}.".format(
                 basename_import, self._input_folder))
 
         self._timeseries_export = pi.Timeseries(
-            self._data_config, self._output_folder, basename_export, binary=self.pi_binary_timeseries)
+            self._data_config, self._output_folder, basename_export, binary=self.pi_binary_timeseries, pi_validate_times=False)
 
         # Convert timeseries timestamps to seconds since t0 for internal use
         self._timeseries_import_times = self._datetime_to_sec(
@@ -116,7 +116,7 @@ class PIMixin(OptimizationProblem):
                     1] - self._timeseries_import_times[0]
                 for i in range(len(self._timeseries_import_times) - 1):
                     if self._timeseries_import_times[i + 1] - self._timeseries_import_times[i] != dt:
-                        raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set equidistant=False if this is intended.'.format(
+                        raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
                             self._timeseries_import.times[i + 1]))
 
     def times(self, variable=None):
@@ -264,6 +264,14 @@ class PIMixin(OptimizationProblem):
         super(PIMixin, self).post()
 
         # Write output
+        if not self.equidistant:
+            # Overrule/write the time range in the export placeholder.
+            # Only needed for non-equidistant, because we can't build the
+            # times automatically from global start/end datetime.
+            self._timeseries_export.times           = self._timeseries_import.times
+            self._timeseries_export._start_datetime = self._timeseries_import._start_datetime
+            self._timeseries_export._end_datetime   = self._timeseries_import._end_datetime
+
         self._timeseries_export.resize(
             self._timeseries_import.forecast_datetime, self._timeseries_import.end_datetime)
 
@@ -345,7 +353,7 @@ class PIMixin(OptimizationProblem):
         :param variable: Variable name
         """
         return '_'.join((variable, 'Min'))
-        
+
     def max_timeseries_id(self, variable):
         """
         Returns the name of the upper bound timeseries for the specified variable.
