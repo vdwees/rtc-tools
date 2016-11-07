@@ -3,7 +3,7 @@ from test_case import TestCase
 
 from rtctools.optimization.optimization_problem import OptimizationProblem
 from rtctools.optimization.collocated_integrated_optimization_problem import CollocatedIntegratedOptimizationProblem
-from rtctools.optimization.goal_programming_mixin import GoalProgrammingMixin, Goal
+from rtctools.optimization.goal_programming_mixin import GoalProgrammingMixin, Goal, StateGoal
 from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.timeseries import Timeseries
 from casadi import MX, MXFunction
@@ -415,6 +415,68 @@ class TestGoalProgrammingSmoothing(TestCase):
 
     def setUp(self):
         self.problem = TestProblemPathGoalsSmoothing()
+        self.problem.optimize()
+        self.tolerance = 1e-6
+
+    def test_x(self):
+        value_tol = 1e-3
+        for x in self.problem.extract_results()['x']:
+            self.assertAlmostGreaterThan(x, 0.0, value_tol)
+            self.assertAlmostLessThan(x, 1.1, value_tol)
+
+
+class StateGoal1(StateGoal):
+
+    state = 'x'
+    priority = 1
+    target_min = 0.0
+
+
+class StateGoal2(StateGoal):
+
+    state = 'x'
+    priority = 2
+    target_max = Timeseries(np.linspace(0.0, 1.0, 21), 21 * [1.0])
+
+
+class StateGoal3(StateGoal):
+
+    state = 'u'
+    priority = 3
+
+
+class TestProblemStateGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
+
+    def __init__(self):
+        super(TestProblemStateGoals, self).__init__(input_folder=data_path(
+        ), output_folder=data_path(), model_name='TestModelWithInitial', model_folder=data_path())
+
+    def times(self, variable=None):
+        # Collocation points
+        return np.linspace(0.0, 1.0, 21)
+
+    def delayed_feedback(self):
+        # Delayed feedback
+        return [('x', 'x_delayed', 0.1)]
+
+    def constant_inputs(self, ensemble_member):
+        # Constant inputs
+        return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
+
+    def bounds(self):
+        bounds = super(TestProblemStateGoals, self).bounds()
+        bounds['u'] = (-2.0, 2.0)
+        bounds['x'] = (-10, 10)
+        return bounds
+
+    def path_goals(self):
+        return [StateGoal1(self), StateGoal2(self), StateGoal3(self)]
+
+
+class TestGoalProgrammingStateGoals(TestCase):
+
+    def setUp(self):
+        self.problem = TestProblemStateGoals()
         self.problem.optimize()
         self.tolerance = 1e-6
 

@@ -179,6 +179,76 @@ class Goal(object):
         return '{}(priority={}, target_min={}, target_max={})'.format(self.__class__, self.priority, self.target_min, self.target_max)
 
 
+class StateGoal(Goal):
+    """
+    Base class for lexicographic goal programming path goals that act on a single model state.
+
+    A state goal is defined by setting at least the ``state`` class variable.
+
+    :cvar state:            State on which the goal acts.  *Required*.
+    :cvar target_min:       Desired lower bound for goal function.  Default is ``numpy.nan``.
+    :cvar target_max:       Desired upper bound for goal function.  Default is ``numpy.nan``.
+    :cvar priority:         Integer priority of goal.  Default is ``1``.
+    :cvar weight:           Optional weighting applied to the goal.  Default is ``1.0``.
+    :cvar order:            Penalization order of goal violation.  Default is ``2``.
+    :cvar critical:         If ``True``, the algorithm will abort if this goal cannot be fully met.  Default is ``False``.
+
+    Example definition of the goal :math:`x(t) \geq 1.1` for all :math:`t` at priority 2::
+
+        class MyStateGoal(StateGoal):
+            state = 'x'
+            target_min = 1.1
+            priority = 2
+
+    Contrary to ordinary ``Goal`` objects, ``PathGoal`` objects need to be initialized with an
+    ``OptimizationProblem`` instance to allow extraction of state metadata, such as bounds and
+    nominal values.  Consequently, state goals must be instantiated as follows::
+
+        my_state_goal = MyStateGoal(optimization_problem)
+
+    Note that ``StateGoal`` is a helper class.  State goals can also be defined using ``Goal`` as direct base class,
+    by implementing the ``function`` method and providing the ``function_range`` and ``function_nominal``
+    class variables manually.
+
+    """
+
+    #: The state on which the goal acts.
+    state = None
+
+    def __init__(self, optimization_problem):
+        """
+        Initialize the state goal object.
+
+        :param optimization_problem: ``OptimizationProblem`` instance.
+        """
+
+        # Check whether a state has been specified
+        if self.state is None:
+            raise Exception('Please specify a state.')
+
+        # Extract state range from model
+        try:
+            self.function_range = optimization_problem.bounds()[self.state] 
+        except KeyError:
+            self.function_range = (None, None)
+        if self.function_range[0] is None:
+            raise Exception('Please provide a lower bound for state {}.'.format(self.state))
+        if self.function_range[1] is None:
+            raise Exception('Please provide an upper bound for state {}.'.format(self.state))
+
+        # Extract state nominal from model
+        self.function_nominal = optimization_problem.variable_nominal(self.state)
+
+        # Set dependency key
+        self.dependency_key = self.state
+
+    def function(self, optimization_problem, ensemble_member):
+        return optimization_problem.state(self.state)
+
+    def __repr__(self):
+        return '{}(priority={}, state={}, target_min={}, target_max={})'.format(self.__class__, self.priority, self.state, self.target_min, self.target_max)
+
+
 class GoalProgrammingMixin(OptimizationProblem):
     """
     Adds lexicographic goal programming to your optimization problem.
@@ -193,6 +263,19 @@ class GoalProgrammingMixin(OptimizationProblem):
             self.function = function
             self.min = min
             self.max = max
+
+    def __init__(self, **kwargs):
+        # Call parent class first for default behaviour.
+        super(GoalProgrammingMixin, self).__init__(**kwargs)
+
+        # Initialize empty lists, so that the overridden methods may be called outside of the goal programming loop,
+        # for example in pre().
+        self._subproblem_epsilons = []
+        self._subproblem_path_epsilons = []
+        self._subproblem_path_timeseries = []
+        self._subproblem_objectives = []
+        self._subproblem_constraints = []
+        self._subproblem_path_constraints = []
 
     @property
     def extra_variables(self):
