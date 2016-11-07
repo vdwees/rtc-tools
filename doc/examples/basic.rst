@@ -45,8 +45,7 @@ program. Make sure to load the Deltares libray before loading the example:
 #. Load the example model into OpenModelica Conection Editor
 
    * Using the menu bar: *File -> Open Model/Library File(s)*
-   * Select ``<installation
-     directory>\RTCTools2\examples\basic\model\Example.mo``
+   * Select ``<installation directory>\RTCTools2\examples\basic\model\Example.mo``
 
 Once loaded, we have an OpenModelica Connection Editor window that looks like
 this:
@@ -187,17 +186,17 @@ All together, the whole example script is as follows:
   :lineno-match:
 
 Running RTC-Tools
----------------------
+-----------------
 
-TODO:
-
-* An explaination of how to run RTC-Tools goes here.
-* So does a description of the terminal output
+To run this basic example in RTC-Tools, navigate to the basic example ``src``
+directory in the RTC-Tools shell and run the example using ``python
+example.py``. For more details about using RTC-Tools, see
+:ref:`running-rtc-tools`.
 
 Extracting Results
 ------------------
 
-The results from the run are found in ``output/timeseries_export.csv``. Any
+The results from the run are found in ``output\timeseries_export.csv``. Any
 CSV-reading software can import it, but this is what the results look like when
 plotted in Microsoft Excel:
 

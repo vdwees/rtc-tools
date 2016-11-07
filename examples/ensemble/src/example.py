@@ -7,7 +7,6 @@ from rtctools.optimization.csv_mixin import CSVMixin
 from rtctools.optimization.control_tree_mixin import ControlTreeMixin
 from rtctools.optimization.csv_lookup_table_mixin import CSVLookupTableMixin
 from rtctools.util import run_optimization_problem
-from rtctools.optimization.timeseries import Timeseries
 import numpy as np
 
 
@@ -97,7 +96,7 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
         # end of our run.
         for e_m in range(self.ensemble_size):
             results = self.extract_results(e_m)
-            self.set_timeseries('V_storage',  results['storage.V'], ensemble_member=e_m)
+            self.set_timeseries('V_storage', results['storage.V'], ensemble_member=e_m)
 
             _max = self.get_timeseries('V_max', ensemble_member=e_m).values
             _min = self.get_timeseries('V_min', ensemble_member=e_m).values

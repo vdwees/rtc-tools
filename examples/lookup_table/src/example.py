@@ -6,7 +6,6 @@ from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.csv_mixin import CSVMixin
 from rtctools.optimization.csv_lookup_table_mixin import CSVLookupTableMixin
 from rtctools.util import run_optimization_problem
-from rtctools.optimization.timeseries import Timeseries
 import numpy as np
 
 class WaterVolumeRangeGoal(Goal):
@@ -65,7 +64,7 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
 
         # Q_in is a varying input and is defined in timeseries_import.csv
         # However, if we set it again here, it will be added to the output file
-        self.set_timeseries('Q_in',self.get_timeseries('Q_in'))
+        self.set_timeseries('Q_in', self.get_timeseries('Q_in'))
 
         # Convert our water level constraints into volume constraints
         self.set_timeseries('V_max',

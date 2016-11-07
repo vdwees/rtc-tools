@@ -1,3 +1,6 @@
+Getting Started
++++++++++++++++
+
 Installation
 ============
 
@@ -126,3 +129,32 @@ Deltares Modelica library remains for the user to set::
     C:\path\to\JModelica\Python.bat example.py
 
 .. _Deltares Download Portal: https://download.deltares.nl/en/download/rtc-tools/
+
+
+.. _running-rtc-tools:
+
+Running RTC-Tools
+=================
+
+
+RTC-Tools is run from a command line shell. If you installed using the Windows
+executable, the RTC-Tools Shell can be started by clicking::
+
+    Start -> Programs -> RTC-Tools -> Shell
+
+
+Once you have started the shell, navigate to the ``src`` directory of the case
+you wish to optimize, e.g.::
+
+    cd \path\to\RTCTools2\examples\basic\src
+
+Then, to run the case with RTC-Tools, run the ``src`` python script, e.g.::
+
+    python example.py
+
+You will see the progress of RTC-Tools in your shell. All your standard shell
+commands can be used in the RTC-Tools shell. For example, you can use::
+
+    python example.py > log.txt
+
+to pipe RTC-Tools output to a log file.

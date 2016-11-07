@@ -19,7 +19,7 @@ from optimization.pi_mixin import PIMixin
 from . import __version__
 
 
-def run_optimization_problem(optimization_problem_class, base_folder=None, log_level=logging.INFO, profile=False, profile_casadi=False):
+def run_optimization_problem(optimization_problem_class, base_folder='..', log_level=logging.INFO, profile=False, profile_casadi=False):
     """
     Sets up and solves an optimization problem.
 
@@ -37,16 +37,10 @@ def run_optimization_problem(optimization_problem_class, base_folder=None, log_l
     :param profile_casadi:             Whether or not to enable CasADi profiling.
     """
 
-    if base_folder == None:
-        # Check command line arguments
-        if len(sys.argv) != 2:
-            raise Exception("Usage: {} BASE_FOLDER".format(sys.argv[0]))
 
-        base_folder = sys.argv[1]
-    else:
-        if not os.path.isabs(base_folder):
-            # Resolve base folder relative to script folder
-            base_folder = os.path.join(sys.path[0], base_folder)
+    if not os.path.isabs(base_folder):
+        # Resolve base folder relative to script folder
+        base_folder = os.path.join(sys.path[0], base_folder)
 
     model_folder = os.path.join(base_folder, 'model')
     input_folder = os.path.join(base_folder, 'input')
@@ -92,7 +86,7 @@ def run_optimization_problem(optimization_problem_class, base_folder=None, log_l
             filename = os.path.join(base_folder, "profile.prof")
 
             cProfile.runctx("prob.optimize()", globals(), locals(), filename)
-            
+
             s = pstats.Stats(filename)
             s.strip_dirs().sort_stats("time").print_stats()
         else:
