@@ -1,25 +1,22 @@
 from rtctools.optimization.collocated_integrated_optimization_problem \
     import CollocatedIntegratedOptimizationProblem
 from rtctools.optimization.goal_programming_mixin \
-    import GoalProgrammingMixin, Goal
+    import GoalProgrammingMixin, Goal, StateGoal
 from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.csv_mixin import CSVMixin
 from rtctools.util import run_optimization_problem
 from numpy import inf
 
 
-class WaterLevelRangeGoal(Goal):
-    # Applying a goal to every time step is easily done by returning the
-    # optimization_problem.state('var') method and then passing the goal using
-    # the path_goals() method. Note that each timestep is implemented as an
-    # independant goal- if we cannot satisfy our min/max on time step A, it will
-    # not affect our desire to satisfy the goal at time step B.
-    def function(self, optimization_problem, ensemble_member):
-        return optimization_problem.state('storage.HQ.H')
-
-    # Enclosure of the function range.
-    function_range = (0, 0.5)
-
+class WaterLevelRangeGoal(StateGoal):
+    # Applying a state goal to every time step is easily done by defining a goal
+    # that inherits StateGoal. StateGoal is a helper class that uses the state
+    # to determine the function, function range, and function nominal
+    # automatically. This type of goal can only be used with the path_goals()
+    # method. Note that each timestep is implemented as an independant goal- if
+    # we cannot satisfy our min/max on time step A, it will not affect our
+    # desire to satisfy the goal at time step B.
+    state = 'storage.HQ.H'
     # One goal can introduce a single or two constraints (min and/or max). Our
     # target water level range is 0.43 - 0.44. We might not always be able to
     # realize this, but we want to try.
@@ -32,14 +29,18 @@ class WaterLevelRangeGoal(Goal):
 
 
 class MinimizeQpumpGoal(Goal):
-    # If we do not specify any minimum or maximum value in this class, the
-    # goal programming mixin will try to minimize the following function.
+    # This goal does not use a helper class, so we have to define the function
+    # method, range and nominal explicitly. We do not specify a target_min or
+    # target_max in this class, so the goal programming mixin will try to
+    # minimize the expression returned by the function method.
     def function(self, optimization_problem, ensemble_member):
         return optimization_problem.integral('Q_pump')
 
     # Every goal needs a rough (over)estimate (enclosure) of the range of the
-    # function defined above.
+    # function defined above. The nominal is used to scale the value returned by
+    # the function method so that the value is on the order of 1.
     function_range = (0, 540000.0)
+    function_nominal = 1.0
     # The lower the number returned by this function, the higher the priority.
     priority = 2
     # The penalty variable is taken to the order'th power.
@@ -48,10 +49,13 @@ class MinimizeQpumpGoal(Goal):
 
 class MinimizeChangeInQpumpGoal(Goal):
     # To reduce pump power cycles, we add a third goal to minimize changes in
-    # Q_pump.
+    # Q_pump. This will be passed into the optimization problem as a path goal
+    # because it is an an individual goal that should be applied at every time
+    # step.
     def function(self, optimization_problem, ensemble_member):
         return optimization_problem.der('Q_pump')
     function_range = (-10.0, 10.0)
+    function_nominal = 5.0
     priority = 3
     order = 2
 
@@ -102,7 +106,7 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
     def path_goals(self):
         # Sorting goals on priority is done in the goal programming mixin. We
         # do not have to worry about order here.
-        return [WaterLevelRangeGoal(), MinimizeChangeInQpumpGoal()]
+        return [WaterLevelRangeGoal(self), MinimizeChangeInQpumpGoal()]
 
     def priority_completed(self, priority):
         # We want to show that the results of our highest priority goal (water

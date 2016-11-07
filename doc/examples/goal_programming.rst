@@ -91,10 +91,13 @@ Declaring Goals
 '''''''''''''''
 
 Goals are defined as classes that inherit the ``Goal`` parent class. The
-components of goals can be found in :doc:`../optimization/multi_objective`.
+components of goals can be found in :doc:`../optimization/multi_objective`. In
+this example, we show three ways to define a goal in RTC-Tools.
 
 First, we have a high priority goal to keep the water level within a minimum and
-maximum:
+maximum. Since we are applying this goal to a specific state (model variable) in
+our model at every time step, we can use a special helper class to define this
+goal, called a ``StateGoal``:
 
 .. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
