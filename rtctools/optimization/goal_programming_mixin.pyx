@@ -228,9 +228,18 @@ class StateGoal(Goal):
 
         # Extract state range from model
         try:
-            self.function_range = optimization_problem.bounds()[self.state] 
+            self.function_range = optimization_problem.bounds()[self.state]
         except KeyError:
-            self.function_range = (None, None)
+            # If KeyError, check the variable the state is aliased to for bounds
+            found = False
+            for variable, aliases in optimization_problem._aliases.iteritems():
+                if self.state in [alias.name for alias in aliases]:
+                    self.function_range = optimization_problem.bounds()[variable]
+                    found = True
+                    break
+            if not found:
+                raise Exception('State {} has no bounds or does not exist in the model.'.format(self.state))
+
         if self.function_range[0] is None:
             raise Exception('Please provide a lower bound for state {}.'.format(self.state))
         if self.function_range[1] is None:
