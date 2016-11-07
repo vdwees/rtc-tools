@@ -8,6 +8,7 @@ import io
 import os
 import logging
 import copy
+import bisect
 
 ns = {'fews': 'http://www.wldelft.nl/fews',
       'pi': 'http://www.wldelft.nl/fews/PI'}
@@ -22,6 +23,8 @@ def _parse_time_step(el):
     # Parse a PI time step element.
     if el.get('unit') == 'second':
         return datetime.timedelta(seconds=int(el.get('multiplier')))
+    elif el.get('unit') == 'nonequidistant':
+        return None
     else:
         raise Exception('Unsupported unit type: ' + el.get('unit'))
 
@@ -319,14 +322,15 @@ class Timeseries:
     PI timeseries wrapper.
     """
 
-    def __init__(self, data_config, folder, basename, binary=True):
+    def __init__(self, data_config, folder, basename, binary=True, pi_validate_times=False):
         """
         Load the timeseries from disk.
 
-        :param data_config:      A :class:`DataConfig` object.
-        :param folder:           The folder in which the time series is located.
-        :param basename:         The basename of the time series file.
-        :param binary:           True if the time series data is stored in a separate binary file.
+        :param data_config:             A :class:`DataConfig` object.
+        :param folder:                  The folder in which the time series is located.
+        :param basename:                The basename of the time series file.
+        :param binary:                  True if the time series data is stored in a separate binary file.
+        :param pi_validate_times        Check consistency of times.  Default is ``False``.
         """
         self._data_config = data_config
 
@@ -370,7 +374,7 @@ class Timeseries:
             else:
                 if dt != self._dt:
                     raise Exception(
-                        'PI: Not all timeseries share the same time step size')
+                        'PI: Not all timeseries have the same time step size.')
             try:
                 start_datetime = _parse_date_time(
                     header.find('pi:startDate', ns))
@@ -397,8 +401,8 @@ class Timeseries:
             el = header.find('pi:forecastDate', ns)
             if el != None:
                 forecast_datetime = _parse_date_time(el)
-            # the timeseries has no forecastDate, so the forecastDaend_datetime
-            # is set to the startDaend_datetime (per the PI-schema)
+            # the timeseries has no forecastDate, so the forecastDate
+            # is set to the startDate (per the PI-schema)
             else:
                 forecast_datetime = start_datetime
             if self._forecast_datetime == None:
@@ -406,22 +410,43 @@ class Timeseries:
             else:
                 if forecast_datetime != self._forecast_datetime:
                     raise Exception(
-                        'PI: Not all timeseries share the same forecastDate')
+                        'PI: Not all timeseries share the same forecastDate.')
 
         # Define the times, and floor the global forecast_datetime to the
-        # global time step to get istart_datetime index
-        self._len = int(round(
-            (self._end_datetime - self._start_datetime).total_seconds() / self._dt.total_seconds() + 1))
-        self._times = [self._start_datetime + i *
-                       self._dt for i in range(0, self._len)]
+        # global time step to get its index
+        if self._dt:
+            t_len = int(round(
+                (self._end_datetime - self._start_datetime).total_seconds() / self._dt.total_seconds() + 1))
+            self._times = [self._start_datetime + i *
+                           self._dt for i in range(0, t_len)]
+        else: # Timeseries are non-equidistant
+            self._times = []
+            for series in self._xml_root.findall('pi:series', ns):
+                events = series.findall('pi:event', ns)
+                # We assume that timeseries can differ in length, but always are
+                # a complete 'slice' of datetimes between start and end. The
+                # longest timeseries then contains all datetimes between start and end.
+                if len(events) > len(self._times):
+                    self._times = [_parse_date_time(e) for e in events]
+
+        # Check if the time steps of all series match the time steps of the global
+        # time range.
+        if pi_validate_times:
+            for series in self._xml_root.findall('pi:series', ns):
+                events = series.findall('pi:event', ns)
+                times = [_parse_date_time(e) for e in events]
+                if not set(self._times).issuperset(set(times)):
+                    raise Exception('PI: Not all timeseries share the same time step spacing. Make sure the time steps of all series are a subset of the global time steps.')
+
         if self._forecast_datetime != None:
-            self._forecast_datetime = _floor_date_time(
-                dt=self._forecast_datetime, tdel=self._dt)
+            if self._dt:
+                self._forecast_datetime = _floor_date_time(
+                    dt=self._forecast_datetime, tdel=self._dt)
             try:
                 self._forecast_index = self._times.index(
                     self._forecast_datetime)
             except ValueError:
-                # This may occur if forecast_datetime is oustart_datetimeide of
+                # This may occur if forecast_datetime is outside of
                 # the timeseries' range.  Can be a valid case for historical
                 # timeseries, for instance.
                 self._forecast_index = -1
@@ -444,8 +469,11 @@ class Timeseries:
             else:
                 ensemble_member = 0
 
-            n_values = int(
-                round((end_datetime - start_datetime).total_seconds() / dt.total_seconds() + 1))
+            if self._dt:
+                n_values = int(
+                    round((end_datetime - start_datetime).total_seconds() / dt.total_seconds() + 1))
+            else:
+                n_values = bisect.bisect_left(self._times, end_datetime) - bisect.bisect_left(self._times, start_datetime) + 1
 
             if self._binary:
                 if f != None:
@@ -456,13 +484,15 @@ class Timeseries:
                         n_values, dtype=self._internal_dtype)
                     self._values[ensemble_member][variable].fill(np.nan)
             else:
-                evenstart_datetime = series.findall('pi:event', ns)
+                events = series.findall('pi:event', ns)
                 self._values[ensemble_member][variable] = np.empty(
                     n_values, dtype=self._internal_dtype)
                 self._values[ensemble_member][variable].fill(np.nan)
-                for i in range(min(n_values, len(evenstart_datetime))):
+                # This assumes that start_datetime equals the datetime of the
+                # first value (which should be the case).
+                for i in range(min(n_values, len(events))):
                     self._values[ensemble_member][variable][
-                        i] = float(evenstart_datetime[i].get('value'))
+                        i] = float(events[i].get('value'))
 
             miss_val = float(header.find('pi:missVal', ns).text)
             self._values[ensemble_member][variable][self._values[
@@ -470,19 +500,35 @@ class Timeseries:
 
             # Prepend empty space, if start_datetime > self._start_datetime.
             if start_datetime > self._start_datetime:
-                filler = np.empty(int(round(
-                    (start_datetime - self._start_datetime).total_seconds() / dt.total_seconds())), dtype=self._internal_dtype)
+                if self._dt:
+                    filler = np.empty(int(round(
+                        (start_datetime - self._start_datetime).total_seconds() / dt.total_seconds())), dtype=self._internal_dtype)
+                else:
+                    filler = np.empty(int(round(
+                        bisect.bisect_left(self._times, start_datetime) - bisect.bisect_left(self._times, self._start_datetime))), dtype=self._internal_dtype)
+
                 filler.fill(np.nan)
                 self._values[ensemble_member][variable] = np.hstack(
                     (filler, self._values[ensemble_member][variable]))
 
             # Append empty space, if end_datetime < self._end_datetime
             if end_datetime < self._end_datetime:
-                filler = np.empty(int(round(
-                    (self._end_datetime - end_datetime).total_seconds() / dt.total_seconds())), dtype=self._internal_dtype)
+                if self._dt:
+                    filler = np.empty(int(round(
+                        (self._end_datetime - end_datetime).total_seconds() / dt.total_seconds())), dtype=self._internal_dtype)
+                else:
+                    filler = np.empty(int(round(
+                        bisect.bisect_left(self._times, self._end_datetime) - bisect.bisect_left(self._times, end_datetime))), dtype=self._internal_dtype)
+
                 filler.fill(np.nan)
                 self._values[ensemble_member][variable] = np.hstack(
                     (self._values[ensemble_member][variable], filler))
+
+        if not self._dt:
+            # Remove time values outside the start/end datetimes.
+            # Only needed for non-equidistant, because we can't build the
+            # times automatically from global start/end datetime.
+            self._times = self._times[bisect.bisect_left(self._times, self._start_datetime) : bisect.bisect_left(self._times, self._end_datetime)+1]
 
         if f != None and self._binary:
             f.close()
@@ -498,7 +544,7 @@ class Timeseries:
             for series in self._xml_root.findall('pi:series', ns):
                 header = series.find('pi:header', ns)
 
-                # Updaend_datetime the time range, which may have changed
+                # Update the time range, which may have changed.
                 el = header.find('pi:startDate', ns)
                 el.set('date', self._start_datetime.strftime('%Y-%m-%d'))
                 el.set('time', self._start_datetime.strftime('%H:%M:%S'))
@@ -520,7 +566,7 @@ class Timeseries:
                 nans = np.isnan(l)
                 l[nans] = miss_val
 
-                # Wriend_datetime output
+                # Write output
                 if self._binary:
                     f.write(l.astype(self._pi_dtype).tostring())
                 else:
@@ -528,6 +574,8 @@ class Timeseries:
 
                     t = self._start_datetime
                     for i in range(min(len(events), len(l))):
+                        if self.dt is None:
+                            t = self.times[i]
                         # Set the date/time, so that any date/time steps that
                         # are wrong in the placeholder file are corrected.
                         events[i].set('date', t.strftime('%Y-%m-%d'))
@@ -535,14 +583,23 @@ class Timeseries:
 
                         # Set the value
                         events[i].set('value', str(l[i]))
-                        t += self.dt
+                        if self.dt:
+                            t += self.dt
                     for i in range(len(events), len(l)):
+                        if self.dt is None:
+                            t = self.times[i]
                         event = ET.Element('pi:event')
                         event.set('date', t.strftime('%Y-%m-%d'))
                         event.set('time', t.strftime('%H:%M:%S'))
                         event.set('value', str(l[i]))
                         series.append(event)
-                        t += self.dt
+                        if self.dt:
+                            t += self.dt
+
+                    # Remove superfluous elements
+                    if len(events) > len(l):
+                        for i in range(len(l), len(events)):
+                            series.remove(events[i])
 
                 # Restore NaN
                 l[nans] = np.nan
@@ -609,7 +666,7 @@ class Timeseries:
         """
         Fill a time series with new values.
 
-        :param variable:        Times eries ID.
+        :param variable:        Time series ID.
         :param new_values:      List of new values.
         :param ensemble_member: Ensemble member index.
         """
@@ -622,14 +679,25 @@ class Timeseries:
         :param start_datetime: Start date and time.
         :param end_datetime:   End date and time.
         """
-        n_delta_s = int(round(
-            (start_datetime - self._start_datetime).total_seconds() / self._dt.total_seconds()))
+
+        if self._dt:
+            n_delta_s = int(round(
+                (start_datetime - self._start_datetime).total_seconds() / self._dt.total_seconds()))
+        else:
+            if start_datetime >= self._start_datetime:
+                n_delta_s = bisect.bisect_left(self._times, start_datetime) - \
+                    bisect.bisect_left(self._times, self._start_datetime)
+            else:
+                raise Exception("PI: Resizing a non-equidistant timeseries to stretch outside of the global range of times is not allowed.")
+
         for ensemble_member in range(len(self._values)):
             if n_delta_s > 0:
+                # New start datetime lies after old start datetime (timeseries will be shortened).
                 for key in self._values[ensemble_member].keys():
                     self._values[ensemble_member][key] = self._values[
                         ensemble_member][key][n_delta_s:]
             elif n_delta_s < 0:
+                # New start datetime lies before old start datetime (timeseries will be lengthened).
                 filler = np.empty(abs(n_delta_s))
                 filler.fill(np.nan)
                 for key in self._values[ensemble_member].keys():
@@ -637,16 +705,26 @@ class Timeseries:
                         (filler, self._values[ensemble_member][key]))
         self._start_datetime = start_datetime
 
-        n_delta_e = int(round(
-            (end_datetime - self._end_datetime).total_seconds() / self._dt.total_seconds()))
+        if self._dt:
+            n_delta_e = int(round(
+                (end_datetime - self._end_datetime).total_seconds() / self._dt.total_seconds()))
+        else:
+            if end_datetime <= self._end_datetime:
+                n_delta_e = bisect.bisect_left(self._times, end_datetime) - \
+                    bisect.bisect_left(self._times, self._end_datetime)
+            else:
+                raise Exception("PI: Resizing a non-equidistant timeseries to stretch outside of the global range of times is not allowed.")
+
         for ensemble_member in range(len(self._values)):
             if n_delta_e > 0:
+            # New end datetime lies after old end datetime (timeseries will be lengthened).
                 filler = np.empty(n_delta_e)
                 filler.fill(np.nan)
                 for key in self._values[ensemble_member].keys():
                     self._values[ensemble_member][key] = np.hstack(
                         (self._values[ensemble_member][key], filler))
             elif n_delta_e < 0:
+            # New end datetime lies before old end datetime (timeseries will be shortened).
                 for key in self._values[ensemble_member].keys():
                     self._values[ensemble_member][key] = self._values[
                         ensemble_member][key][:n_delta_e]

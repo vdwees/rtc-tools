@@ -22,18 +22,18 @@ class CSVMixin(OptimizationProblem):
 
     During postprocessing, a file named ``timeseries_export.csv`` is written to the ``output`` subfolder.
 
-    In ensemble mode, a file named ``ensemble.csv`` is read from the ``input`` folder.  This file contains two columns. 
+    In ensemble mode, a file named ``ensemble.csv`` is read from the ``input`` folder.  This file contains two columns.
     The first column gives the name of the ensemble member, and the second column its probability.  Furthermore, the other XML files
     appear one level deeper inside the filesystem hierarchy, inside subfolders with the names of the ensemble members.
 
     :cvar csv_delimiter:           Column delimiter used in CSV files.  Default is ``,``.
-    :cvar csv_equidistant:         Whether or not the timeseries data is equidistant.  Default is ``true``.
-    :cvar csv_ensemble_mode:       Whether or not to use ensembles.  Default is ``false``.
-    :cvar csv_validate_timeseries: Check consistency of timeseries.  Default is ``true``.
+    :cvar csv_equidistant:         Whether or not the timeseries data is equidistant.  Default is ``True``.
+    :cvar csv_ensemble_mode:       Whether or not to use ensembles.  Default is ``False``.
+    :cvar csv_validate_timeseries: Check consistency of timeseries.  Default is ``True``.
     """
 
     #: Column delimiter used in CSV files
-    csv_delimiter = ',' 
+    csv_delimiter = ','
 
     #: Whether or not the timeseries data is equidistant
     csv_equidistant = True
@@ -389,7 +389,7 @@ class CSVMixin(OptimizationProblem):
         :param variable: Variable name.
         """
         return '_'.join((variable, 'Min'))
-        
+
     def max_timeseries_id(self, variable):
         """
         Returns the name of the upper bound timeseries for the specified variable.

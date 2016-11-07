@@ -13,7 +13,8 @@ import os
 
 class TestProblem(PIMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
-    pi_binary_timeseries = False
+    pi_binary_timeseries   = False
+    pi_validate_timeseries = False
 
     def __init__(self):
         super(TestProblem, self).__init__(input_folder=data_path(), output_folder=data_path(

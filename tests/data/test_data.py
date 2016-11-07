@@ -133,6 +133,51 @@ class TestPI(TestCase):
         timeseries.set('S', orig, ensemble_member=0)
         timeseries.write()
 
+    def test_shrink_timeseries_neq(self):
+        # Decrease end date time
+        timeseries = pi.Timeseries(
+            self.data_config, data_path(), "timeseries_import_neq", binary=False)
+        orig_values = np.array(timeseries.get('S', ensemble_member=0), copy=True)
+        orig_times  = timeseries.times
+        orig_end    = timeseries.end_datetime
+        timeseries.resize(timeseries.start_datetime,
+                          timeseries.end_datetime - datetime.timedelta(seconds=3600))
+        timeseries.get('S', ensemble_member=0)[-1] = 12345.0
+        timeseries.write()
+
+        timeseries = pi.Timeseries(
+            self.data_config, data_path(), "timeseries_import_neq", binary=False)
+        self.assertEquals(timeseries.get('S')[-1], 12345.0)
+        self.assertEquals(len(timeseries.get('S')), len(orig_values) - 1)
+        timeseries.set('S', orig_values, ensemble_member=0)
+        # Because we don't support extension of nonequidistant series, we need
+        # to reset the times manually.
+        timeseries._times = orig_times
+        timeseries._end_datetime = orig_end
+        timeseries.write()
+
+        # Increase start date time
+        timeseries = pi.Timeseries(
+            self.data_config, data_path(), "timeseries_import_neq", binary=False)
+        orig_values = np.array(timeseries.get('S', ensemble_member=0), copy=True)
+        orig_times  = timeseries.times
+        orig_start  = timeseries.start_datetime
+        timeseries.resize(timeseries.start_datetime + datetime.timedelta(seconds=7200),
+                          timeseries.end_datetime )
+        timeseries.get('S', ensemble_member=0)[0] = 0.0
+        timeseries.write()
+
+        timeseries = pi.Timeseries(
+            self.data_config, data_path(), "timeseries_import_neq", binary=False)
+        self.assertEquals(timeseries.get('S')[0], 0.0)
+        self.assertEquals(len(timeseries.get('S')), len(orig_values) - 1)
+        timeseries.set('S', orig_values, ensemble_member=0)
+        # Because we don't support extension of nonequidistant series, we need
+        # to reset the times manually.
+        timeseries._times = orig_times
+        timeseries._start_datetime = orig_start
+        timeseries.write()
+
     def test_placeholder_timeseries(self):
         for binary in [True, False]:
             timeseries = pi.Timeseries(
