@@ -175,6 +175,9 @@ class Goal(object):
 
         return self.dependency_key
 
+    def __repr__(self):
+        return '{}(priority={}, target_min={}, target_max={})'.format(self.__class__, self.priority, self.target_min, self.target_max)
+
 
 class GoalProgrammingMixin(OptimizationProblem):
     """
@@ -343,11 +346,11 @@ class GoalProgrammingMixin(OptimizationProblem):
             elif constraint.goal.has_target_min:
                 if goal.target_min < constraint.goal.target_min:
                     raise Exception(
-                        "Minimum value of goal less than minimum of a higher priority goal")
+                        "Target minimum of goal {} must be greater or equal than target minimum of goal {}.".format(goal, constraint.goal))
             elif constraint.goal.has_target_max:
                 if goal.target_max > constraint.goal.target_max:
                     raise Exception(
-                        "Maximum value of goal greater than maximum of a higher priority goal")
+                        "Target maximum of goal {} must be less or equal than target maximum of goal {}".format(goal, constraint.goal))
 
         # Check goal consistency
         if goal.has_target_min and goal.has_target_max:
