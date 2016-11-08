@@ -114,7 +114,7 @@ of the variable over all the timesteps. This goal does not use a helper class:
   :pyobject: MinimizeQpumpGoal
   :lineno-match:
 
-We add a third goal minimizing the derivative of ``Q_pump``, and give it the
+We add a third goal minimizing the changes in``Q_pump``, and give it the
 least priority. This goal smoothes out the operation of the pump so that it
 changes state as few times as possible. To get an idea of what the pump would
 have done without this goal, see Mixed Integer: :ref:`mixed-integer-results`.
@@ -168,10 +168,10 @@ optimizer.
 
 For the goals that want to apply our goals to every timestep, so we use the
 ``path_goals()`` method. This is a method that returns a list of the path goals
-we defined above. Note that with path goals,  each timestep is implemented as
-an independant goal- if we cannot satisfy our min/max on time step A, it will
-not affect our desire to satisfy the goal at time step B. Goals that inherit
-``StateGoal`` are always path goals and must also always be initialized with the
+we defined above. Note that with path goals,  each timestep is implemented as an
+independant goal- if we cannot satisfy our min/max on time step A, it will not
+affect our desire to satisfy the goal at time step B. Goals that inherit
+``StateGoal`` are always path goals and must always be initialized with the
 parameter ``self``.
 
 .. literalinclude:: ../../examples/goal_programming/src/example.py
@@ -250,11 +250,18 @@ should print out the following lines::
 
     After finishing goals of priority 1:
     Level goal satisfied at 19 of 21 time steps
-    Integral of Q_pump = 73.93
+    Integral of Q_pump = 74.18
+    Sum of Changes in Q_pump: 7.83
 
     After finishing goals of priority 2:
     Level goal satisfied at 19 of 21 time steps
-    Integral of Q_pump = 52.22
+    Integral of Q_pump = 60.10
+    Sum of Changes in Q_pump: 11.70
+
+    After finishing goals of priority 3:
+    Level goal satisfied at 19 of 21 time steps
+    Integral of Q_pump = 60.10
+    Sum of Changes in Q_pump: 10.07
 
 As the output indicates, while optimizing for the priority 1 goal, no attempt
 was made to minimize the integral of ``Q_pump``. The only objective was to
@@ -262,7 +269,12 @@ minimize the number of states in violation of the water level goal.
 
 After optimizing for the priority 2 goal, the solver was able to find a solution
 that reduced the integral of ``Q_pump`` without increasing the number of
-timesteps where the water level exceded the limit.
+timesteps where the water level exceded the limit. However, this solution
+induced additional variation into the operation of ``Q_pump``
+
+After optimizing the priority 3 goal, the integral of ``Q_pump`` is the same and
+the level goal has not improved. Without hurting any higher priority goals,
+RTC-Tools was able to smooth out the operation of the pump.
 
 Extracting Results
 ------------------
