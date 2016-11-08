@@ -92,7 +92,7 @@ Declaring Goals
 
 Goals are defined as classes that inherit the ``Goal`` parent class. The
 components of goals can be found in :doc:`../optimization/multi_objective`. In
-this example, we show three ways to define a goal in RTC-Tools.
+this example, we demonstrate three ways to define a goal in RTC-Tools.
 
 First, we have a high priority goal to keep the water level within a minimum and
 maximum. Since we are applying this goal to a specific state (model variable) in
@@ -104,10 +104,10 @@ goal, called a ``StateGoal``:
   :pyobject: WaterLevelRangeGoal
   :lineno-match:
 
-We also want to save energy, so we define a goal to minimize the integral
-of ``Q_pump``. This goal has a lower priority than the water level range goal.
-With non-path goals, the function range must be large enough to enclose the
-integral of the variable over all the timesteps.
+We also want to save energy, so we define a goal to minimize the integral of
+``Q_pump``. This goal has a lower priority than the water level range goal. With
+non-path goals, the function range must be large enough to enclose the integral
+of the variable over all the timesteps. This goal does not use a helper class:
 
 .. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
@@ -119,7 +119,8 @@ least priority. This goal smoothes out the operation of the pump so that it
 changes state as few times as possible. To get an idea of what the pump would
 have done without this goal, see Mixed Integer: :ref:`mixed-integer-results`.
 The order of this goal must be 2, so that it penalizes both positive and
-negative derivatives.
+negative derivatives. Order of 2 is the default, but we include it here
+explicity for the sake of clarity.
 
 .. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
@@ -165,9 +166,10 @@ optimizer.
   :pyobject: Example.goals
   :lineno-match:
 
-For the goals that want to apply our goals to every timestep, so we use
-the ``path_goals()`` method. This is a method that returns a list of the path
-goals we defined above.
+For the goals that want to apply our goals to every timestep, so we use the
+``path_goals()`` method. This is a method that returns a list of the path goals
+we defined above. Goals that inherit ``StateGoal`` are always path goals and
+must also always be initialized with the parameter ``self``.
 
 .. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
