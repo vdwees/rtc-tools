@@ -5,7 +5,7 @@ from rtctools.optimization.goal_programming_mixin \
 from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.csv_mixin import CSVMixin
 from rtctools.util import run_optimization_problem
-from numpy import inf
+from numpy import inf, diff, absolute
 
 
 class WaterLevelRangeGoal(StateGoal):
@@ -128,17 +128,20 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
         n_level_satisfied = sum(
             [1 for x in results['storage.HQ.H'] if _min <= x <= _max])
         q_pump_integral = sum(results['Q_pump'])
+        q_pump_sum_changes = sum(absolute(diff(results['Q_pump'])))
         self.intermediate_results.append(
-            (priority, n_level_satisfied, q_pump_integral))
+            (priority, n_level_satisfied, q_pump_integral, q_pump_sum_changes))
 
     def post(self):
         # Call super() class to not overwrite default behaviour
         super(Example, self).post()
-        for priority, n_level_satisfied, q_pump_integral in self.intermediate_results:
-            print("\nAfter finishing goals of priority {}:".format(priority))
-            print("Level goal satisfied at {} of {} time steps".format(
+        for priority, n_level_satisfied, q_pump_integral, q_pump_sum_changes \
+                in self.intermediate_results:
+            print('\nAfter finishing goals of priority {}:'.format(priority))
+            print('Level goal satisfied at {} of {} time steps'.format(
                 n_level_satisfied, len(self.times())))
-            print("Integral of Q_pump = {:.2f}".format(q_pump_integral))
+            print('Integral of Q_pump = {:.2f}'.format(q_pump_integral))
+            print('Sum of Changes in Q_pump: {:.2f}'.format(q_pump_sum_changes))
 
     # Any solver options can be set here
     def solver_options(self):
