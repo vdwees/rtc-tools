@@ -131,6 +131,25 @@ Deltares Modelica library remains for the user to set::
 .. _Deltares Download Portal: https://download.deltares.nl/en/download/rtc-tools/
 
 
+.. _getting-started-omedit:
+
+Getting OMEdit
+==============
+
+RTC-Tools uses the Modelica language to describe the mathematics of the system
+we wish to optimize. There are several editors for Modelica models, but the
+OpenModelica Connection Editor, or OMEdit, is a free and open-source graphical
+connection editor that can be used to construct RTC-Tools models. To download it
+for windows, click here: https://www.openmodelica.org/download/download-windows
+
+Once installed, you can start OMEdit by clicking::
+
+   Start -> Programs -> OpenModelica -> OMEdit
+
+With OMEdit installed, you can start using it by following along with the basic
+example, :doc:`examples/basic`.
+
+
 .. _running-rtc-tools:
 
 Running RTC-Tools

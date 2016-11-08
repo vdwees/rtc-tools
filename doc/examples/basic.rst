@@ -33,16 +33,18 @@ directory has the following structure:
 The Model
 ---------
 
-The first step is to develop a physical model of the system.
-The model can be viewed and editied using the OpenModelica Connection Editor
-program. Make sure to load the Deltares libray before loading the example:
+The first step is to develop a physical model of the system. The model can be
+viewed and editied using the OpenModelica Connection Editor (OMEdit) program.
+For how to download and start up OMEdit, see :ref:`getting-started-omedit`.
 
-#. Load the Deltares library into OpenModelica Conection Editor
+Make sure to load the Deltares libray before loading the example:
+
+#. Load the Deltares library into OMEdit
 
    * Using the menu bar: *File -> Open Model/Library File(s)*
    * Select ``<installation directory>\RTCTools2\mo\Deltares\package.mo``
 
-#. Load the example model into OpenModelica Conection Editor
+#. Load the example model into OMEdit
 
    * Using the menu bar: *File -> Open Model/Library File(s)*
    * Select ``<installation directory>\RTCTools2\examples\basic\model\Example.mo``
