@@ -233,7 +233,7 @@ class StateGoal(Goal):
             # If KeyError, check the variable the state is aliased to for bounds
             found = False
             for variable in itertools.chain(optimization_problem.differentiated_states, optimization_problem.algebraic_states):
-                if self.state in [alias.name for alias in self.variable_aliases(variable)]:
+                if self.state in [alias.name for alias in optimization_problem.variable_aliases(variable)]:
                     self.function_range = optimization_problem.bounds()[variable]
                     found = True
                     break
