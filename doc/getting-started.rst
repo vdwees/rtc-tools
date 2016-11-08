@@ -144,7 +144,7 @@ for windows, click here: https://www.openmodelica.org/download/download-windows
 
 Once installed, you can start OMEdit by clicking::
 
-   Start -> Programs -> OpenModelica -> OMEdit
+   Start -> All Programs -> OpenModelica -> OpenModelica Connection Editor
 
 With OMEdit installed, you can start using it by following along with the basic
 example, :doc:`examples/basic`.
@@ -159,7 +159,7 @@ Running RTC-Tools
 RTC-Tools is run from a command line shell. If you installed using the Windows
 executable, the RTC-Tools Shell can be started by clicking::
 
-    Start -> Programs -> RTC-Tools -> Shell
+    Start -> All Programs -> RTC-Tools -> Shell
 
 
 Once you have started the shell, navigate to the ``src`` directory of the case
