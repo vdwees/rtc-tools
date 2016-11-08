@@ -12,10 +12,7 @@ class WaterLevelRangeGoal(StateGoal):
     # Applying a state goal to every time step is easily done by defining a goal
     # that inherits StateGoal. StateGoal is a helper class that uses the state
     # to determine the function, function range, and function nominal
-    # automatically. This type of goal can only be used with the path_goals()
-    # method. Note that each timestep is implemented as an independant goal- if
-    # we cannot satisfy our min/max on time step A, it will not affect our
-    # desire to satisfy the goal at time step B.
+    # automatically.
     state = 'storage.HQ.H'
     # One goal can introduce a single or two constraints (min and/or max). Our
     # target water level range is 0.43 - 0.44. We might not always be able to
