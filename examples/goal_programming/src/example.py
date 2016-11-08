@@ -40,7 +40,7 @@ class MinimizeQpumpGoal(Goal):
     # function defined above. The nominal is used to scale the value returned by
     # the function method so that the value is on the order of 1.
     function_range = (0, 540000.0)
-    function_nominal = 1.0
+    function_nominal = 100.0
     # The lower the number returned by this function, the higher the priority.
     priority = 2
     # The penalty variable is taken to the order'th power.
@@ -57,6 +57,7 @@ class MinimizeChangeInQpumpGoal(Goal):
     function_range = (-10.0, 10.0)
     function_nominal = 5.0
     priority = 3
+    # Default order is 2, but we want to be explicit
     order = 2
 
 
@@ -108,6 +109,13 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
         # do not have to worry about order here.
         return [WaterLevelRangeGoal(self), MinimizeChangeInQpumpGoal()]
 
+    def pre(self):
+        # Call super() class to not overwrite default behaviour
+        super(Example, self).pre()
+        # We keep track of our intermediate results, so that we can print some
+        # information about the progress of goals at the end of our run.
+        self.intermediate_results = []
+
     def priority_completed(self, priority):
         # We want to show that the results of our highest priority goal (water
         # level) are remembered. The other information we want to see is how our
@@ -125,13 +133,6 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
         q_pump_integral = sum(results['Q_pump'])
         self.intermediate_results.append(
             (priority, n_level_satisfied, q_pump_integral))
-
-    def pre(self):
-        # Call super() class to not overwrite default behaviour
-        super(Example, self).pre()
-        # We keep track of our intermediate results, so that we can print some
-        # information about the progress of goals at the end of our run.
-        self.intermediate_results = []
 
     def post(self):
         # Call super() class to not overwrite default behaviour
