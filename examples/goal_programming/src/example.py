@@ -150,4 +150,4 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
         return options
 
 # Run
-run_optimization_problem(Example, base_folder='..')
+run_optimization_problem(Example)
