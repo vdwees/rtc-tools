@@ -249,7 +249,10 @@ class StateGoal(Goal):
         self.function_nominal = optimization_problem.variable_nominal(self.state)
 
         # Set dependency key
-        self.dependency_key = self.state
+        # TODO Make sure that dependency key logic does not delete previously set targets, if
+        # either target_min or target_max is not set.  Disabling dependency key until this is
+        # addressed.
+        # self.dependency_key = self.state
 
     def function(self, optimization_problem, ensemble_member):
         return optimization_problem.state(self.state)
