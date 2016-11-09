@@ -668,7 +668,8 @@ class GoalProgrammingMixin(OptimizationProblem):
 
     def optimize(self, preprocessing=True, postprocessing=True):
         # Do pre-processing
-        self.pre()
+        if preprocessing:
+            self.pre()
 
         # Group goals into subproblems
         subproblems = []
@@ -819,7 +820,8 @@ class GoalProgrammingMixin(OptimizationProblem):
         logger.info("Done goal programming")
 
         # Do post-processing
-        self.post()
+        if postprocessing:
+            self.post()
 
         # Done
         return success
