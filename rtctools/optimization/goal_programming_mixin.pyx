@@ -163,17 +163,17 @@ class Goal(object):
         """
         return (self.has_target_min or self.has_target_max)
 
-    def get_dependency_key(self):
+    def get_function_key(self, optimization_problem, ensemble_member):
         """
-        Returns the "dependency key".  Goals with same dependency key are assumed to determine the same states.  This
+        Returns a key string uniquely identifying the goal function.  This
         is used to eliminate linearly dependent constraints from the optimization problem.
         """
-        if hasattr(self, 'dependency_key'):
-            return self.dependency_key
+        if hasattr(self, 'function_key'):
+            return self.function_key
 
-        self.dependency_key = uuid.uuid4()
+        self.function_key = uuid.uuid4()
 
-        return self.dependency_key
+        return self.function_key
 
     def __repr__(self):
         return '{}(priority={}, target_min={}, target_max={})'.format(self.__class__, self.priority, self.target_min, self.target_max)
@@ -248,11 +248,8 @@ class StateGoal(Goal):
         # Extract state nominal from model
         self.function_nominal = optimization_problem.variable_nominal(self.state)
 
-        # Set dependency key
-        # TODO Make sure that dependency key logic does not delete previously set targets, if
-        # either target_min or target_max is not set.  Disabling dependency key until this is
-        # addressed.
-        # self.dependency_key = self.state
+        # Set function key
+        self.function_key = self.state
 
     def function(self, optimization_problem, ensemble_member):
         return optimization_problem.state(self.state)
@@ -430,7 +427,7 @@ class GoalProgrammingMixin(OptimizationProblem):
     def _add_goal_constraint(self, goal, epsilon, ensemble_member, options):
         # Check existing constraints for this state.
         constraints = self._subproblem_constraints[
-            ensemble_member].get(goal.get_dependency_key(), [])
+            ensemble_member].get(goal.get_function_key(self, ensemble_member), [])
         for constraint in constraints:
             if constraint.goal == goal:
                 continue
@@ -476,7 +473,7 @@ class GoalProgrammingMixin(OptimizationProblem):
             # and we add it to the list of constraints for this state.  We keep the existing constraints to ensure
             # that the attainment of previous goals is not worsened.
             self._subproblem_constraints[ensemble_member][
-                goal.get_dependency_key()] = constraints
+                goal.get_function_key(self, ensemble_member)] = constraints
         else:
             fix_value = False
 
@@ -514,20 +511,15 @@ class GoalProgrammingMixin(OptimizationProblem):
 
             # Epsilon is fixed.  Override previous {min,max} constraints for
             # this state.
-            new_constraints = [constraint]
             if not fix_value:
                 for existing_constraint in constraints:
-                    if goal.has_target_min and existing_constraint.goal.has_target_min:
-                        # We have an existing min constraint, and are adding a new min constraint.
-                        # Skip the existing constraint.
-                        continue
-                    if goal.has_target_max and existing_constraint.goal.has_target_max:
-                        # We have an existing max constraint, and are adding a new max constraint.
-                        # Skip the existing constraint.
-                        continue
-                    new_constraints.append(existing_constraint)
+                    if goal is not existing_constraint.goal:
+                        if existing_constraint.goal.has_target_min:
+                            constraint.min = max(constraint.min, existing_constraint.min)
+                        if existing_constraint.goal.has_target_max:
+                            constraint.max = min(constraint.max, existing_constraint.max)
             self._subproblem_constraints[ensemble_member][
-                goal.get_dependency_key()] = new_constraints
+                goal.get_function_key(self, ensemble_member)] = [constraint]
 
     def _add_path_goal_constraint(self, goal, epsilon, ensemble_member, options, min_series=None, max_series=None):
         # Generate list of min and max values
@@ -551,7 +543,7 @@ class GoalProgrammingMixin(OptimizationProblem):
 
         # Check existing constraints for this state.
         constraints = self._subproblem_path_constraints[
-            ensemble_member].get(goal.get_dependency_key(), [])
+            ensemble_member].get(goal.get_function_key(self, ensemble_member), [])
         for constraint in constraints:
             if constraint.goal == goal:
                 continue
@@ -600,7 +592,7 @@ class GoalProgrammingMixin(OptimizationProblem):
             # and we add it to the list of constraints for this state.  We keep the existing constraints to ensure
             # that the attainment of previous goals is not worsened.
             self._subproblem_path_constraints[ensemble_member][
-                goal.get_dependency_key()] = constraints
+                goal.get_function_key(self, ensemble_member)] = constraints
         else:
             fix_value = False
 
@@ -649,22 +641,15 @@ class GoalProgrammingMixin(OptimizationProblem):
 
             # Epsilon is fixed.  Override previous {min,max} constraints for
             # this state.
-            new_constraints = [constraint]
             if not fix_value:
                 for existing_constraint in constraints:
-                    existing_constraint_m, existing_constraint_M = _min_max_arrays(
-                        existing_constraint.goal)
-                    if np.all(np.isfinite(goal_m)) and np.all(np.isfinite(existing_constraint_m)):
-                        # We have an existing min constraint, and are adding a new min constraint.
-                        # Skip the existing constraint.
-                        continue
-                    if np.all(np.isfinite(goal_M)) and np.all(np.isfinite(existing_constraint_M)):
-                        # We have an existing max constraint, and are adding a new max constraint.
-                        # Skip the existing constraint.
-                        continue
-                    new_constraints.append(existing_constraint)
+                    if goal is not existing_constraint.goal:
+                        if existing_constraint.goal.has_target_min:
+                            constraint.min = Timeseries(times, np.maximum(constraint.min.values, existing_constraint.min.values))
+                        if existing_constraint.goal.has_target_max:
+                            constraint.max = Timeseries(times, np.minimum(constraint.max.values, existing_constraint.max.values))
             self._subproblem_path_constraints[ensemble_member][
-                goal.get_dependency_key()] = new_constraints
+                goal.get_function_key(self, ensemble_member)] = [constraint]
 
     def optimize(self, preprocessing=True, postprocessing=True):
         # Do pre-processing
