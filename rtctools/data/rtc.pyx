@@ -29,6 +29,7 @@ class DataConfig:
         :param folder: Folder in which rtcDataConfig.xml is located.
         """
         self._map = {}
+        self._location_parameter_ids = {}
         self._basename_import = None
         self._basename_export = None
 
@@ -44,6 +45,8 @@ class DataConfig:
             for timeseries in timeseriess1:
                 pi_timeseries = timeseries.find('fews:PITimeSeries', ns)
                 if pi_timeseries != None:
+                    self._location_parameter_ids[timeseries.get('id')] = \
+                        self._pi_location_parameter_id(pi_timeseries, 'fews')
                     self._map[self._pi_timeseries_id(
                         pi_timeseries, 'fews')] = timeseries.get('id')
 
@@ -77,6 +80,16 @@ class DataConfig:
         else:
             return timeseries_id
 
+    def _pi_location_parameter_id(self, el, namespace):
+        ids = []
+        ids.append(el.find(namespace + ':locationId', ns).text)
+        ids.append(el.find(namespace + ':parameterId', ns).text)
+        qualifiers = el.findall(namespace + ':qualifierId', ns)
+        for qualifier in qualifiers:
+            ids.append(qualifier.text)
+
+        return ids
+
     def variable(self, pi_header):
         """
         Map a PI timeseries header to an RTC-Tools timeseries ID.
@@ -91,3 +104,17 @@ class DataConfig:
             return self._map[series_id]
         except KeyError:
             return series_id
+
+    def location_parameter_id(self, variable):
+        """
+        Map a RTC-Tools timeseries ID to a list of location, parameter and qualifier ID's.
+
+        :param variable: A timeseries ID.
+
+        :returns: A list of location, parameter and qualifier ID's.
+        :rtype: list
+        """
+        try:
+            return self._location_parameter_ids[variable]
+        except KeyError:
+            return variable
