@@ -8,6 +8,9 @@ import struct
 import io
 import os
 import logging
+from collections import namedtuple
+
+ids = namedtuple('ids', 'location_id parameter_id qualifier_id')
 
 ns = {'fews': 'http://www.wldelft.nl/fews',
       'pi': 'http://www.wldelft.nl/fews/PI'}
@@ -29,6 +32,7 @@ class DataConfig:
         :param folder: Folder in which rtcDataConfig.xml is located.
         """
         self._map = {}
+        self._location_parameter_ids = {}
         self._basename_import = None
         self._basename_export = None
 
@@ -44,6 +48,8 @@ class DataConfig:
             for timeseries in timeseriess1:
                 pi_timeseries = timeseries.find('fews:PITimeSeries', ns)
                 if pi_timeseries != None:
+                    self._location_parameter_ids[timeseries.get('id')] = \
+                        self._pi_location_parameter_id(pi_timeseries, 'fews')
                     self._map[self._pi_timeseries_id(
                         pi_timeseries, 'fews')] = timeseries.get('id')
 
@@ -77,6 +83,17 @@ class DataConfig:
         else:
             return timeseries_id
 
+    def _pi_location_parameter_id(self, el, namespace):
+        qualifier_ids = []
+        qualifiers = el.findall(namespace + ':qualifierId', ns)
+        for qualifier in qualifiers:
+            qualifier_ids.append(qualifier.text)
+
+        location_parameter_ids = ids( location_id  = el.find(namespace + ':locationId', ns).text,
+                                      parameter_id = el.find(namespace + ':parameterId', ns).text,
+                                      qualifier_id = qualifier_ids)
+        return location_parameter_ids
+
     def variable(self, pi_header):
         """
         Map a PI timeseries header to an RTC-Tools timeseries ID.
@@ -91,3 +108,16 @@ class DataConfig:
             return self._map[series_id]
         except KeyError:
             return series_id
+
+    def location_parameter_id(self, variable):
+        """
+        Map a RTC-Tools timeseries ID to a named tuple of location, parameter
+        and qualifier ID's.
+
+        :param variable: A timeseries ID.
+
+        :returns: A named tuple with fields location_id, parameter_id and qualifier_id.
+        :rtype: namedtuple
+        :raises KeyError: If the timeseries Id has no mapping in rtcDataConfig.
+        """
+        return self._location_parameter_ids[variable]

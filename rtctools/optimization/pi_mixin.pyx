@@ -96,7 +96,7 @@ class PIMixin(OptimizationProblem):
                 basename_import, self._input_folder))
 
         self._timeseries_export = pi.Timeseries(
-            self._data_config, self._output_folder, basename_export, binary=self.pi_binary_timeseries, pi_validate_times=False)
+            self._data_config, self._output_folder, basename_export, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
 
         # Convert timeseries timestamps to seconds since t0 for internal use
         self._timeseries_import_times = self._datetime_to_sec(
@@ -124,7 +124,7 @@ class PIMixin(OptimizationProblem):
 
     @property
     def equidistant(self):
-        if self._timeseries_import._dt:
+        if self._timeseries_import._dt != None:
             return True
         else:
             return False
@@ -263,23 +263,31 @@ class PIMixin(OptimizationProblem):
         # Call parent class first for default behaviour.
         super(PIMixin, self).post()
 
-        # Write output
-        if not self.equidistant:
-            # Overrule/write the time range in the export placeholder.
-            # Only needed for non-equidistant, because we can't build the
-            # times automatically from global start/end datetime.
-            self._timeseries_export.times           = self._timeseries_import.times
-            self._timeseries_export._start_datetime = self._timeseries_import._start_datetime
-            self._timeseries_export._end_datetime   = self._timeseries_import._end_datetime
+        # Start of write output
+        # Write the time range for the export file.
+        self._timeseries_export._times = self._timeseries_import.times[self._timeseries_import.forecast_index:]
 
-        self._timeseries_export.resize(
-            self._timeseries_import.forecast_datetime, self._timeseries_import.end_datetime)
+        # Write other time settings
+        self._timeseries_export._start_datetime = self._timeseries_import._forecast_datetime
+        self._timeseries_export._end_datetime  = self._timeseries_import._end_datetime
+        self._timeseries_export._forecast_datetime  = self._timeseries_import._forecast_datetime
+        self._timeseries_export._dt = self._timeseries_import._dt
+        self._timeseries_export._timezone = self._timeseries_import._timezone
 
+        # Write the ensemble properties for the export file.
+        self._timeseries_export._ensemble_size = self.ensemble_size
+        self._timeseries_export._contains_ensemble = self._timeseries_import.contains_ensemble
+        while self._timeseries_export._ensemble_size > len(self._timeseries_export._values):
+            self._timeseries_export._values.append({})
+
+        # Start looping over the ensembles for extraction of the output values.
         times = self.times()
         for ensemble_member in range(self.ensemble_size):
             results = self.extract_results(ensemble_member)
 
-            for variable in self._timeseries_export._values[ensemble_member].keys():
+            # For all variables that are output variables the values are
+            # extracted from the results.
+            for variable in [sym.getName() for sym in self.output_variables]:
                 try:
                     values = results[variable]
                     if len(values) != len(times):
@@ -295,11 +303,20 @@ class PIMixin(OptimizationProblem):
                             values = ts.values
                     except KeyError:
                         logger.error(
-                            "Output requested for non-existent variable {}".format(variable))
+                            'PIMixin: Output requested for non-existent variable {}. Will not be in output file.'.format(variable))
                         continue
-                self._timeseries_export.set(
-                    variable, values, ensemble_member=ensemble_member)
 
+                # Check if ID mapping is present
+                try:
+                    location_parameter_id = self._timeseries_export._data_config.location_parameter_id(variable)
+                except KeyError:
+                    logger.debug('PIMixIn: variable {} has no mapping defined in rtcDataConfig so cannot be added to timeseries_export.'.format(variable))
+                    continue
+
+                # Add series to output file
+                self._timeseries_export.set(variable, values, ensemble_member=ensemble_member)
+
+        # Write output file to disk
         self._timeseries_export.write()
 
     def _datetime_to_sec(self, d):
@@ -338,6 +355,10 @@ class PIMixin(OptimizationProblem):
 
     def timeseries_at(self, variable, t, ensemble_member=0):
         return self.interpolate(t, self._timeseries_import_times, self._timeseries_import.get(variable, ensemble_member=ensemble_member))
+
+    @property
+    def ensemble_size(self):
+        return self._timeseries_import.ensemble_size
 
     @property
     def output_variables(self):
