@@ -1,8 +1,6 @@
 # cython: embedsignature=True
 
 from rtctools.optimization.optimization_problem import OptimizationProblem
-from rtctools.optimization.timeseries import Timeseries
-import itertools
 import logging
 
 logger = logging.getLogger("rtctools")
