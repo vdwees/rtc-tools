@@ -343,7 +343,8 @@ class Timeseries:
         self._internal_dtype = np.float64
         self._pi_dtype = np.float32
 
-        if make_new_file:
+        self.make_new_file = make_new_file
+        if self.make_new_file:
             self._xml_root = ET.Element('{%s}' % (ns['pi'], ) + 'TimeSeries')
             self._tree = ET.ElementTree(self._xml_root)
 
@@ -579,7 +580,7 @@ class Timeseries:
             if f != None and self._binary:
                 f.close()
 
-    def add_header(self, variable, location_parameter_id, ensemble_member=0, miss_val=-999):
+    def _add_header(self, variable, location_parameter_id, ensemble_member=0, miss_val=-999):
         """
         Add a timeseries header to the timeseries object.
         """
@@ -652,6 +653,12 @@ class Timeseries:
                 # timeZone has to be the first element according to the schema
                 self._xml_root.insert(0, timezone)
             timezone.text = str(self.timezone)
+
+        if self.make_new_file:
+            for ensemble_member in range(len(self._values)):
+                for variable in self._values[ensemble_member].keys():
+                    location_parameter_id = self._data_config.location_parameter_id(variable)
+                    self._add_header(variable, location_parameter_id, ensemble_member=ensemble_member, miss_val=-999)
 
         for ensemble_member in range(len(self._values)):
             for series in self._xml_root.findall('pi:series', ns):

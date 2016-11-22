@@ -306,7 +306,7 @@ class PIMixin(OptimizationProblem):
                             'PIMixin: Output requested for non-existent variable {}. Will not be in output file.'.format(variable))
                         continue
 
-                # Read ID's
+                # Check if ID mapping is present
                 try:
                     location_parameter_id = self._timeseries_export._data_config.location_parameter_id(variable)
                 except KeyError:
@@ -314,7 +314,6 @@ class PIMixin(OptimizationProblem):
                     continue
 
                 # Add series to output file
-                self._timeseries_export.add_header(variable, location_parameter_id, ensemble_member=ensemble_member)
                 self._timeseries_export.set(variable, values, ensemble_member=ensemble_member)
 
         # Write output file to disk
