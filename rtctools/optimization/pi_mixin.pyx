@@ -271,14 +271,13 @@ class PIMixin(OptimizationProblem):
         self._timeseries_export._start_datetime = self._timeseries_import._forecast_datetime
         self._timeseries_export._end_datetime  = self._timeseries_import._end_datetime
         self._timeseries_export._forecast_datetime  = self._timeseries_import._forecast_datetime
-        self._timeseries_export._forecast_datetime_in_file = self._timeseries_import._forecast_datetime_in_file
         self._timeseries_export._dt = self._timeseries_import._dt
         self._timeseries_export._timezone = self._timeseries_import._timezone
 
         # Write the ensemble properties for the export file.
         self._timeseries_export._ensemble_size = self.ensemble_size
         self._timeseries_export._contains_ensemble = self._timeseries_import.contains_ensemble
-        while self._timeseries_export._ensemble_size - 1 >= len(self._timeseries_export._values):
+        while self._timeseries_export._ensemble_size > len(self._timeseries_export._values):
             self._timeseries_export._values.append({})
 
         # Start looping over the ensembles for extraction of the output values.
@@ -308,15 +307,17 @@ class PIMixin(OptimizationProblem):
                         continue
 
                 # Read ID's
-                ids = self._timeseries_export._data_config.location_parameter_id(variable)
-                if ids == variable or len(ids) < 2:
-                    logger.debug('PIMixIn: variable {} has no parameter and/or location ID defined in rtcDataConfig so cannot be added to timeseries_export.'.format(variable))
+                try:
+                    location_parameter_id = self._timeseries_export._data_config.location_parameter_id(variable)
+                except KeyError:
+                    logger.debug('PIMixIn: variable {} has no mapping defined in rtcDataConfig so cannot be added to timeseries_export.'.format(variable))
                     continue
 
                 # Add series to output file
-                self._timeseries_export.add_series(variable, ids, values=values, ensemble_member=ensemble_member)
+                self._timeseries_export.add_header(variable, location_parameter_id, ensemble_member=ensemble_member)
+                self._timeseries_export.set(variable, values, ensemble_member=ensemble_member)
 
-        # Write output file to disk 
+        # Write output file to disk
         self._timeseries_export.write()
 
     def _datetime_to_sec(self, d):
@@ -358,10 +359,7 @@ class PIMixin(OptimizationProblem):
 
     @property
     def ensemble_size(self):
-        if self._timeseries_import.contains_ensemble:
-            return self._timeseries_import.ensemble_size
-        else:
-            return 1
+        return self._timeseries_import.ensemble_size
 
     @property
     def output_variables(self):

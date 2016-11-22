@@ -8,6 +8,9 @@ import struct
 import io
 import os
 import logging
+from collections import namedtuple
+
+ids = namedtuple('ids', 'location_id parameter_id qualifier_id')
 
 ns = {'fews': 'http://www.wldelft.nl/fews',
       'pi': 'http://www.wldelft.nl/fews/PI'}
@@ -81,14 +84,15 @@ class DataConfig:
             return timeseries_id
 
     def _pi_location_parameter_id(self, el, namespace):
-        ids = []
-        ids.append(el.find(namespace + ':locationId', ns).text)
-        ids.append(el.find(namespace + ':parameterId', ns).text)
+        qualifier_ids = []
         qualifiers = el.findall(namespace + ':qualifierId', ns)
         for qualifier in qualifiers:
-            ids.append(qualifier.text)
+            qualifier_ids.append(qualifier.text)
 
-        return ids
+        location_parameter_ids = ids( location_id  = el.find(namespace + ':locationId', ns).text,
+                                      parameter_id = el.find(namespace + ':parameterId', ns).text,
+                                      qualifier_id = qualifier_ids)
+        return location_parameter_ids
 
     def variable(self, pi_header):
         """
@@ -107,14 +111,13 @@ class DataConfig:
 
     def location_parameter_id(self, variable):
         """
-        Map a RTC-Tools timeseries ID to a list of location, parameter and qualifier ID's.
+        Map a RTC-Tools timeseries ID to a named tuple of location, parameter
+        and qualifier ID's.
 
         :param variable: A timeseries ID.
 
-        :returns: A list of location, parameter and qualifier ID's.
-        :rtype: list
+        :returns: A named tuple with fields location_id, parameter_id and qualifier_id.
+        :rtype: namedtuple
+        :raises KeyError: If the timeseries Id has no mapping in rtcDataConfig.
         """
-        try:
-            return self._location_parameter_ids[variable]
-        except KeyError:
-            return variable
+        return self._location_parameter_ids[variable]

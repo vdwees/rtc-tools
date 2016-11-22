@@ -1,4 +1,4 @@
- # cython: embedsignature=True
+# cython: embedsignature=True
 
 import xml.etree.cElementTree as ET
 import numpy as np
@@ -379,7 +379,6 @@ class Timeseries:
             self._start_datetime = None
             self._end_datetime = None
             self._forecast_datetime = None
-            self._forecast_datetime_in_file = False
             self._forecast_index = None
             self._contains_ensemble = False
             self._ensemble_size = 1
@@ -420,12 +419,10 @@ class Timeseries:
 
                 el = header.find('pi:forecastDate', ns)
                 if el != None:
-                    forecast_datetime_in_file = True
                     forecast_datetime = _parse_date_time(el)
-                # the timeseries has no forecastDate, so the forecastDate
-                # is set to the startDate (per the PI-schema)
                 else:
-                    forecast_datetime_in_file = False
+                    # the timeseries has no forecastDate, so the forecastDate
+                    # is set to the startDate (per the PI-schema)
                     forecast_datetime = start_datetime
                 if self._forecast_datetime == None:
                     self._forecast_datetime = forecast_datetime
@@ -433,9 +430,6 @@ class Timeseries:
                     if forecast_datetime != self._forecast_datetime:
                         raise Exception(
                             'PI: Not all timeseries share the same forecastDate.')
-                if self._forecast_datetime_in_file == False:
-                # Only overwrite when _forecast_datetime_in_file was False before
-                    self._forecast_datetime_in_file = forecast_datetime_in_file
 
                 el = header.find('pi:ensembleMemberIndex', ns)
                 if el != None:
@@ -585,28 +579,28 @@ class Timeseries:
             if f != None and self._binary:
                 f.close()
 
-    def add_series(self, variable, ids, values=None, ensemble_member=0, miss_val=-999):
+    def add_header(self, variable, location_parameter_id, ensemble_member=0, miss_val=-999):
         """
-        Add a series to the timeseries object.
+        Add a timeseries header to the timeseries object.
         """
         # Save current datetime
         now = datetime.datetime.now()
 
         # Define the basic structure of the header
         header_elements       = ['type', 'locationId', 'parameterId', 'timeStep', 'startDate', 'endDate', 'missVal', 'stationName', 'units', 'creationDate', 'creationTime']
-        header_element_texts  = ['instantaneous', ids[0], ids[1], '', '', '', str(miss_val), ids[0], 'unit_unknown', now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')]
+        header_element_texts  = ['instantaneous', location_parameter_id.location_id, location_parameter_id.parameter_id, '', '', '', str(miss_val), location_parameter_id.location_id, 'unit_unknown', now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')]
 
         # Add ensembleMemberIndex, forecastDate and qualifierId if necessary.
         if self.contains_ensemble:
             header_elements.insert(3, 'ensembleMemberIndex')
             header_element_texts.insert(3, str(ensemble_member))
-        if self.forecast_datetime_in_file:
+        if self._forecast_datetime != self._start_datetime:
             header_elements.insert(6, 'forecastDate')
             header_element_texts.insert(6, '')
-        if len(ids) > 2:
+        if len(location_parameter_id.qualifier_id) > 0:
             # Track relative index to preserve original ordering of qualifier ID's
             i = 0
-            for qualifier_id in ids[2:]:
+            for qualifier_id in location_parameter_id.qualifier_id:
                 header_elements.insert(3, 'qualifierId')
                 header_element_texts.insert(3+i, qualifier_id)
                 i += 1
@@ -635,27 +629,13 @@ class Timeseries:
         el.set('time', self._end_datetime.strftime('%H:%M:%S'))
 
         # Set the forecast date if applicable
-        if self.forecast_datetime_in_file:
-          el = header.find('pi:forecastDate', ns)
-          el.set('date', self._forecast_datetime.strftime('%Y-%m-%d'))
-          el.set('time', self._forecast_datetime.strftime('%H:%M:%S'))
+        if self._forecast_datetime != self._start_datetime:
+            el = header.find('pi:forecastDate', ns)
+            el.set('date', self._forecast_datetime.strftime('%Y-%m-%d'))
+            el.set('time', self._forecast_datetime.strftime('%H:%M:%S'))
 
         # Add series to xml
         self._xml_root.append(series)
-
-        # Add values to values dictionary
-        if values is not None:
-            if len(values) == len(self._times):
-              self.set(
-                  variable, values, ensemble_member=ensemble_member)
-            else:
-                raise Exception("PI: Can't add less/more values to timeseries file than there are time steps.")
-        else:
-            values = np.empty(
-                len(self.times), dtype=self._internal_dtype)
-            values.fill(np.nan)
-            self.set(
-                variable, values, ensemble_member=ensemble_member)
 
     def write(self):
         """
@@ -764,13 +744,6 @@ class Timeseries:
         Ensemble size.
         """
         return self._ensemble_size
-
-    @property
-    def forecast_datetime_in_file(self):
-        """
-        Flag to indicate forecastDate was specified in the file.
-        """
-        return self._forecast_datetime_in_file
 
     @property
     def start_datetime(self):
