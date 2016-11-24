@@ -310,7 +310,7 @@ class PIMixin(OptimizationProblem):
                 try:
                     location_parameter_id = self._timeseries_export._data_config.location_parameter_id(variable)
                 except KeyError:
-                    logger.debug('PIMixIn: variable {} has no mapping defined in rtcDataConfig so cannot be added to timeseries_export.'.format(variable))
+                    logger.debug('PIMixIn: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(variable))
                     continue
 
                 # Add series to output file
