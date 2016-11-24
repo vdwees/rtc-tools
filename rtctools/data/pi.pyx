@@ -388,7 +388,10 @@ class Timeseries:
 
                 variable = self._data_config.variable(header)
 
-                dt = _parse_time_step(header.find('pi:timeStep', ns))
+                try:
+                    dt = _parse_time_step(header.find('pi:timeStep', ns))
+                except ValueError:
+                    raise Exception('PI: Multiplier of time step of variable {} must be a positive integer per the PI schema.'.format(variable))
                 if self._dt == None:
                     self._dt = dt
                 else:
@@ -617,7 +620,7 @@ class Timeseries:
         # Set time step
         if self.dt:
             el.set('unit', 'second')
-            el.set('multiplier', str(self.dt.total_seconds()))
+            el.set('multiplier', str(int(self.dt.total_seconds())))
         else:
             el.set('unit', 'nonequidistant')
 
