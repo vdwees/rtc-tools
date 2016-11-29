@@ -264,5 +264,14 @@ and does not branch until it arrives at the first branching time. Up until the
 branching point, RTC-Tools is making decisions that enhance the flexibility of
 the system so that it can respond as ideally as possible to whichever future
 emerges. In the case of two forecasts, this means taking a path that falls
-between the two possible futures. Once the branching time is reached, RTC-
-Tools is allowed to optimize for each individual branch separately.
+between the two possible futures. This will cause the water level to diverge
+from the ideal levels as time progresses. While this appears to be suboptimal,
+it is preferable to simply gambling on one of the forecasts coming true and
+ignoring the other. Once the branching time is reached, RTC-Tools is allowed
+to optimize for each individual branch separately. Imidiately, RTC-Tools
+applies the corrective control needed to get the water levels into the
+acceptible range. If the operator simply picks a forcast to use and guesses
+wrong, the corrective control will have to be much more drastic and
+potentially catastrophic.
+
+
