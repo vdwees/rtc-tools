@@ -1,0 +1,27 @@
+build:windows:
+  stage: build
+  cache:
+    paths:
+      - venv/
+  script:
+    - call %PATH_VCVARSALL% x86
+    - SET DISTUTILS_USE_SDK=1
+    - SET MSSdk=1
+    - python -m virtualenv venv
+    - call venv\Scripts\activate.bat
+    - pip install -r doc\requirements.txt
+    - pip wheel .
+  artifacts:
+    paths:
+      - '*.whl'
+    expire_in: 1 week
+  tags:
+    - windows
+
+test:linux:
+  image: jmodelica.org
+  stage: test
+  # FIXME: Nose fails if we do not have a USER environment variable
+  script: python setup.py install && export USER=root && /opt/JModelica/bin/jm_python.sh -m nose --exe -w tests
+  tags:
+    - docker
