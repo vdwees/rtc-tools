@@ -49,11 +49,6 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
     # Overide default csv_ensemble_mode = False from CSVMixin before calling pre()
     csv_ensemble_mode = True
 
-    def control_tree_options(self):
-        options = super(Example, self).control_tree_options()
-        options['branching_times'] = self.times()[2:]
-        return options
-
     def pre(self):
         # Do the standard preprocessing
         super(Example, self).pre()
@@ -94,6 +89,14 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
                                       self.get_timeseries('V_max')))
         g.append(MinimizeQreleaseGoal())
         return g
+
+    def control_tree_options(self):
+        # We want to modify the control tree options, so we override the default
+        # control_tree_options method. We call super() to get the default options
+        options = super(Example, self).control_tree_options()
+        # Change the branching_times list to only contain the fifth timestep
+        options['branching_times'] = [self.times()[5]]
+        return options
 
     def priority_completed(self, priority):
         # We want to print some information about our goal programming problem.

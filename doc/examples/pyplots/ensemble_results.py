@@ -33,7 +33,7 @@ for idx, forecast in enumerate(forecast_names):
         linewidth=2, color='r', linestyle='--')
         axarr[0].plot(results['time'], results['V_min'], label='Min',
         linewidth=2, color='g', linestyle='--')
-    axarr[0].plot(results['time'], results['V_storage'], label=forecast,
+    axarr[0].plot(results['time'], results['V_storage'], label=forecast + ':volume',
                         linewidth=2, color=get_cmap(cmaps[idx])(shades[1]))
 
     # Lower Subplot
