@@ -135,11 +135,11 @@ We turn on ensemble mode by setting ``csv_ensemble_mode = True``:
   :lineno-match:
 
 The method ``pre()`` is already defined in RTC-Tools, but we would like to add
-a line to it to create a variable for storing intermediate results. To do this,
-we declare a new ``pre()`` method, call ``super(Example, self).pre()`` to ensure
-that the original method runs unmodified, and add in a variable declaration to
-store our list of intermediate results. This variable is a dict, reflecting the
-need to store results from multiple ensemble.
+a line to it to create a variable for storing intermediate results. To do
+this, we declare a new ``pre()`` method, call ``super(Example, self).pre()``
+to ensure that the original method runs unmodified, and add in a variable
+declaration to store our list of intermediate results. This variable is a
+dict, reflecting the need to store results from multiple ensemble.
 
 Because the timeseries we set will be the same for both ensemble members, we
 also make sure that the timeseries we set are set for both ensemble members
@@ -155,6 +155,17 @@ Now we pass in the goals:
 .. literalinclude:: ../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.path_goals
+  :lineno-match:
+
+In order to better demonstrate the way that ensembles are handled in RTC-
+Tools, we modify the ``control_tree_options()`` method. The default setting
+allows the control tree to split at every time, but we override this method
+and force it to split at a single timestep. See :ref:`ensemble-results` at
+the bottom of the page for more information.
+
+.. literalinclude:: ../../examples/ensemble/src/example.py
+  :language: python
+  :pyobject: Example.control_tree_options
   :lineno-match:
 
 We define the ``priority_completed()`` method. We ensure that it stores the
@@ -241,3 +252,26 @@ matplotlib:
 
 .. plot:: examples/pyplots/ensemble_results.py
    :include-source:
+
+
+.. _ensemble-results:
+
+Observations
+------------
+
+Note that in the results plotted above, the control tree follows a single path
+and does not branch until it arrives at the first branching time. Up until the
+branching point, RTC-Tools is making decisions that enhance the flexibility of
+the system so that it can respond as ideally as possible to whichever future
+emerges. In the case of two forecasts, this means taking a path that falls
+between the two possible futures. This will cause the water level to diverge
+from the ideal levels as time progresses. While this appears to be suboptimal,
+it is preferable to simply gambling on one of the forecasts coming true and
+ignoring the other. Once the branching time is reached, RTC-Tools is allowed
+to optimize for each individual branch separately. Immidiately, RTC-Tools
+applies the corrective control needed to get the water levels into the
+acceptable range. If the operator simply picks a forecast to use and guesses
+wrong, the corrective control will have to be much more drastic and
+potentially catastrophic.
+
+

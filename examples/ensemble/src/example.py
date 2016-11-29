@@ -90,6 +90,14 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
         g.append(MinimizeQreleaseGoal())
         return g
 
+    def control_tree_options(self):
+        # We want to modify the control tree options, so we override the default
+        # control_tree_options method. We call super() to get the default options
+        options = super(Example, self).control_tree_options()
+        # Change the branching_times list to only contain the fifth timestep
+        options['branching_times'] = [self.times()[5]]
+        return options
+
     def priority_completed(self, priority):
         # We want to print some information about our goal programming problem.
         # We store the useful numbers temporarily, and print information at the
