@@ -49,6 +49,11 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
     # Overide default csv_ensemble_mode = False from CSVMixin before calling pre()
     csv_ensemble_mode = True
 
+    def control_tree_options(self):
+        options = super(Example, self).control_tree_options()
+        options['branching_times'] = self.times()[2:]
+        return options
+
     def pre(self):
         # Do the standard preprocessing
         super(Example, self).pre()
