@@ -20,7 +20,8 @@ axarr[0].set_title('Water Volume and Discharge')
 f.autofmt_xdate()
 
 # Upper subplot
-axarr[0].set_ylabel('Water Volume [m3]')
+axarr[0].set_ylabel(u'Water Volume [m\u00B3]')
+axarr[0].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 axarr[0].plot(results['time'], results['V_storage'], label='Storage',
               linewidth=2, color='b')
 axarr[0].plot(results['time'], [420000]*len(results['time']), label='Storage Max',
@@ -29,7 +30,7 @@ axarr[0].plot(results['time'], [380000]*len(results['time']), label='Storage Min
               linewidth=2, color='g', linestyle='--')
 
 # Lower Subplot
-axarr[1].set_ylabel('Flow Rate [m3/s]')
+axarr[1].set_ylabel(u'Flow Rate [m\u00B3/s]')
 # axarr[1].plot(results['time'], results['Q_in'], label='Inflow',
 #               linewidth=2, color='g')
 axarr[1].plot(results['time'], results['Q_release'], label='Release',

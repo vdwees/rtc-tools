@@ -35,7 +35,7 @@ axarr[1].plot(results['time'], 0.43 * np.ones_like(results['time']), label='Stor
               linewidth=2, color='g', linestyle='--')
 
 # Lower Subplot
-axarr[2].set_ylabel('Flow Rate [m3/s]')
+axarr[2].set_ylabel(u'Flow Rate [m\u00B3/s]')
 axarr[2].plot(results['time'], results['Q_orifice'], label='Orifice',
               linewidth=2, color='g')
 axarr[2].plot(results['time'], results['Q_pump'], label='Pump',
