@@ -218,26 +218,27 @@ Running the Optimization Problem
 Following the execution of the optimization problem, the  ``post()`` method
 should print out the following lines::
 
-    Results for Ensemble Member 0:
+  Results for Ensemble Member 0:
 
-    After finishing goals of priority 1:
-    Level goal satisfied at 9 of 12 time steps
-    Integral of Q_release = 45.59
+  After finishing goals of priority 1:
+  Level goal satisfied at 10 of 12 time steps
+  Integral of Q_release = 17.34
 
-    After finishing goals of priority 2:
-    Level goal satisfied at 9 of 12 time steps
-    Integral of Q_release = 42.36
+  After finishing goals of priority 2:
+  Level goal satisfied at 9 of 12 time steps
+  Integral of Q_release = 17.12
 
 
-    Results for Ensemble Member 1:
+  Results for Ensemble Member 1:
 
-    After finishing goals of priority 1:
-    Level goal satisfied at 12 of 12 time steps
-    Integral of Q_release = 19.49
+  After finishing goals of priority 1:
+  Level goal satisfied at 10 of 12 time steps
+  Integral of Q_release = 20.82
 
-    After finishing goals of priority 2:
-    Level goal satisfied at 12 of 12 time steps
-    Integral of Q_release = 16.26
+  After finishing goals of priority 2:
+  Level goal satisfied at 9 of 12 time steps
+  Integral of Q_release = 20.60
+
 
 This is the same output as the output for :doc:`mixed_integer`, except
 now the output for each ensemble is printed.

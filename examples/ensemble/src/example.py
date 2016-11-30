@@ -1,7 +1,7 @@
 from rtctools.optimization.collocated_integrated_optimization_problem \
     import CollocatedIntegratedOptimizationProblem
 from rtctools.optimization.goal_programming_mixin \
-    import GoalProgrammingMixin, Goal
+    import GoalProgrammingMixin, Goal, StateGoal
 from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.csv_mixin import CSVMixin
 from rtctools.optimization.control_tree_mixin import ControlTreeMixin
@@ -24,16 +24,9 @@ class WaterVolumeRangeGoal(Goal):
     priority = 1
 
 
-class MinimizeQreleaseGoal(Goal):
+class MinimizeQreleaseGoal(StateGoal):
     # goal programming mixin will try to minimize the following function
-    def function(self, optimization_problem, ensemble_member):
-        return optimization_problem.state('Q_release')
-
-    # Every goal needs a rough (over)estimate (enclosure) of the range of the function
-    # defined above.
-    function_range = (0.0, 6.0)
-    # Nominal function value.  Used to scale the goal constraint.
-    function_nominal = 2.5
+    state = 'Q_release'
     # The lower the number returned by this function, the higher the priority.
     priority = 2
     # The penalty variable is taken to the order'th power.
@@ -62,7 +55,7 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
         _lookup_tables = self.lookup_tables(ensemble_member=0)
         self.lookup_storage_V = _lookup_tables['storage_V']
 
-        # Non-varrying goals can be implemented as a timeseries
+        # Non-varying goals can be implemented as a timeseries
         for e_m in range(self.ensemble_size):
             self.set_timeseries('H_min', np.ones_like(self.times()) * 0.44,
                                 ensemble_member=e_m)
@@ -87,7 +80,7 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
         g = []
         g.append(WaterVolumeRangeGoal(self.get_timeseries('V_min'),
                                       self.get_timeseries('V_max')))
-        g.append(MinimizeQreleaseGoal())
+        g.append(MinimizeQreleaseGoal(self))
         return g
 
     def control_tree_options(self):
@@ -135,6 +128,10 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
     # Any solver options can be set here
     def solver_options(self):
         options = super(Example, self).solver_options()
+        # When mumps_scaling is not zero, errors occur. RTC-Tools does its own
+        # scaling, so mumps scaling is not critical. Proprietary HSL solvers
+        # do not exhibit this error.
+        options['mumps_scaling'] = 0
         options['print_level'] = 1
         return options
 

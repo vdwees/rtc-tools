@@ -193,13 +193,13 @@ Running the Optimization Problem
 Following the execution of the optimization problem, the  ``post()`` method
 should print out the following lines::
 
-    After finishing goals of priority 1:
-    Volume goal satisfied at 12 of 12 time steps
-    Integral of Q_release = 47.69
+  After finishing goals of priority 1:
+  Volume goal satisfied at 12 of 12 time steps
+  Integral of Q_release = 42.69
 
-    After finishing goals of priority 2:
-    Volume goal satisfied at 12 of 12 time steps
-    Integral of Q_release = 42.58
+  After finishing goals of priority 2:
+  Volume goal satisfied at 12 of 12 time steps
+  Integral of Q_release = 42.58
 
 As the output indicates, while optimizing for the priority 1 goal, no attempt
 was made to minimize the integral of ``Q_release``. The only objective was to
