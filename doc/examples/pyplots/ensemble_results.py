@@ -19,25 +19,30 @@ def get_results(forecast_name):
 # Generate Plot
 n_subplots = 2
 f, axarr = plt.subplots(n_subplots, sharex=True, figsize=(8, 4 * n_subplots))
-axarr[0].set_title('Optimized Water Volume and Discharge')
+axarr[0].set_title('Water Volume and Discharge')
 cmaps = ['Blues', 'Greens']
 shades = [0.5, 0.8]
 f.autofmt_xdate()
 
-# Upper subplot
+# Upper Subplot
+axarr[0].set_ylabel(u'Water Volume in Storage [m\u00B3]')
+axarr[0].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+
+# Lower Subplot
+axarr[1].set_ylabel(u'Flow Rate [m\u00B3/s]')
+
+# Plot Ensemble Members
 for idx, forecast in enumerate(forecast_names):
+    # Upper Subplot
     results = get_results(forecast)
-    axarr[0].set_ylabel('Water Volume in Storage [m3]')
     if idx == 0:
         axarr[0].plot(results['time'], results['V_max'], label='Max',
         linewidth=2, color='r', linestyle='--')
         axarr[0].plot(results['time'], results['V_min'], label='Min',
         linewidth=2, color='g', linestyle='--')
-    axarr[0].plot(results['time'], results['V_storage'], label=forecast + ':volume',
+    axarr[0].plot(results['time'], results['V_storage'], label=forecast + ':Volume',
                         linewidth=2, color=get_cmap(cmaps[idx])(shades[1]))
-
     # Lower Subplot
-    axarr[1].set_ylabel('Flow Rate [m3/s]')
     axarr[1].plot(results['time'], results['Q_in'], label='{}:Inflow'.format(forecast),
                             linewidth=2, color=get_cmap(cmaps[idx])(shades[0]))
     axarr[1].plot(results['time'], results['Q_release'], label='{}:Release'.format(forecast),
