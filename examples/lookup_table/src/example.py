@@ -28,7 +28,7 @@ class WaterVolumeRangeGoal(Goal):
 
 
 class MinimizeQreleaseGoal(StateGoal):
-    # goal programming mixin will try to minimize the following function
+    # GoalProgrammingMixin will try to minimize the following state:
     state = 'Q_release'
     # The lower the number returned by this function, the higher the priority.
     priority = 2
