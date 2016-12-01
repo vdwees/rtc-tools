@@ -1,7 +1,7 @@
 from rtctools.optimization.collocated_integrated_optimization_problem \
     import CollocatedIntegratedOptimizationProblem
 from rtctools.optimization.goal_programming_mixin \
-    import GoalProgrammingMixin, Goal
+    import GoalProgrammingMixin, Goal, StateGoal
 from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.csv_mixin import CSVMixin
 from rtctools.optimization.csv_lookup_table_mixin import CSVLookupTableMixin
@@ -27,16 +27,9 @@ class WaterVolumeRangeGoal(Goal):
     priority = 1
 
 
-class MinimizeQreleaseGoal(Goal):
-    # goal programming mixin will try to minimize the following function
-    def function(self, optimization_problem, ensemble_member):
-        return optimization_problem.state('Q_release')
-
-    # Every goal needs a rough (over)estimate (enclosure) of the range of the
-    # function defined above.
-    function_range = (0.0, 10.0)
-    # Nominal function value.  Used to scale the goal constraint.
-    function_nominal = 2.5
+class MinimizeQreleaseGoal(StateGoal):
+    # GoalProgrammingMixin will try to minimize the following state:
+    state = 'Q_release'
     # The lower the number returned by this function, the higher the priority.
     priority = 2
     # The penalty variable is taken to the order'th power.
@@ -76,7 +69,7 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
         g = []
         g.append(WaterVolumeRangeGoal(self.get_timeseries('V_min'),
                                       self.get_timeseries('V_max')))
-        g.append(MinimizeQreleaseGoal())
+        g.append(MinimizeQreleaseGoal(self))
         return g
 
     # We want to print some information about our goal programming problem. We
