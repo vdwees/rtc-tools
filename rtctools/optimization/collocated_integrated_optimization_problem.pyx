@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, jacobian, vertcat, horzcat, horzsplit, substitute, sumRows, sumCols, IMatrix, interp1d, transpose
+from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, jacobian, vertcat, horzcat, vec, substitute, sumRows, sumCols, IMatrix, interp1d, transpose
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools
@@ -629,20 +629,22 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             accumulation_U = transpose(horzcat(list(accumulation_U)))
 
             # Map to all time steps
-            logger.info("Creating map")
+            logger.info("Mapping")
 
             [integrators_and_collocation_and_path_constraints] = accumulation(
                 [accumulation_X0, accumulation_U])
-            integrators = integrators_and_collocation_and_path_constraints[
-                :len(integrated_variables), :]
             if integrators_and_collocation_and_path_constraints.size2() > 0:
-                collocation_constraints = horzsplit(integrators_and_collocation_and_path_constraints[len(integrated_variables):len(
+                integrators = integrators_and_collocation_and_path_constraints[:len(integrated_variables), :]
+                collocation_constraints = vec(integrators_and_collocation_and_path_constraints[len(integrated_variables):len(
                     integrated_variables) + dae_residual_collocated.size1(), 0:n_collocation_times - 1])
-                discretized_path_constraints = horzsplit(integrators_and_collocation_and_path_constraints[len(
+                discretized_path_constraints = vec(integrators_and_collocation_and_path_constraints[len(
                     integrated_variables) + dae_residual_collocated.size1():, 0:n_collocation_times - 1])
             else:
-                collocation_constraints = []
-                discretized_path_constraints = []
+                integrators = MX()
+                collocation_constraints = MX()
+                discretized_path_constraints = MX()
+
+            logger.info("Composing NLP")
 
             # Store integrators for result extraction
             if len(integrated_variables) > 0:
@@ -654,10 +656,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     self.integrators_mx.append(integrators[:, j])
 
             # Add collocation constraints
-            if len(collocation_constraints) > 0:
-                g.extend(collocation_constraints)
-                zeros = collocation_constraints[
-                    0].size1() * (n_collocation_times - 1) * [0.0]
+            if collocation_constraints.size1() > 0:
+                g.append(collocation_constraints)
+                zeros = collocation_constraints.size1() * [0.0]
                 lbg.extend(zeros)
                 ubg.extend(zeros)
 
