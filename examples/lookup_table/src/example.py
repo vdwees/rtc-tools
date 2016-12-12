@@ -18,8 +18,8 @@ class WaterVolumeRangeGoal(StateGoal):
         # Call super class first, and pass in the optimization problem
         super(WaterVolumeRangeGoal, self).__init__(optimization_problem)
         # Assign V_min and V_max the the target range
-        self.target_min = V_min
-        self.target_max = V_max
+        self.target_min = optimization_problem.get_timeseries('V_min')
+        self.target_max = optimization_problem.get_timeseries('V_max')
     state = 'storage.V'
     priority = 1
 
@@ -64,9 +64,7 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
 
     def path_goals(self):
         g = []
-        g.append(WaterVolumeRangeGoal(self,
-                                      self.get_timeseries('V_min'),
-                                      self.get_timeseries('V_max')))
+        g.append(WaterVolumeRangeGoal(self))
         g.append(MinimizeQreleaseGoal(self))
         return g
 
