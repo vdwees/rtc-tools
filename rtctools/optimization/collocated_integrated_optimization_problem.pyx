@@ -376,6 +376,62 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 accumulation = accumulated.map(
                     'accumulation', n_collocation_times - 1, {'parallelization': 'openmp'})
 
+
+            ensemble_store = []
+            for ensemble_member in range(self.ensemble_size):
+                ensemble_data = {}
+                ensemble_store.append(ensemble_data)
+                # Replace parameters and constant values
+                # We only replace those for which we have values are available.
+                parameters = self.parameters(ensemble_member)
+                dae_variables_parameters_values = [None]*len(self.dae_variables['parameters'])
+                values = []
+                for i, symbol in enumerate(self.dae_variables['parameters']):
+                    for alias in self.variable_aliases(symbol.getName()):
+                        if alias.name in parameters:
+                            dae_variables_parameters_values[i] = alias.sign * parameters[alias.name]
+                            break
+                ensemble_data["dae_variables_parameters_values"] = vertcat(dae_variables_parameters_values)
+
+
+                # Constant inputs
+                constant_inputs = self.constant_inputs(ensemble_member)
+                constant_inputs_interpolated = {}
+                for variable in self.dae_variables['constant_inputs']:
+                    found = False
+                    for alias in self.variable_aliases(variable.getName()):
+                        if alias.name in constant_inputs:
+                            constant_input = constant_inputs[alias.name]
+                            # Always cast to built-in float type for compatibility
+                            # with CasADi.
+                            constant_inputs_interpolated[variable.getName()] = alias.sign * self.interpolate(
+                                collocation_times, constant_input.times, constant_input.values, 0.0, 0.0)
+                            found = True
+                            break
+                    if not found:
+                        constant_inputs_interpolated[
+                            variable.getName()] = n_collocation_times * [0.0]
+                ensemble_data["constant_inputs"] = constant_inputs_interpolated
+
+
+                # Compute initial residual, avoiding the use of expensive
+                # state_at().
+                initial_state = ensemble_data["initial_state"] = []
+                initial_derivatives = ensemble_data["initial_derivatives"] = []
+                for variable in integrated_variables + collocated_variables:
+                    variable = variable.getName()
+                    value = self.state_vector(
+                        variable, ensemble_member=ensemble_member)[0]
+                    nominal = self.variable_nominal(variable)
+                    if nominal != 1:
+                        value *= nominal
+                    initial_state.append(value)
+                    initial_derivatives.append(self.der_at(
+                        variable, t0, ensemble_member=ensemble_member))
+
+            ensemble_aggregate = {}
+            ensemble_aggregate["dae_variables_parameters_values"] = horzcat([ d["dae_variables_parameters_values"] for d in ensemble_store])
+
         for ensemble_member in range(self.ensemble_size):
             logger.info("Transcribing ensemble member {}/{}".format(ensemble_member + 1, self.ensemble_size))
 
@@ -383,6 +439,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             dae_residual_with_lookup_tables = dae_residual
             lookup_tables = self.lookup_tables(ensemble_member)
             inserted_lookup_tables = set()
+            assert len(self.dae_variables['lookup_tables'])==0
             """
             for sym in self.dae_variables['lookup_tables']:
                 found = False
@@ -417,31 +474,17 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     [dae_residual_with_lookup_tables], [sym], [value])
             """
 
-
-
-            # Replace parameters and constant values
-            # We only replace those for which we have values are available.
-            parameters = self.parameters(ensemble_member)
-            dae_variables_parameters_values = [None]*len(self.dae_variables['parameters'])
-            values = []
-            for i, symbol in enumerate(self.dae_variables['parameters']):
-                for alias in self.variable_aliases(symbol.getName()):
-                    if alias.name in parameters:
-                        dae_variables_parameters_values[i] = alias.sign * parameters[alias.name]
-                        break
-            [dae_residual_with_params] = substitute(
-                [dae_residual_with_lookup_tables], self.dae_variables['parameters'], dae_variables_parameters_values)
-
-
+            dae_variables_parameters_values = ensemble_aggregate["dae_variables_parameters_values"][:, i]
 
             # Check linearity of collocated part
             self._linear_collocation_constraints = True
+            """
             if self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
                 # Check linearity of collocation constraints, which is a necessary condition for the optimization problem to be convex
                 # Borrowed from
                 # https://gist.github.com/jgillis/5aebf6b09ada29355418783e8f60e8ef
                 def classify_linear(e, v):
-                    """
+                    ""
                     Takes vector expression e, and symbolic primitives v
                     Returns classification vector
                     For each element in e, determines if:
@@ -450,7 +493,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                       - element does not depend on v at all     (0)
 
                     This method can be sped up a lot with JacSparsityTraits::sp
-                    """
+                    ""
 
                     f = MXFunction("f", [v], [jacobian(e, v)])
                     ret = ((sumCols(IMatrix(f.outputSparsity(0), 1))
@@ -469,8 +512,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
                         logger.warning(
                             "The DAE equation {} is non-linear.  The optimization problem is not convex.  This will, in general, result in the existence of multiple local optima and trouble finding a feasible initial solution.".format(dae_residual_collocated[j]))
-
+                """
             # Initialize an MXFunction for the DAE residual (integrated part)
+            assert len(self.dae_variables['lookup_tables'])==0
             """
             if len(integrated_variables) > 0:
                 I = MX.sym('I', len(integrated_variables))
@@ -507,44 +551,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 integrator_step_function = ImplicitFunction(
                     'integrator_step_function', 'newton', dae_residual_function_integrated, options)
             """
+            constant_inputs = ensemble_store[ensemble_member]["constant_inputs"]
 
-
-
-            # Constant inputs
-            constant_inputs = self.constant_inputs(ensemble_member)
-            constant_inputs_interpolated = {}
-            for variable in self.dae_variables['constant_inputs']:
-                found = False
-                for alias in self.variable_aliases(variable.getName()):
-                    if alias.name in constant_inputs:
-                        constant_input = constant_inputs[alias.name]
-                        # Always cast to built-in float type for compatibility
-                        # with CasADi.
-                        constant_inputs_interpolated[variable.getName()] = alias.sign * self.interpolate(
-                            collocation_times, constant_input.times, constant_input.values, 0.0, 0.0)
-                        found = True
-                        break
-                if not found:
-                    constant_inputs_interpolated[
-                        variable.getName()] = n_collocation_times * [0.0]
-            constant_inputs = constant_inputs_interpolated
-
-
-
-            # Compute initial residual, avoiding the use of expensive
-            # state_at().
-            initial_state = []
-            initial_derivatives = []
-            for variable in integrated_variables + collocated_variables:
-                variable = variable.getName()
-                value = self.state_vector(
-                    variable, ensemble_member=ensemble_member)[0]
-                nominal = self.variable_nominal(variable)
-                if nominal != 1:
-                    value *= nominal
-                initial_state.append(value)
-                initial_derivatives.append(self.der_at(
-                    variable, t0, ensemble_member=ensemble_member))
+            initial_state =  ensemble_store[ensemble_member]["initial_state"]
+            initial_derivatives =  ensemble_store[ensemble_member]["initial_derivatives"]
 
             [res] = initial_residual_with_params_fun([ dae_variables_parameters_values,
                                                         vertcat(initial_state
@@ -725,7 +735,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         if alias.name == out_variable_name:
                             out_times = collocation_times
                             out_values = alias.sign * \
-                                constant_inputs_interpolated[variable]
+                                constant_inputs[variable]
                     if out_times is not None:
                         break
                 if in_times is None:
