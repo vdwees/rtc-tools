@@ -114,10 +114,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             # TODO treat these separately.
             collocated_variables.append(variable)
 
-        logger.debug("Integrating variables {}".format(
-            repr(integrated_variables)))
-        logger.debug("Collocating variables {}".format(
-            repr(collocated_variables)))
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            logger.debug("Integrating variables {}".format(
+                repr(integrated_variables)))
+            logger.debug("Collocating variables {}".format(
+                repr(collocated_variables)))
 
         self._path_variable_names = [variable.getName()
                                      for variable in self.path_variables]
@@ -199,6 +200,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         collocation_times = self.times()
         n_collocation_times = len(collocation_times)
         for ensemble_member in range(self.ensemble_size):
+            logger.info("Transcribing ensemble member {}/{}".format(ensemble_member + 1, self.ensemble_size))
+
             # Insert lookup tables
             dae_residual_with_lookup_tables = dae_residual
             lookup_tables = self.lookup_tables(ensemble_member)
@@ -251,11 +254,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             [initial_residual_with_params] = substitute(
                 [initial_residual], symbols, values)
 
-            logger.debug("DAE residual:")
-            logger.debug(dae_residual_with_params)
+            if logger.getEffectiveLevel() == logging.DEBUG:
+                logger.debug("DAE residual:")
+                logger.debug(dae_residual_with_params)
 
-            logger.debug("Initial residual:")
-            logger.debug(initial_residual_with_params)
+                logger.debug("Initial residual:")
+                logger.debug(initial_residual_with_params)
 
             # Split DAE into integrated and into a collocated part
             dae_residual_integrated = []
@@ -644,7 +648,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 collocation_constraints = MX()
                 discretized_path_constraints = MX()
 
-            logger.info("Composing NLP")
+            logger.info("Composing NLP segment")
 
             # Store integrators for result extraction
             if len(integrated_variables) > 0:
