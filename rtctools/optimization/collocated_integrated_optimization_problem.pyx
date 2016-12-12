@@ -786,6 +786,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 ubg.extend(ubg_path_constraints.transpose().ravel())
 
         # NLP function
+        logger.info("Creating NLP function")
+        
         # , {'jit': True, 'compiler': 'shell'})
         nlp = MXFunction('nlp', nlpIn(x=X), nlpOut(f=f, g=vertcat(g)))
 
