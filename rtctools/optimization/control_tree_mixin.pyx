@@ -244,7 +244,7 @@ class ControlTreeMixin(OptimizationProblem):
     def control_vector(self, variable, ensemble_member=0):
         X = self.solver_input
 
-        return vertcat([X[i] for i in self._control_indices[variable][ensemble_member, :]])
+        return X[self._control_indices[variable][ensemble_member, :]]
 
     def control_at(self, variable, t, ensemble_member=0, scaled=False, extrapolate=True):
         t0 = self.initial_time
