@@ -199,6 +199,23 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         ubg = []
         collocation_times = self.times()
         n_collocation_times = len(collocation_times)
+
+
+        for ensemble_member in range(self.ensemble_size):
+            # Objective
+            f_member = self.objective(ensemble_member)
+            f += self.ensemble_member_probability(ensemble_member) * f_member
+
+            if logger.getEffectiveLevel() == logging.DEBUG:
+                logger.debug(
+                    "Adding ensemble member objective {}".format(f_member))
+
+        # Add constraints for initial conditions
+        initial_residual_with_params_fun = MXFunction('initial_residual', [vertcat(self.dae_variables['parameters']), vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
+                                                  'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat([dae_residual, initial_residual])])
+        # Expand to SX for improved performance
+        initial_residual_with_params_fun = initial_residual_with_params_fun.expand()
+
         for ensemble_member in range(self.ensemble_size):
             logger.info("Transcribing ensemble member {}/{}".format(ensemble_member + 1, self.ensemble_size))
 
@@ -206,6 +223,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             dae_residual_with_lookup_tables = dae_residual
             lookup_tables = self.lookup_tables(ensemble_member)
             inserted_lookup_tables = set()
+            """
             for sym in self.dae_variables['lookup_tables']:
                 found = False
                 sym_key = None
@@ -237,29 +255,22 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 [value] = lookup_tables[sym_key].function(input_syms)
                 [dae_residual_with_lookup_tables] = substitute(
                     [dae_residual_with_lookup_tables], [sym], [value])
+            """
 
             # Replace parameters and constant values
             # We only replace those for which we have values are available.
             parameters = self.parameters(ensemble_member)
-            symbols = []
+            dae_variables_parameters_values = [None]*len(self.dae_variables['parameters'])
             values = []
-            for symbol in self.dae_variables['parameters']:
+            for i, symbol in enumerate(self.dae_variables['parameters']):
                 for alias in self.variable_aliases(symbol.getName()):
                     if alias.name in parameters:
-                        symbols.append(symbol)
-                        values.append(alias.sign * parameters[alias.name])
+                        dae_variables_parameters_values[i] = alias.sign * parameters[alias.name]
                         break
             [dae_residual_with_params] = substitute(
-                [dae_residual_with_lookup_tables], symbols, values)
+                [dae_residual_with_lookup_tables], self.dae_variables['parameters'], dae_variables_parameters_values)
             [initial_residual_with_params] = substitute(
-                [initial_residual], symbols, values)
-
-            if logger.getEffectiveLevel() == logging.DEBUG:
-                logger.debug("DAE residual:")
-                logger.debug(dae_residual_with_params)
-
-                logger.debug("Initial residual:")
-                logger.debug(initial_residual_with_params)
+                [initial_residual], self.dae_variables['parameters'], dae_variables_parameters_values)
 
             # Split DAE into integrated and into a collocated part
             dae_residual_integrated = []
@@ -317,6 +328,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                             "The DAE equation {} is non-linear.  The optimization problem is not convex.  This will, in general, result in the existence of multiple local optima and trouble finding a feasible initial solution.".format(dae_residual_collocated[j]))
 
             # Initialize an MXFunction for the DAE residual (integrated part)
+            """
             if len(integrated_variables) > 0:
                 I = MX.sym('I', len(integrated_variables))
                 I0 = MX.sym('I0', len(integrated_variables))
@@ -351,6 +363,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 options = self.integrator_options()
                 integrator_step_function = ImplicitFunction(
                     'integrator_step_function', 'newton', dae_residual_function_integrated, options)
+            """
 
             # Initialize an MXFunction for the DAE residual (collocated part)
             if len(collocated_variables) > 0:
@@ -380,11 +393,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         variable.getName()] = n_collocation_times * [0.0]
             constant_inputs = constant_inputs_interpolated
 
-            # Add constraints for initial conditions
-            initial_residual_with_params = MXFunction('initial_residual', [vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
-                                                      'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat([dae_residual_with_params, initial_residual_with_params])])
-            # Expand to SX for improved performance
-            initial_residual_with_params = initial_residual_with_params.expand()
+
 
             # Compute initial residual, avoiding the use of expensive
             # state_at().
@@ -401,7 +410,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 initial_derivatives.append(self.der_at(
                     variable, t0, ensemble_member=ensemble_member))
 
-            [res] = initial_residual_with_params([vertcat(initial_state
+            [res] = initial_residual_with_params_fun([ dae_variables_parameters_values,
+                                                        vertcat(initial_state
                                                           + initial_derivatives
                                                           + [float(constant_inputs[variable.getName()][0]) for variable in self.dae_variables[
                                                               'constant_inputs']]
@@ -722,13 +732,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 lbg.extend(n_collocation_times * [0.0])
                 ubg.extend(n_collocation_times * [0.0])
 
-            # Objective
-            f_member = self.objective(ensemble_member)
-            f += self.ensemble_member_probability(ensemble_member) * f_member
 
-            if logger.getEffectiveLevel() == logging.DEBUG:
-                logger.debug(
-                    "Adding ensemble member objective {}".format(f_member))
 
             # Constraints
             constraints = self.constraints(ensemble_member)
