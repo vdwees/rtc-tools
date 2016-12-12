@@ -10,17 +10,14 @@ from rtctools.util import run_optimization_problem
 import numpy as np
 
 
-class WaterVolumeRangeGoal(Goal):
-    def __init__(self, V_min, V_max):
-        self.target_min = V_min
-        self.target_max = V_max
-
-    def function(self, optimization_problem, ensemble_member):
-        return optimization_problem.state('storage.V')
-
-    # Enclosure of the function range.
-    function_range = (2e5, 6e5)
-    function_nominal = 4e5
+class WaterVolumeRangeGoal(StateGoal):
+    def __init__(self, optimization_problem):
+        # Call super class first, and pass in the optimization problem
+        super(WaterVolumeRangeGoal, self).__init__(optimization_problem)
+        # Assign V_min and V_max the the target range
+        self.target_min = optimization_problem.get_timeseries('V_min')
+        self.target_max = optimization_problem.get_timeseries('V_max')
+    state = 'storage.V'
     priority = 1
 
 
@@ -78,8 +75,7 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
 
     def path_goals(self):
         g = []
-        g.append(WaterVolumeRangeGoal(self.get_timeseries('V_min'),
-                                      self.get_timeseries('V_max')))
+        g.append(WaterVolumeRangeGoal(self))
         g.append(MinimizeQreleaseGoal(self))
         return g
 
