@@ -65,7 +65,8 @@ Declaring Goals
 '''''''''''''''
 
 Goals are defined as classes that inherit the ``Goal`` parent class. The
-components of goals can be found in :doc:`../optimization/multi_objective`.
+components of goals can be found in :doc:`../optimization/multi_objective`. In
+this example, we use the helper goal class, ``StateGoal``.
 
 First, we have a high priority goal to keep the water volume within a minimum
 and maximum. We use a water volume goal instead of a water level goal when the
@@ -73,9 +74,10 @@ volume-storage relation of the storage element is non-linear. The volume of
 water in the storage element behaves linearly, while the water level does not.
 
 However, goals are usually defined in the form of water level goals. We will
-convert the water level goals into volume goals within the optimization problem
-class, so we define the ``__init__()`` method so we can pass the values of the
-goals in later.
+convert the water level goals into volume goals within the optimization
+problem class, so we define the ``__init__()`` method so we can pass the
+values of the goals in later. We call the ``super()`` method to avoid
+overwriting the ``__init__()`` method of the parent class.
 
 .. literalinclude:: ../../examples/lookup_table/src/example.py
   :language: python
