@@ -216,6 +216,34 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Expand to SX for improved performance
         initial_residual_with_params_fun = initial_residual_with_params_fun.expand()
 
+        # Split DAE into integrated and into a collocated part
+        dae_residual_integrated = []
+        dae_residual_collocated = []
+        for output_index in range(dae_residual.size1()):
+            output = dae_residual[output_index]
+
+            contains = False
+            for derivative in integrated_derivatives:
+                if contains_symbol(output, derivative):
+                    contains = True
+                    break
+
+            if contains:
+                dae_residual_integrated.append(output)
+            else:
+                dae_residual_collocated.append(output)
+        dae_residual_integrated = vertcat(dae_residual_integrated)
+        dae_residual_collocated = vertcat(dae_residual_collocated)
+
+        # Initialize an MXFunction for the DAE residual (collocated part)
+        if len(collocated_variables) > 0:
+            dae_residual_function_collocated = MXFunction('dae_residual_function_collocated', [vertcat(self.dae_variables['parameters']), vertcat(
+                integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_collocated])
+            # Expand to SX for improved performance
+            # We do not expand the overall problem, as that would unroll
+            # map/mapaccum as well into an SX tree.
+            dae_residual_function_collocated = dae_residual_function_collocated.expand()
+
         for ensemble_member in range(self.ensemble_size):
             logger.info("Transcribing ensemble member {}/{}".format(ensemble_member + 1, self.ensemble_size))
 
@@ -269,27 +297,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         break
             [dae_residual_with_params] = substitute(
                 [dae_residual_with_lookup_tables], self.dae_variables['parameters'], dae_variables_parameters_values)
-            [initial_residual_with_params] = substitute(
-                [initial_residual], self.dae_variables['parameters'], dae_variables_parameters_values)
 
-            # Split DAE into integrated and into a collocated part
-            dae_residual_integrated = []
-            dae_residual_collocated = []
-            for output_index in range(dae_residual_with_params.size1()):
-                output = dae_residual_with_params[output_index]
 
-                contains = False
-                for derivative in integrated_derivatives:
-                    if contains_symbol(output, derivative):
-                        contains = True
-                        break
-
-                if contains:
-                    dae_residual_integrated.append(output)
-                else:
-                    dae_residual_collocated.append(output)
-            dae_residual_integrated = vertcat(dae_residual_integrated)
-            dae_residual_collocated = vertcat(dae_residual_collocated)
 
             # Check linearity of collocated part
             self._linear_collocation_constraints = True
@@ -365,14 +374,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     'integrator_step_function', 'newton', dae_residual_function_integrated, options)
             """
 
-            # Initialize an MXFunction for the DAE residual (collocated part)
-            if len(collocated_variables) > 0:
-                dae_residual_function_collocated = MXFunction('dae_residual_function_collocated', [vertcat(
-                    integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_collocated])
-                # Expand to SX for improved performance
-                # We do not expand the overall problem, as that would unroll
-                # map/mapaccum as well into an SX tree.
-                dae_residual_function_collocated = dae_residual_function_collocated.expand()
+
 
             # Constant inputs
             constant_inputs = self.constant_inputs(ensemble_member)
@@ -525,7 +527,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             if len(collocated_variables) > 0:
                 if theta < 1:
                     # Obtain state vector
-                    [dae_residual_0] = dae_residual_function_collocated([vertcat([integrated_states_0,
+                    [dae_residual_0] = dae_residual_function_collocated([dae_variables_parameters_values, vertcat([integrated_states_0,
                                                                                   collocated_states_0,
                                                                                   integrated_finite_differences,
                                                                                   collocated_finite_differences,
@@ -534,7 +536,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                                                         False, True)
                 if theta > 0:
                     # Obtain state vector
-                    [dae_residual_1] = dae_residual_function_collocated([vertcat([integrated_states_1,
+                    [dae_residual_1] = dae_residual_function_collocated([dae_variables_parameters_values, vertcat([integrated_states_1,
                                                                                   collocated_states_1,
                                                                                   integrated_finite_differences,
                                                                                   collocated_finite_differences,
