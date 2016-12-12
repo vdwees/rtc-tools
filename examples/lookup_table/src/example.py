@@ -14,7 +14,7 @@ class WaterVolumeRangeGoal(StateGoal):
     # min and max are. We add an __init__() method so that the values of these
     # goals can be defined when the optimization problem class instantiates
     # this goal.
-    def __init__(self, optimization_problem, V_min, V_max):
+    def __init__(self, optimization_problem):
         # Call super class first, and pass in the optimization problem
         super(WaterVolumeRangeGoal, self).__init__(optimization_problem)
         # Assign V_min and V_max the the target range
