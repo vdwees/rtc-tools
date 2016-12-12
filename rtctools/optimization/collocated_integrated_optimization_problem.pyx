@@ -722,14 +722,16 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             f_member = self.objective(ensemble_member)
             f += self.ensemble_member_probability(ensemble_member) * f_member
 
-            logger.debug(
-                "Adding ensemble member objective {}".format(f_member))
+            if logger.getEffectiveLevel() == logging.DEBUG:
+                logger.debug(
+                    "Adding ensemble member objective {}".format(f_member))
 
             # Constraints
             constraints = self.constraints(ensemble_member)
-            for constraint in constraints:
-                logger.debug(
-                    "Adding constraint {}, {}, {}".format(*constraint))
+            if logger.getEffectiveLevel() == logging.DEBUG:
+                for constraint in constraints:
+                    logger.debug(
+                        "Adding constraint {}, {}, {}".format(*constraint))
 
             g_constraint = [f_constraint for (
                 f_constraint, lb, ub) in constraints]
@@ -760,8 +762,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 ubg_path_constraints = np.empty(
                     (len(path_constraints), n_collocation_times))
                 for j, path_constraint in enumerate(path_constraints):
-                    logger.debug(
-                        "Adding path constraint {}, {}, {}".format(*path_constraint))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug(
+                            "Adding path constraint {}, {}, {}".format(*path_constraint))
 
                     lb = path_constraint[1]
                     if isinstance(lb, Timeseries):
