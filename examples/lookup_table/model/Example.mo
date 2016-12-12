@@ -1,6 +1,6 @@
 model Example
   Deltares.ChannelFlow.SimpleRouting.BoundaryConditions.Inflow inflow annotation(Placement(visible = true, transformation(origin = {-55, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  Deltares.ChannelFlow.SimpleRouting.Storage.Storage storage annotation(Placement(visible = true, transformation(origin = {0, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Deltares.ChannelFlow.SimpleRouting.Storage.Storage storage(V(nominal=4e5, min=2e5, max=6e5)) annotation(Placement(visible = true, transformation(origin = {0, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Deltares.ChannelFlow.SimpleRouting.BoundaryConditions.Terminal outfall annotation(Placement(visible = true, transformation(origin = {55, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   input Modelica.SIunits.VolumeFlowRate Q_in(fixed = true);
   input Modelica.SIunits.VolumeFlowRate Q_release(fixed = false, min = 0.0, max = 10.0);

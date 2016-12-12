@@ -8,22 +8,19 @@ from rtctools.optimization.csv_lookup_table_mixin import CSVLookupTableMixin
 from rtctools.util import run_optimization_problem
 import numpy as np
 
-class WaterVolumeRangeGoal(Goal):
+class WaterVolumeRangeGoal(StateGoal):
     # We want to add a water volume range goal to our optimization. However, at
     # the time of defining this goal we still do not know what the value of the
     # min and max are. We add an __init__() method so that the values of these
     # goals can be defined when the optimization problem class instantiates
     # this goal.
-    def __init__(self, V_min, V_max):
+    def __init__(self, optimization_problem, V_min, V_max):
+        # Call super class first, and pass in the optimization problem
+        super(WaterVolumeRangeGoal, self).__init__(optimization_problem)
+        # Assign V_min and V_max the the target range
         self.target_min = V_min
         self.target_max = V_max
-
-    def function(self, optimization_problem, ensemble_member):
-        return optimization_problem.state('storage.V')
-
-    # Enclosure of the function range.
-    function_range = (2e5, 6e5)
-    function_nominal = 4e5
+    state = 'storage.V'
     priority = 1
 
 
@@ -67,7 +64,8 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
 
     def path_goals(self):
         g = []
-        g.append(WaterVolumeRangeGoal(self.get_timeseries('V_min'),
+        g.append(WaterVolumeRangeGoal(self,
+                                      self.get_timeseries('V_min'),
                                       self.get_timeseries('V_max')))
         g.append(MinimizeQreleaseGoal(self))
         return g
