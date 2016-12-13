@@ -431,12 +431,21 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 ensemble_data["initial_state"] = vertcat(initial_state)
                 ensemble_data["initial_derivatives"] = vertcat(initial_derivatives)
 
+                initial_path_variables = []
+                for j, variable in enumerate(self.path_variables):
+                    variable = variable.getName()
+                    values = self.state_vector(
+                        variable, ensemble_member=ensemble_member)
+                    initial_path_variables.append(values[0])
+
+                ensemble_data["initial_path_variables"] = vertcat(initial_path_variables)
+
             ensemble_aggregate = {}
             ensemble_aggregate["dae_variables_parameters_values"] = horzcat([ d["dae_variables_parameters_values"] for d in ensemble_store])
             ensemble_aggregate["initial_state"] = horzcat([ d["initial_state"] for d in ensemble_store])
             ensemble_aggregate["initial_derivatives"] = horzcat([ d["initial_derivatives"] for d in ensemble_store])
             ensemble_aggregate["constant_inputs"] = horzcat([ vertcat([float(d["constant_inputs"][variable.getName()][0]) for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
-
+            ensemble_aggregate["initial_path_variables"] = horzcat([ d["initial_path_variables"] for d in ensemble_store])
 
         for ensemble_member in range(self.ensemble_size):
             # Add initial conditions specified in data
@@ -782,18 +791,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             # Path constraints
             if len(path_constraints) > 0:
-                initial_path_variables = []
-                for j, variable in enumerate(self.path_variables):
-                    variable = variable.getName()
-                    values = self.state_vector(
-                        variable, ensemble_member=ensemble_member)
-                    initial_path_variables.append(values[0])
+                initial_path_variables = ensemble_aggregate["initial_path_variables"][:,ensemble_member]
                 constant_inputs = ensemble_aggregate["constant_inputs"][:,ensemble_member]
                 initial_path_constraints = path_constraints_function([vertcat([initial_state
                                                                               , initial_derivatives
                                                                               , constant_inputs,
-                                                                              0.0]
-                                                                              + initial_path_variables)], False, True)
+                                                                              0.0,
+                                                                              initial_path_variables])], False, True)
                 g.extend(initial_path_constraints)
                 g.extend(discretized_path_constraints)
 
