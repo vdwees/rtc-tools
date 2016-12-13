@@ -438,6 +438,41 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             ensemble_aggregate["constant_inputs"] = horzcat([ vertcat([float(d["constant_inputs"][variable.getName()][0]) for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
 
 
+        for ensemble_member in range(self.ensemble_size):
+            # Add initial conditions specified in data
+            history = self.history(ensemble_member)
+            for state in history.keys():
+                try:
+                    history_timeseries = history[state]
+                    xinit = self.interpolate(
+                        t0, history_timeseries.times, history_timeseries.values, np.nan, np.nan)
+
+                except KeyError:
+                    xinit = np.nan
+
+                if np.isfinite(xinit):
+                    # Avoid the use of slow state_at().  We don't need
+                    # interpolation or history values here.
+                    value = None
+                    for variable in self.dae_variables['free_variables']:
+                        variable = variable.getName()
+                        for alias in self.variable_aliases(variable):
+                            if alias.name == state:
+                                value = self.state_vector(
+                                    variable, ensemble_member=ensemble_member)[0]
+                                nominal = self.variable_nominal(variable)
+                                if nominal != 1:
+                                    value *= nominal
+                                if alias.sign < 0:
+                                    value *= -1
+                                break
+                    if value == None:
+                        # This was no free variable.
+                        continue
+                    g.append(value)
+                    lbg.append(float(xinit))
+                    ubg.append(float(xinit))
+
 
         for ensemble_member in range(self.ensemble_size):
             logger.info("Transcribing ensemble member {}/{}".format(ensemble_member + 1, self.ensemble_size))
@@ -570,40 +605,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             ubg.extend(zeros)
 
             constant_inputs = ensemble_store[ensemble_member]["constant_inputs"]
-
-            # Add initial conditions specified in data
-            history = self.history(ensemble_member)
-            for state in history.keys():
-                try:
-                    history_timeseries = history[state]
-                    xinit = self.interpolate(
-                        t0, history_timeseries.times, history_timeseries.values, np.nan, np.nan)
-
-                except KeyError:
-                    xinit = np.nan
-
-                if np.isfinite(xinit):
-                    # Avoid the use of slow state_at().  We don't need
-                    # interpolation or history values here.
-                    value = None
-                    for variable in self.dae_variables['free_variables']:
-                        variable = variable.getName()
-                        for alias in self.variable_aliases(variable):
-                            if alias.name == state:
-                                value = self.state_vector(
-                                    variable, ensemble_member=ensemble_member)[0]
-                                nominal = self.variable_nominal(variable)
-                                if nominal != 1:
-                                    value *= nominal
-                                if alias.sign < 0:
-                                    value *= -1
-                                break
-                    if value == None:
-                        # This was no free variable.
-                        continue
-                    g.append(value)
-                    lbg.append(float(xinit))
-                    ubg.append(float(xinit))
 
 
 
