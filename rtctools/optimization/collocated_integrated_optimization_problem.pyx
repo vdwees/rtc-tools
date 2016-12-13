@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, jacobian, vertcat, horzcat, vec, substitute, sumRows, sumCols, IMatrix, interp1d, transpose, repmat
+from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, jacobian, vertcat, horzcat, vec, substitute, sumRows, sumCols, IMatrix, interp1d, transpose, repmat, matrix_expand
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools
@@ -392,6 +392,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                             dae_variables_parameters_values[i] = alias.sign * parameters[alias.name]
                             break
                 ensemble_data["dae_variables_parameters_values"] = vertcat(dae_variables_parameters_values)
+                if len(self.dae_variables['parameters'])==0: ensemble_data["dae_variables_parameters_values"] = MX(0,1)
 
 
                 # Constant inputs
@@ -412,6 +413,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         constant_inputs_interpolated[
                             variable.getName()] = n_collocation_times * [0.0]
                 ensemble_data["constant_inputs"] = constant_inputs_interpolated
+                if len(self.dae_variables['constant_inputs'])==0: ensemble_data["constant_inputs"] = MX(0,1)
 
 
                 # Compute initial residual, avoiding the use of expensive
@@ -440,11 +442,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
                 ensemble_data["initial_path_variables"] = vertcat(initial_path_variables)
 
+            def nullvertcat(L):
+                if len(L)==0: return MX(0,1)
+                return vertcat(L)
             ensemble_aggregate = {}
             ensemble_aggregate["dae_variables_parameters_values"] = horzcat([ d["dae_variables_parameters_values"] for d in ensemble_store])
             ensemble_aggregate["initial_state"] = horzcat([ d["initial_state"] for d in ensemble_store])
             ensemble_aggregate["initial_derivatives"] = horzcat([ d["initial_derivatives"] for d in ensemble_store])
-            ensemble_aggregate["constant_inputs"] = horzcat([ vertcat([float(d["constant_inputs"][variable.getName()][0]) for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
+            ensemble_aggregate["constant_inputs"] = horzcat([ nullvertcat([float(d["constant_inputs"][variable.getName()][0]) for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
             ensemble_aggregate["initial_path_variables"] = horzcat([ d["initial_path_variables"] for d in ensemble_store])
 
         for ensemble_member in range(self.ensemble_size):
@@ -629,7 +634,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     value *= nominal
                 accumulation_X0.append(value)
             accumulation_X0 = vertcat(accumulation_X0)
-            print "accumulation_X0", accumulation_X0
 
             # Input for map
             logger.info("Interpolating states")
@@ -683,6 +687,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             accumulation_U = transpose(horzcat(list(accumulation_U)))
 
+            accumulation_U = matrix_expand(accumulation_U)
             # Map to all time steps
             logger.info("Mapping")
 
