@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, jacobian, vertcat, horzcat, vec, substitute, sumRows, sumCols, IMatrix, interp1d, transpose, repmat, matrix_expand
+from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, jacobian, vertcat, horzcat, vec, substitute, sumRows, sumCols, IMatrix, interp1d, transpose, repmat, matrix_expand, reshape, mul
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools
@@ -448,6 +448,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             ensemble_aggregate = {}
             ensemble_aggregate["dae_variables_parameters_values"] = horzcat([ d["dae_variables_parameters_values"] for d in ensemble_store])
             ensemble_aggregate["initial_state"] = horzcat([ d["initial_state"] for d in ensemble_store])
+
+            def jacobian_trick(e,p):
+                temp = MXFunction("temp",[],[jacobian(e, p)])
+                J = temp([])[0]
+                return reshape(mul(J, p), e.shape)
+
+            ensemble_aggregate["initial_state"] = jacobian_trick(ensemble_aggregate["initial_state"], self.solver_input)
             ensemble_aggregate["initial_derivatives"] = horzcat([ d["initial_derivatives"] for d in ensemble_store])
             ensemble_aggregate["constant_inputs"] = horzcat([ nullvertcat([float(d["constant_inputs"][variable.getName()][0]) for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
             ensemble_aggregate["initial_path_variables"] = horzcat([ d["initial_path_variables"] for d in ensemble_store])
@@ -488,6 +495,16 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     ubg.append(float(xinit))
 
 
+
+        initial_residual_with_params_fun_map = initial_residual_with_params_fun.map('initial_residual_with_params_fun_map', self.ensemble_size)
+        [res] = initial_residual_with_params_fun_map([ repmat(dae_variables_parameters_values,1,self.ensemble_size), vertcat([ensemble_aggregate["initial_state"], ensemble_aggregate["initial_derivatives"], ensemble_aggregate["constant_inputs"], repmat([0.0],1,self.ensemble_size)])], False, True)
+
+        res = vec(res)
+        g.append(res)
+        zeros = [0.0] * res.size1()
+        lbg.extend(zeros)
+        ubg.extend(zeros)
+
         for ensemble_member in range(self.ensemble_size):
             logger.info("Transcribing ensemble member {}/{}".format(ensemble_member + 1, self.ensemble_size))
 
@@ -496,7 +513,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             lookup_tables = self.lookup_tables(ensemble_member)
             inserted_lookup_tables = set()
             assert len(self.dae_variables['lookup_tables'])==0
-            """
+            """ -> test_csv_mixin
             for sym in self.dae_variables['lookup_tables']:
                 found = False
                 sym_key = None
@@ -571,7 +588,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 """
             # Initialize an MXFunction for the DAE residual (integrated part)
             assert len(self.dae_variables['lookup_tables'])==0
-            """
+            """ -> test_integration !!
+
             if len(integrated_variables) > 0:
                 I = MX.sym('I', len(integrated_variables))
                 I0 = MX.sym('I0', len(integrated_variables))
@@ -607,17 +625,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 integrator_step_function = ImplicitFunction(
                     'integrator_step_function', 'newton', dae_residual_function_integrated, options)
             """
-            constant_inputs = ensemble_aggregate["constant_inputs"][:,ensemble_member]
+
+
             initial_state =  ensemble_aggregate["initial_state"][:,ensemble_member]
             initial_derivatives =  ensemble_aggregate["initial_derivatives"][:,ensemble_member]
-
-            [res] = initial_residual_with_params_fun([ dae_variables_parameters_values,
-                                                        vertcat([initial_state, initial_derivatives, constant_inputs, [0.0]])], False, True)
-            g.append(res)
-            zeros = [0.0] * res.size1()
-            lbg.extend(zeros)
-            ubg.extend(zeros)
-
             constant_inputs = ensemble_store[ensemble_member]["constant_inputs"]
 
 
@@ -791,8 +802,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 f_constraint, lb, ub) in constraints]
             g.extend(g_constraint)
 
-            lbg.extend(itertools.chain(*[f_constraint.size1() * [float(lb)] for (f_constraint, lb, ub) in constraints]))
-            ubg.extend(itertools.chain(*[f_constraint.size1() * [float(ub)] for (f_constraint, lb, ub) in constraints]))
+            for (f_constraint, lb, ub) in constraints:
+                print lb.shape, ub.shape
+                lbg.append(lb)
+                ubg.append(ub)
+            #lbg.extend(itertools.chain(*[f_constraint.size1() * [float(lb)] for (f_constraint, lb, ub) in constraints]))
+            #ubg.extend(itertools.chain(*[f_constraint.size1() * [float(ub)] for (f_constraint, lb, ub) in constraints]))
 
             # Path constraints
             if len(path_constraints) > 0:
@@ -838,6 +853,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Done
         logger.info("Done transcribing problem")
+
+        nlp.generate("nlp.c")
 
         return discrete, lbx, ubx, lbg, ubg, x0, nlp
 

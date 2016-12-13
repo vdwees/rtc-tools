@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MXFunction, NlpSolver, MX, CasadiOptions
+from casadi import MXFunction, NlpSolver, MX, CasadiOptions, vertcat
 from abc import ABCMeta, abstractmethod, abstractproperty
 import numpy as np
 cimport numpy as np
@@ -156,8 +156,8 @@ class OptimizationProblem(object):
 
         solver.setInput(lbx, 'lbx')
         solver.setInput(ubx, 'ubx')
-        solver.setInput(lbg, 'lbg')
-        solver.setInput(ubg, 'ubg')
+        solver.setInput(vertcat(lbg), 'lbg')
+        solver.setInput(vertcat(ubg), 'ubg')
         solver.setInput(x0, 'x0')
 
         # Solve NLP
