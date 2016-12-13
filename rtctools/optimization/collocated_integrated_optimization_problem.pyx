@@ -416,7 +416,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
                 # Compute initial residual, avoiding the use of expensive
                 # state_at().
-                initial_state = ensemble_data["initial_state"] = []
+                initial_state = []
                 initial_derivatives = ensemble_data["initial_derivatives"] = []
                 for variable in integrated_variables + collocated_variables:
                     variable = variable.getName()
@@ -428,9 +428,16 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     initial_state.append(value)
                     initial_derivatives.append(self.der_at(
                         variable, t0, ensemble_member=ensemble_member))
+                ensemble_data["initial_state"] = vertcat(initial_state)
+                ensemble_data["initial_derivatives"] = vertcat(initial_derivatives)
 
             ensemble_aggregate = {}
             ensemble_aggregate["dae_variables_parameters_values"] = horzcat([ d["dae_variables_parameters_values"] for d in ensemble_store])
+            ensemble_aggregate["initial_state"] = horzcat([ d["initial_state"] for d in ensemble_store])
+            ensemble_aggregate["initial_derivatives"] = horzcat([ d["initial_derivatives"] for d in ensemble_store])
+            ensemble_aggregate["constant_inputs"] = horzcat([ vertcat([float(d["constant_inputs"][variable.getName()][0]) for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
+
+
 
         for ensemble_member in range(self.ensemble_size):
             logger.info("Transcribing ensemble member {}/{}".format(ensemble_member + 1, self.ensemble_size))
@@ -474,7 +481,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     [dae_residual_with_lookup_tables], [sym], [value])
             """
 
-            dae_variables_parameters_values = ensemble_aggregate["dae_variables_parameters_values"][:, i]
+            dae_variables_parameters_values = ensemble_aggregate["dae_variables_parameters_values"][:, ensemble_member]
 
             # Check linearity of collocated part
             self._linear_collocation_constraints = True
@@ -551,21 +558,18 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 integrator_step_function = ImplicitFunction(
                     'integrator_step_function', 'newton', dae_residual_function_integrated, options)
             """
-            constant_inputs = ensemble_store[ensemble_member]["constant_inputs"]
-
-            initial_state =  ensemble_store[ensemble_member]["initial_state"]
-            initial_derivatives =  ensemble_store[ensemble_member]["initial_derivatives"]
+            constant_inputs = ensemble_aggregate["constant_inputs"][:,ensemble_member]
+            initial_state =  ensemble_aggregate["initial_state"][:,ensemble_member]
+            initial_derivatives =  ensemble_aggregate["initial_derivatives"][:,ensemble_member]
 
             [res] = initial_residual_with_params_fun([ dae_variables_parameters_values,
-                                                        vertcat(initial_state
-                                                          + initial_derivatives
-                                                          + [float(constant_inputs[variable.getName()][0]) for variable in self.dae_variables[
-                                                              'constant_inputs']]
-                                                          + [0.0])], False, True)
+                                                        vertcat([initial_state, initial_derivatives, constant_inputs, [0.0]])], False, True)
             g.append(res)
             zeros = [0.0] * res.size1()
             lbg.extend(zeros)
             ubg.extend(zeros)
+
+            constant_inputs = ensemble_store[ensemble_member]["constant_inputs"]
 
             # Add initial conditions specified in data
             history = self.history(ensemble_member)
