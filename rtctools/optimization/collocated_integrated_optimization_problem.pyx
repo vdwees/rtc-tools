@@ -620,6 +620,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     value *= nominal
                 accumulation_X0.append(value)
             accumulation_X0 = vertcat(accumulation_X0)
+            print "accumulation_X0", accumulation_X0
 
             # Input for map
             logger.info("Interpolating states")
@@ -787,11 +788,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     values = self.state_vector(
                         variable, ensemble_member=ensemble_member)
                     initial_path_variables.append(values[0])
-                initial_path_constraints = path_constraints_function([vertcat(initial_state
-                                                                              + initial_derivatives
-                                                                              + [float(constant_inputs[variable.getName()][0]) for variable in self.dae_variables[
-                                                                                  'constant_inputs']]
-                                                                              + [0.0]
+                constant_inputs = ensemble_aggregate["constant_inputs"][:,ensemble_member]
+                initial_path_constraints = path_constraints_function([vertcat([initial_state
+                                                                              , initial_derivatives
+                                                                              , constant_inputs,
+                                                                              0.0]
                                                                               + initial_path_variables)], False, True)
                 g.extend(initial_path_constraints)
                 g.extend(discretized_path_constraints)
