@@ -791,8 +791,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 f_constraint, lb, ub) in constraints]
             g.extend(g_constraint)
 
-            lbg.extend([float(lb) for (f_constraint, lb, ub) in constraints])
-            ubg.extend([float(ub) for (f_constraint, lb, ub) in constraints])
+            lbg.extend(itertools.chain(*[f_constraint.size1() * [float(lb)] for (f_constraint, lb, ub) in constraints]))
+            ubg.extend(itertools.chain(*[f_constraint.size1() * [float(ub)] for (f_constraint, lb, ub) in constraints]))
 
             # Path constraints
             if len(path_constraints) > 0:
