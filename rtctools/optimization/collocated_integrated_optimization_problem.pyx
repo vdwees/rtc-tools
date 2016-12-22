@@ -302,6 +302,15 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             # map/mapaccum as well into an SX tree.
             dae_residual_function_collocated = dae_residual_function_collocated.expand()
 
+        # Initialize an MXFunction for the path objective
+        # Note that we assume that the path objective expression is the same for all ensemble members
+        path_objective = self.path_objective(ensemble_member)
+        path_objective_function = MXFunction('path_objective',
+                                               [vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
+                                                        'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
+                                               [path_objective])
+        path_objective_function = path_objective_function.expand()
+
         # Initialize an MXFunction for the path constraints
         # Note that we assume that the path constraint expression is the same for all ensemble members
         path_constraints = self.path_constraints(0)
@@ -408,6 +417,15 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             else:
                 accumulated_Y.append(
                     (1 - theta) * dae_residual_0 + theta * dae_residual_1)
+
+        accumulated_Y.extend(path_objective_function([vertcat([integrated_states_1,
+                                                               collocated_states_1,
+                                                               integrated_finite_differences,
+                                                               collocated_finite_differences,
+                                                               constant_inputs_1,
+                                                               collocation_time_1 - t0,
+                                                               path_variables_1])],
+                                                       False, True))
 
         accumulated_Y.extend(path_constraints_function([vertcat([integrated_states_1,
                                                                  collocated_states_1,
@@ -641,11 +659,15 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 integrators = integrators_and_collocation_and_path_constraints[:len(integrated_variables), :]
                 collocation_constraints = vec(integrators_and_collocation_and_path_constraints[len(integrated_variables):len(
                     integrated_variables) + dae_residual_collocated.size1(), 0:n_collocation_times - 1])
+                discretized_path_objective = vec(integrators_and_collocation_and_path_constraints[len(
+                    integrated_variables) + dae_residual_collocated.size1():len(
+                    integrated_variables) + dae_residual_collocated.size1() + path_objective.size1(), 0:n_collocation_times - 1])
                 discretized_path_constraints = vec(integrators_and_collocation_and_path_constraints[len(
-                    integrated_variables) + dae_residual_collocated.size1():, 0:n_collocation_times - 1])
+                    integrated_variables) + dae_residual_collocated.size1() + path_objective.size1():, 0:n_collocation_times - 1])
             else:
                 integrators = MX()
                 collocation_constraints = MX()
+                discretized_path_objective = MX()
                 discretized_path_constraints = MX()
 
             logger.info("Composing NLP segment")
@@ -723,13 +745,29 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 lbg.extend(n_collocation_times * [0.0])
                 ubg.extend(n_collocation_times * [0.0])
 
+            # Initial path variables
+            initial_path_variables = []
+            for j, variable in enumerate(self.path_variables):
+                variable = variable.getName()
+                values = self.state_vector(
+                    variable, ensemble_member=ensemble_member)
+                initial_path_variables.append(values[0])
+
             # Objective
             f_member = self.objective(ensemble_member)
+            if path_objective.size1() > 0:
+                initial_path_objective = path_objective_function([vertcat(initial_state
+                                                                          + initial_derivatives
+                                                                          + [float(constant_inputs[variable.getName()][0]) for variable in self.dae_variables[
+                                                                              'constant_inputs']]
+                                                                          + [0.0]
+                                                                          + initial_path_variables)], False, True)
+                f_member += initial_path_objective[0] + sumRows(discretized_path_objective)
             f.append(self.ensemble_member_probability(ensemble_member) * f_member)
 
             if logger.getEffectiveLevel() == logging.DEBUG:
                 logger.debug(
-                    "Adding ensemble member objective {}".format(f_member))
+                    "Adding objective {}".format(f_member))
 
             # Constraints
             constraints = self.constraints(ensemble_member)

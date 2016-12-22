@@ -329,8 +329,18 @@ class GoalProgrammingMixin(OptimizationProblem):
         return seed
 
     def objective(self, ensemble_member):
-        acc_objective = sumRows(vertcat([o(self, ensemble_member) for o in self._subproblem_objectives]))
-        return acc_objective / len(self._subproblem_objectives)
+        if len(self._subproblem_objectives) > 0:
+            acc_objective = sumRows(vertcat([o(self, ensemble_member) for o in self._subproblem_objectives]))
+            return acc_objective / len(self._subproblem_objectives)
+        else:
+            return MX(0)
+
+    def path_objective(self, ensemble_member):
+        if len(self._subproblem_path_objectives) > 0:
+            acc_objective = sumRows(vertcat([o(self, ensemble_member) for o in self._subproblem_path_objectives]))
+            return acc_objective / len(self._subproblem_path_objectives)
+        else:
+            return MX(0)
 
     def constraints(self, ensemble_member):
         constraints = []
@@ -685,6 +695,7 @@ class GoalProgrammingMixin(OptimizationProblem):
 
             # Reset objective function
             self._subproblem_objectives = []
+            self._subproblem_path_objectives = []
 
             for j, goal in enumerate(goals):
                 if goal.critical:
@@ -701,7 +712,8 @@ class GoalProgrammingMixin(OptimizationProblem):
                         self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * constpow(
                             problem.extra_variable(epsilon.getName(), ensemble_member=ensemble_member), goal.order))
                     else:
-                        self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight * goal.function(problem, ensemble_member) / (goal.function_range[1] - goal.function_range[0]) / goal.function_nominal)
+                        self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight * constpow(
+                            goal.function(problem, ensemble_member) / (goal.function_range[1] - goal.function_range[0]) / goal.function_nominal, goal.order))
 
                 if goal.has_target_bounds:
                     for ensemble_member in range(self.ensemble_size):
@@ -736,16 +748,8 @@ class GoalProgrammingMixin(OptimizationProblem):
                         self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * sumRows(
                             constpow(problem.state_vector(epsilon.getName(), ensemble_member=ensemble_member), goal.order)))
                     else:
-                        # Efficient evaluation of path goal function over entire time horizon
-                        def delegate(problem, ensemble_member, goal=goal):
-                            states = problem.dae_variables['states'] + problem.dae_variables['algebraics'] + problem.dae_variables['control_inputs']
-                            f = MXFunction('f', [vertcat(states)], [constpow(goal.function(problem, ensemble_member), goal.order)])
-                            fmap = f.map('fmap', len(problem.times()))
-                            # TODO interpolation, recovery later
-                            # TODO path_objective
-                            X = vertcat([transpose(problem.state_vector(state.getName())) for state in states])
-                            return goal.weight * sumCols(fmap([X])[0]) / (goal.function_range[1] - goal.function_range[0]) / goal.function_nominal
-                        self._subproblem_objectives.append(delegate)
+                        self._subproblem_path_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight * 
+                            constpow(goal.function(problem, ensemble_member) / (goal.function_range[1] - goal.function_range[0]) / goal.function_nominal, goal.order))
 
                 if goal.has_target_bounds:
                     for ensemble_member in range(self.ensemble_size):
@@ -802,8 +806,11 @@ class GoalProgrammingMixin(OptimizationProblem):
                         # Add a relaxation to appease the barrier method.
                         epsilon += options['constraint_relaxation']
                     else:
+                        # TODO cache somehow the mapped() path objective
+                        # CollocatedIntegrated function:  path_function_to_function, which we can then feed with solver_input.
+                        # Can also use this function internally for path constraints and objectives, instead of the splitting approach.
                         states = self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
-                        f = MXFunction('f', [vertcat(states)], [constpow(goal.function(self, ensemble_member), goal.order)])
+                        f = MXFunction('f', [vertcat(states)], [goal.function(self, ensemble_member)])
                         fmap = f.map('fmap', len(self.times()))
                         # TODO path_objective
                         X = vertcat([transpose(self.state_vector(state.getName())) for state in states])

@@ -505,7 +505,6 @@ class OptimizationProblem(object):
         """
         return {}
 
-    @abstractmethod
     def objective(self, ensemble_member):
         """
         The objective function for the given ensemble member.
@@ -524,7 +523,26 @@ class OptimizationProblem(object):
                 return self.state_at('x', times[-1], ensemble_member)
 
         """
-        pass
+        return MX(0)
+
+    def path_objective(self, ensemble_member):
+        """
+        Returns a path objective the given ensemble member.  Path objectives apply to all times and ensemble members simultaneously.
+
+        Call :func:`OptimizationProblem.state` to return a time- and ensemble-member-independent symbol representing a model variable.
+
+        :param ensemble_member: The ensemble member index.  This index is currently unused, and here for future use only.
+
+        :returns: A :class:`MX` object representing the path objective.
+
+        Example::
+
+            def path_objective(self, ensemble_member):
+                # Minimize x(t) for all t
+                return self.state('x')
+
+        """
+        return MX(0)
 
     def constraints(self, ensemble_member):
         """
