@@ -227,6 +227,41 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         dae_residual_integrated = vertcat(dae_residual_integrated)
         dae_residual_collocated = vertcat(dae_residual_collocated)
 
+        # Check linearity of collocated part
+        self._linear_collocation_constraints = True
+        if self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
+            # Check linearity of collocation constraints, which is a necessary condition for the optimization problem to be convex
+            # Borrowed from
+            # https://gist.github.com/jgillis/5aebf6b09ada29355418783e8f60e8ef
+            def classify_linear(e, v):
+                """
+                Takes vector expression e, and symbolic primitives v
+                Returns classification vector
+                For each element in e, determines if:
+                  - element is nonlinear in v               (2)
+                  - element is    linear in v               (1)
+                  - element does not depend on v at all     (0)
+
+                This method can be sped up a lot with JacSparsityTraits::sp
+                """
+
+                f = MXFunction("f", [v], [jacobian(e, v)])
+                ret = ((sumCols(IMatrix(f.outputSparsity(0), 1))
+                        == 0) == 0).nonzeros()
+                pattern = IMatrix(f.jacSparsity(
+                    0, 0), 1).reshape((e.shape[0], -1))
+                for k in sumCols(pattern).row():
+                    ret[k] = 2
+                return ret
+
+            classification = classify_linear(dae_residual_collocated, vertcat(
+                collocated_variables + collocated_derivatives))
+            for j in range(len(classification)):
+                if classification[j] == 2:
+                    self._linear_collocation_constraints = False
+
+                    logger.warning(
+                        "The DAE equation {} is non-linear.  The optimization problem is not convex.  This will, in general, result in the existence of multiple local optima and trouble finding a feasible initial solution.".format(dae_residual_collocated[j]))
 
         if len(integrated_variables) > 0:
             I = MX.sym('I', len(integrated_variables))
@@ -577,46 +612,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             dae_variables_parameters_values = ensemble_aggregate["dae_variables_parameters_values"][:, ensemble_member]
 
-            # Check linearity of collocated part
-            self._linear_collocation_constraints = True
-            """
-            if self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
-                # Check linearity of collocation constraints, which is a necessary condition for the optimization problem to be convex
-                # Borrowed from
-                # https://gist.github.com/jgillis/5aebf6b09ada29355418783e8f60e8ef
-                def classify_linear(e, v):
-                    ""
-                    Takes vector expression e, and symbolic primitives v
-                    Returns classification vector
-                    For each element in e, determines if:
-                      - element is nonlinear in v               (2)
-                      - element is    linear in v               (1)
-                      - element does not depend on v at all     (0)
-
-                    This method can be sped up a lot with JacSparsityTraits::sp
-                    ""
-
-                    f = MXFunction("f", [v], [jacobian(e, v)])
-                    ret = ((sumCols(IMatrix(f.outputSparsity(0), 1))
-                            == 0) == 0).nonzeros()
-                    pattern = IMatrix(f.jacSparsity(
-                        0, 0), 1).reshape((e.shape[0], -1))
-                    for k in sumCols(pattern).row():
-                        ret[k] = 2
-                    return ret
-
-                classification = classify_linear(dae_residual_collocated, vertcat(
-                    collocated_variables + collocated_derivatives))
-                for j in range(len(classification)):
-                    if classification[j] == 2:
-                        self._linear_collocation_constraints = False
-
-                        logger.warning(
-                            "The DAE equation {} is non-linear.  The optimization problem is not convex.  This will, in general, result in the existence of multiple local optima and trouble finding a feasible initial solution.".format(dae_residual_collocated[j]))
-                """
             # Initialize an MXFunction for the DAE residual (integrated part)
-            assert len(self.dae_variables['lookup_tables'])==0
-
             initial_state =  ensemble_aggregate["initial_state"][:,ensemble_member]
             initial_derivatives =  ensemble_aggregate["initial_derivatives"][:,ensemble_member]
             constant_inputs = ensemble_store[ensemble_member]["constant_inputs"]
@@ -799,11 +795,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             g.extend(g_constraint)
 
             for (f_constraint, lb, ub) in constraints:
-                print lb.shape, ub.shape
                 lbg.append(lb)
                 ubg.append(ub)
-            #lbg.extend(itertools.chain(*[f_constraint.size1() * [float(lb)] for (f_constraint, lb, ub) in constraints]))
-            #ubg.extend(itertools.chain(*[f_constraint.size1() * [float(ub)] for (f_constraint, lb, ub) in constraints]))
 
             # Path constraints
             if len(path_constraints) > 0:
