@@ -180,6 +180,42 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         self._state_size = state_size
         self._symbol_cache = {}
 
+        # Insert lookup tables.  No support yet for different lookup tables per ensemble member.
+        lookup_tables = self.lookup_tables(0)
+        inserted_lookup_tables = set()
+        
+        for sym in self.dae_variables['lookup_tables']:
+            found = False
+            sym_key = None
+            for alias in self.variable_aliases(sym.getName()):
+                if alias.name in lookup_tables:
+                    sym_key = alias.name
+                    inserted_lookup_tables.add(alias.name)
+                    found = True
+                    break
+            if not found:
+                raise Exception(
+                    "Unable to find lookup table function for {}".format(sym.getName()))
+
+            input_syms = []
+            for input in lookup_tables[sym_key].inputs:
+                found = False
+                input_sym = None
+                for symbol in self.dae_variables['free_variables']:
+                    for alias in self.variable_aliases(symbol.getName()):
+                        if alias.name == input.getName():
+                            input_sym = symbol
+                            found = True
+                            break
+                if not found:
+                    raise Exception(
+                        "Unable to find input symbol {} in model".format(input.getName()))
+                input_syms.append(input_sym)
+
+            [value] = lookup_tables[sym_key].function(input_syms)
+            [dae_residual] = substitute(
+                [dae_residual], [sym], [value])
+
         # Transcribe DAE using theta method collocation
         def contains_symbol(mx, sym):
             try:
@@ -394,12 +430,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                                                               collocation_time_0 - t0])],
                                                                     False, True)
             if theta > 0:
-                print [integrated_states_1,
-                                                                              collocated_states_1,
-                                                                              integrated_finite_differences,
-                                                                              collocated_finite_differences,
-                                                                              constant_inputs_1,
-                                                                              collocation_time_1 - t0]
                 # Obtain state vector
                 [dae_residual_1] = dae_residual_function_collocated([vertcat(self.dae_variables["parameters"]), vertcat([integrated_states_1,
                                                                               collocated_states_1,
@@ -570,45 +600,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         for ensemble_member in range(self.ensemble_size):
             logger.info("Transcribing ensemble member {}/{}".format(ensemble_member + 1, self.ensemble_size))
-
-            # Insert lookup tables
-            dae_residual_with_lookup_tables = dae_residual
-            lookup_tables = self.lookup_tables(ensemble_member)
-            inserted_lookup_tables = set()
-            assert len(self.dae_variables['lookup_tables'])==0
-            """ -> test_csv_mixin
-            for sym in self.dae_variables['lookup_tables']:
-                found = False
-                sym_key = None
-                for alias in self.variable_aliases(sym.getName()):
-                    if alias.name in lookup_tables:
-                        sym_key = alias.name
-                        inserted_lookup_tables.add(alias.name)
-                        found = True
-                        break
-                if not found:
-                    raise Exception(
-                        "Unable to find lookup table function for {}".format(sym.getName()))
-
-                input_syms = []
-                for input in lookup_tables[sym_key].inputs:
-                    found = False
-                    input_sym = None
-                    for symbol in self.dae_variables['free_variables']:
-                        for alias in self.variable_aliases(symbol.getName()):
-                            if alias.name == input.getName():
-                                input_sym = symbol
-                                found = True
-                                break
-                    if not found:
-                        raise Exception(
-                            "Unable to find input symbol {} in model".format(input.getName()))
-                    input_syms.append(input_sym)
-
-                [value] = lookup_tables[sym_key].function(input_syms)
-                [dae_residual_with_lookup_tables] = substitute(
-                    [dae_residual_with_lookup_tables], [sym], [value])
-            """
 
             dae_variables_parameters_values = ensemble_aggregate["dae_variables_parameters_values"][:, ensemble_member]
 
@@ -800,7 +791,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             # Path constraints
             if len(path_constraints) > 0:
-                initial_path_variables = ensemble_aggregate["initial_path_variables"][:,ensemble_member]
+                if ensemble_aggregate["initial_path_variables"].size1() > 0 and ensemble_aggregate["initial_path_variables"].size2() > 0:
+                    initial_path_variables = ensemble_aggregate["initial_path_variables"][:,ensemble_member]
+                else:
+                    initial_path_variables = MX()
                 constant_inputs = ensemble_aggregate["constant_inputs"][:,ensemble_member]
                 initial_path_constraints = path_constraints_function([vertcat([initial_state
                                                                               , initial_derivatives
