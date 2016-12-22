@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, MXFunction, sumRows, substitute, constpow, vertcat
+from casadi import MX, MXFunction, sumRows, sumCols, vertcat, transpose, substitute, constpow
 from abc import ABCMeta, abstractmethod
 import numpy as np
 cimport numpy as np
@@ -459,12 +459,6 @@ class GoalProgrammingMixin(OptimizationProblem):
                     constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(problem, ensemble_member) - problem.extra_variable(
                         epsilon.getName(), ensemble_member=ensemble_member) * (goal.function_range[1] - goal.target_max) - goal.target_max) / goal.function_nominal, -np.inf, 0.0)
                     constraints.append(constraint)
-            else:
-                # Epsilon encodes the position within the function range,
-                # scaled between 0 and 1.
-                constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(problem, ensemble_member) - problem.extra_variable(
-                    epsilon.getName(), ensemble_member=ensemble_member) * (goal.function_range[1] - goal.function_range[0]) - goal.function_range[0]) / goal.function_nominal, 0.0, 0.0)
-                constraints.append(constraint)
 
             # TODO forgetting max like this.
             # Epsilon is not fixed yet.  This constraint is therefore linearly independent of any existing constraints,
@@ -498,14 +492,11 @@ class GoalProgrammingMixin(OptimizationProblem):
                     constraint.min = value / goal.function_nominal
                     constraint.max = value / goal.function_nominal
             else:
-                # Epsilon encodes the position within the function range,
-                # scaled between 0 and 1.
+                # Epsilon encodes the position within the function range.
                 fix_value = True
 
-                constraint.min = (epsilon * (goal.function_range[1] - goal.function_range[
-                                  0]) + goal.function_range[0]) / goal.function_nominal
-                constraint.max = (epsilon * (goal.function_range[1] - goal.function_range[
-                                  0]) + goal.function_range[0]) / goal.function_nominal
+                constraint.min = epsilon / goal.function_nominal
+                constraint.max = epsilon / goal.function_nominal
 
             # Epsilon is fixed.  Override previous {min,max} constraints for
             # this state.
@@ -578,12 +569,6 @@ class GoalProgrammingMixin(OptimizationProblem):
                     constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(problem, ensemble_member) - problem.variable(
                         epsilon.getName()) * (goal.function_range[1] - problem.variable(max_series.getName())) - problem.variable(max_series.getName())) / goal.function_nominal, -np.inf, 0.0)
                     constraints.append(constraint)
-            else:
-                # Epsilon encodes the position within the function range,
-                # scaled between 0 and 1.
-                constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(
-                    problem, ensemble_member) - problem.variable(epsilon.getName()) * (goal.function_range[1] - goal.function_range[0]) - goal.function_range[0]) / goal.function_nominal, 0.0, 0.0)
-                constraints.append(constraint)
 
             # TODO forgetting max like this.
             # Epsilon is not fixed yet.  This constraint is therefore linearly independent of any existing constraints,
@@ -625,14 +610,11 @@ class GoalProgrammingMixin(OptimizationProblem):
                         m[i] = value / goal.function_nominal
                         M[i] = value / goal.function_nominal
             else:
-                # Epsilon encodes the position within the function range,
-                # scaled between 0 and 1.
+                # Epsilon encodes the position within the function range.
                 fix_value = True
 
-                m = (epsilon * (goal.function_range[1] - goal.function_range[
-                     0]) + goal.function_range[0]) / goal.function_nominal
-                M = (epsilon * (goal.function_range[1] - goal.function_range[
-                     0]) + goal.function_range[0]) / goal.function_nominal
+                m = epsilon / goal.function_nominal
+                M = epsilon / goal.function_nominal
 
             constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal: goal.function(
                 problem, ensemble_member) / goal.function_nominal, Timeseries(times, m), Timeseries(times, M))
@@ -710,16 +692,21 @@ class GoalProgrammingMixin(OptimizationProblem):
                         raise Exception("Minimization goals cannot be critical")
                     epsilon = 0.0
                 else:
-                    epsilon = MX.sym('eps_{}_{}'.format(i, j))
-                    self._subproblem_epsilons.append(epsilon)
+                    if goal.has_target_bounds:
+                        epsilon = MX.sym('eps_{}_{}'.format(i, j))
+                        self._subproblem_epsilons.append(epsilon)
 
                 if not goal.critical:
-                    self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * constpow(
-                        problem.extra_variable(epsilon.getName(), ensemble_member=ensemble_member), goal.order))
+                    if goal.has_target_bounds:
+                        self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * constpow(
+                            problem.extra_variable(epsilon.getName(), ensemble_member=ensemble_member), goal.order))
+                    else:
+                        self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight * goal.function(problem, ensemble_member) / (goal.function_range[1] - goal.function_range[0]) / goal.function_nominal)
 
-                for ensemble_member in range(self.ensemble_size):
-                    self._add_goal_constraint(
-                        goal, epsilon, ensemble_member, options)
+                if goal.has_target_bounds:
+                    for ensemble_member in range(self.ensemble_size):
+                        self._add_goal_constraint(
+                            goal, epsilon, ensemble_member, options)
 
             for j, goal in enumerate(path_goals):
                 if goal.critical:
@@ -727,8 +714,9 @@ class GoalProgrammingMixin(OptimizationProblem):
                         raise Exception("Minimization goals cannot be critical")
                     epsilon = np.zeros(len(self.times()))
                 else:
-                    epsilon = MX.sym('path_eps_{}_{}'.format(i, j))
-                    self._subproblem_path_epsilons.append(epsilon)
+                    if goal.has_target_bounds:
+                        epsilon = MX.sym('path_eps_{}_{}'.format(i, j))
+                        self._subproblem_path_epsilons.append(epsilon)
 
                 if goal.has_target_min:
                     min_series = MX.sym('path_min_{}_{}'.format(i, j))
@@ -744,12 +732,25 @@ class GoalProgrammingMixin(OptimizationProblem):
                     max_series = None
 
                 if not goal.critical:
-                    self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * sumRows(
-                        constpow(problem.state_vector(epsilon.getName(), ensemble_member=ensemble_member), goal.order)))
+                    if goal.has_target_bounds:
+                        self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * sumRows(
+                            constpow(problem.state_vector(epsilon.getName(), ensemble_member=ensemble_member), goal.order)))
+                    else:
+                        # Efficient evaluation of path goal function over entire time horizon
+                        def delegate(problem, ensemble_member, goal=goal):
+                            states = problem.dae_variables['states'] + problem.dae_variables['algebraics'] + problem.dae_variables['control_inputs']
+                            f = MXFunction('f', [vertcat(states)], [constpow(goal.function(problem, ensemble_member), goal.order)])
+                            fmap = f.map('fmap', len(problem.times()))
+                            # TODO interpolation, recovery later
+                            # TODO path_objective
+                            X = vertcat([transpose(problem.state_vector(state.getName())) for state in states])
+                            return goal.weight * sumCols(fmap([X])[0]) / (goal.function_range[1] - goal.function_range[0]) / goal.function_nominal
+                        self._subproblem_objectives.append(delegate)
 
-                for ensemble_member in range(self.ensemble_size):
-                    self._add_path_goal_constraint(
-                        goal, epsilon, ensemble_member, options, min_series, max_series)
+                if goal.has_target_bounds:
+                    for ensemble_member in range(self.ensemble_size):
+                        self._add_path_goal_constraint(
+                            goal, epsilon, ensemble_member, options, min_series, max_series)
 
             # Solve subproblem
             success = super(GoalProgrammingMixin, self).optimize(
@@ -776,11 +777,15 @@ class GoalProgrammingMixin(OptimizationProblem):
                     if goal.critical:
                         continue
 
-                    epsilon = self._results[ensemble_member][
-                        'eps_{}_{}'.format(i, j)]
                     if goal.has_target_bounds:
+                        epsilon = self._results[ensemble_member][
+                            'eps_{}_{}'.format(i, j)]
+
                         # Add a relaxation to appease the barrier method.
                         epsilon += options['constraint_relaxation']
+                    else:
+                        f = MXFunction('f', [self.solver_input], [goal.function(self, ensemble_member)])
+                        epsilon = f([self.solver_output])[0]
 
                     # Add inequality constraint
                     self._add_goal_constraint(
@@ -790,11 +795,20 @@ class GoalProgrammingMixin(OptimizationProblem):
                     if goal.critical:
                         continue
 
-                    epsilon = self._results[ensemble_member][
-                        'path_eps_{}_{}'.format(i, j)]
                     if goal.has_target_bounds:
+                        epsilon = self._results[ensemble_member][
+                            'path_eps_{}_{}'.format(i, j)]
+                    
                         # Add a relaxation to appease the barrier method.
                         epsilon += options['constraint_relaxation']
+                    else:
+                        states = self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
+                        f = MXFunction('f', [vertcat(states)], [constpow(goal.function(self, ensemble_member), goal.order)])
+                        fmap = f.map('fmap', len(self.times()))
+                        # TODO path_objective
+                        X = vertcat([transpose(self.state_vector(state.getName())) for state in states])
+                        f2 = MXFunction('f2', [self.solver_input], fmap([X]))
+                        epsilon = transpose(f2([self.solver_output])[0])
 
                     # Add inequality constraint
                     self._add_path_goal_constraint(
