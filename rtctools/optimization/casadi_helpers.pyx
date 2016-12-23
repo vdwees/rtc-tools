@@ -29,15 +29,21 @@ def classify_linear(e, v):
     return ret
 
 
-def depends_on(e, v):
+def depends_on(mx, sym):
     """
     Return True if e depends on v.
     """
-    classification = classify_linear(e, v)
-    if sum(classification) > 0:
-        return True
-    else:
-        return False
+    # TODO rewrite using classify_linear
+    try:
+        if mx.getName() == sym.getName():
+            return True
+    except:
+        pass
+    for dep_index in range(mx.getNdeps()):
+        dep = mx.getDep(dep_index)
+        if depends_on(dep, sym):
+            return True
+    return False
 
 
 def nullvertcat(L):

@@ -549,11 +549,11 @@ class OptimizationProblem(object):
 
     def path_constraints(self, ensemble_member):
         """
-        Returns a list of path constraints for the given ensemble member.
+        Returns a list of path constraints.  Path constraints apply to all times and ensemble members simultaneously.
 
-        Call :func:`OptimizationProblem.state` to return a time-independent symbol representing a model variable.
+        Call :func:`OptimizationProblem.state` to return a time- and ensemble-member-independent symbol representing a model variable.
 
-        :param ensemble_member: The ensemble member index.
+        :param ensemble_member: The ensemble member index.  This argument is currently ignored, and reserved for future use.
 
         :returns: A list of triples ``(f, m, M)``, with an :class:`MX` object representing the path constraint function ``f``, lower bound ``m``, and upper bound ``M``.  The bounds may be numbers or :class:`Timeseries` objects.
 
