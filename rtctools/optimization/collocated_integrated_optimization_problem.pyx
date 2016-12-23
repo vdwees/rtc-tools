@@ -304,7 +304,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Initialize an MXFunction for the path objective
         # Note that we assume that the path objective expression is the same for all ensemble members
-        path_objective = self.path_objective(ensemble_member)
+        path_objective = self.path_objective(0)
         path_objective_function = MXFunction('path_objective',
                                                [vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
                                                         'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
