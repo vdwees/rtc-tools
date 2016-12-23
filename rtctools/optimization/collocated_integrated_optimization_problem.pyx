@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, jacobian, vertcat, horzcat, vec, substitute, sumRows, sumCols, IMatrix, interp1d, transpose, repmat, matrix_expand, reshape, mul
+from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, vertcat, horzcat, vec, substitute, sumRows, sumCols, interp1d, transpose, repmat, matrix_expand, reshape, mul
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools
@@ -8,6 +8,7 @@ import logging
 
 from optimization_problem import OptimizationProblem
 from timeseries import Timeseries
+from casadi_helpers import *
 
 logger = logging.getLogger("rtctools")
 
@@ -102,24 +103,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         logger.info("Transcribing problem with a DAE of {} equations, {} collocation points, and {} free variables".format(
             dae_residual.size1(), len(self.times()), len(self.dae_variables['free_variables'])))
 
-        # Free variables for the collocated optimization problem
-        integrated_variables = []
-        collocated_variables = []
-        for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics']):
-            if variable.getName() in self.integrated_states:
-                integrated_variables.append(variable)
-            else:
-                collocated_variables.append(variable)
-        for variable in self.dae_variables['control_inputs']:
-            # TODO treat these separately.
-            collocated_variables.append(variable)
-
-        if logger.getEffectiveLevel() == logging.DEBUG:
-            logger.debug("Integrating variables {}".format(
-                repr(integrated_variables)))
-            logger.debug("Collocating variables {}".format(
-                repr(collocated_variables)))
-
+        # Cache path variable names
         self._path_variable_names = [variable.getName()
                                      for variable in self.path_variables]
 
@@ -150,22 +134,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         x0[:len(x0_control)] = x0_control
         x0[len(x0_control):] = x0_state
 
-        # Split derivatives into "integrated" and "collocated" lists.
-        integrated_derivatives = []
-        collocated_derivatives = []
-        for k, var in enumerate(self.dae_variables['states']):
-            if var.getName() in self.integrated_states:
-                integrated_derivatives.append(
-                    self.dae_variables['derivatives'][k])
-            else:
-                collocated_derivatives.append(
-                    self.dae_variables['derivatives'][k])
-        self._algebraic_and_control_derivatives = []
-        for k, var in enumerate(itertools.chain(self.dae_variables['algebraics'], self.dae_variables['control_inputs'])):
-            sym = MX.sym('der({})'.format(var.getName()))
-            self._algebraic_and_control_derivatives.append(sym)
-            collocated_derivatives.append(sym)
-
         # Delayed feedback
         delayed_feedback = self.delayed_feedback()
 
@@ -181,6 +149,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         self._symbol_cache = {}
 
         # Insert lookup tables.  No support yet for different lookup tables per ensemble member.
+        if len(self.dae_variables['lookup_tables']) > 0 and self.ensemble_size > 1:
+            logger.warning("Using lookup tables for ensemble member #0 for all members.")
+
         lookup_tables = self.lookup_tables(0)
         inserted_lookup_tables = set()
         
@@ -216,33 +187,39 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             [dae_residual] = substitute(
                 [dae_residual], [sym], [value])
 
-        # Transcribe DAE using theta method collocation
-        def contains_symbol(mx, sym):
-            try:
-                if mx.getName() == sym.getName():
-                    return True
-            except:
-                pass
-            for dep_index in range(mx.getNdeps()):
-                dep = mx.getDep(dep_index)
-                if contains_symbol(dep, sym):
-                    return True
-            return False
+        # Free variables for the collocated optimization problem
+        integrated_variables = []
+        collocated_variables = []
+        for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics']):
+            if variable.getName() in self.integrated_states:
+                integrated_variables.append(variable)
+            else:
+                collocated_variables.append(variable)
+        for variable in self.dae_variables['control_inputs']:
+            # TODO treat these separately.
+            collocated_variables.append(variable)
 
-        f = MX(0)
-        g = []
-        lbg = []
-        ubg = []
-        collocation_times = self.times()
-        n_collocation_times = len(collocation_times)
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            logger.debug("Integrating variables {}".format(
+                repr(integrated_variables)))
+            logger.debug("Collocating variables {}".format(
+                repr(collocated_variables)))
 
-        dae_variables_parameters = vertcat(self.dae_variables['parameters'])
-
-        # Add constraints for initial conditions
-        initial_residual_with_params_fun = MXFunction('initial_residual', [dae_variables_parameters, vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
-                                                  'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat([dae_residual, initial_residual])])
-        # Expand to SX for improved performance
-        initial_residual_with_params_fun = initial_residual_with_params_fun.expand()
+        # Split derivatives into "integrated" and "collocated" lists.
+        integrated_derivatives = []
+        collocated_derivatives = []
+        for k, var in enumerate(self.dae_variables['states']):
+            if var.getName() in self.integrated_states:
+                integrated_derivatives.append(
+                    self.dae_variables['derivatives'][k])
+            else:
+                collocated_derivatives.append(
+                    self.dae_variables['derivatives'][k])
+        self._algebraic_and_control_derivatives = []
+        for k, var in enumerate(itertools.chain(self.dae_variables['algebraics'], self.dae_variables['control_inputs'])):
+            sym = MX.sym('der({})'.format(var.getName()))
+            self._algebraic_and_control_derivatives.append(sym)
+            collocated_derivatives.append(sym)
 
         # Split DAE into integrated and into a collocated part
         dae_residual_integrated = []
@@ -252,7 +229,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             contains = False
             for derivative in integrated_derivatives:
-                if contains_symbol(output, derivative):
+                if depends_on(output, derivative):
                     contains = True
                     break
 
@@ -267,29 +244,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         self._linear_collocation_constraints = True
         if self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
             # Check linearity of collocation constraints, which is a necessary condition for the optimization problem to be convex
-            # Borrowed from
-            # https://gist.github.com/jgillis/5aebf6b09ada29355418783e8f60e8ef
-            def classify_linear(e, v):
-                """
-                Takes vector expression e, and symbolic primitives v
-                Returns classification vector
-                For each element in e, determines if:
-                  - element is nonlinear in v               (2)
-                  - element is    linear in v               (1)
-                  - element does not depend on v at all     (0)
-
-                This method can be sped up a lot with JacSparsityTraits::sp
-                """
-
-                f = MXFunction("f", [v], [jacobian(e, v)])
-                ret = ((sumCols(IMatrix(f.outputSparsity(0), 1))
-                        == 0) == 0).nonzeros()
-                pattern = IMatrix(f.jacSparsity(
-                    0, 0), 1).reshape((e.shape[0], -1))
-                for k in sumCols(pattern).row():
-                    ret[k] = 2
-                return ret
-
             classification = classify_linear(dae_residual_collocated, vertcat(
                 collocated_variables + collocated_derivatives))
             for j in range(len(classification)):
@@ -298,6 +252,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
                     logger.warning(
                         "The DAE equation {} is non-linear.  The optimization problem is not convex.  This will, in general, result in the existence of multiple local optima and trouble finding a feasible initial solution.".format(dae_residual_collocated[j]))
+
+        # Transcribe DAE using theta method collocation
+        f = MX(0)
+        g = []
+        lbg = []
+        ubg = []
+        collocation_times = self.times()
+        n_collocation_times = len(collocation_times)
 
         if len(integrated_variables) > 0:
             I = MX.sym('I', len(integrated_variables))
@@ -331,10 +293,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             options = self.integrator_options()
             integrator_step_function = ImplicitFunction('integrator_step_function', 'newton', dae_residual_function_integrated, options)
 
-
         # Initialize an MXFunction for the DAE residual (collocated part)
         if len(collocated_variables) > 0:
-            dae_residual_function_collocated = MXFunction('dae_residual_function_collocated', [dae_variables_parameters, vertcat(
+            dae_residual_function_collocated = MXFunction('dae_residual_function_collocated', [vertcat(self.dae_variables['parameters']), vertcat(
                 integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_collocated])
             # Expand to SX for improved performance
             # We do not expand the overall problem, as that would unroll
@@ -359,7 +320,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             accumulated_X = MX.sym('accumulated_X', 0)
         accumulated_U = MX.sym('accumulated_U', 2 * (len(collocated_variables) + len(
             self.dae_variables['constant_inputs']) + 1) + len(self.path_variables))
-
 
         integrated_states_0 = accumulated_X[0:len(integrated_variables)]
         integrated_states_1 = MX.sym(
@@ -386,7 +346,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # We use vertcat to compose the list into an MX.  This is, in
         # CasADi 2.4, faster.
         accumulated_Y = []
-
 
         # Integrate integrated states
         if len(integrated_variables) > 0:
@@ -446,6 +405,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 accumulated_Y.append(
                     (1 - theta) * dae_residual_0 + theta * dae_residual_1)
 
+            # TODO also in nitegration
             accumulated_Y.extend(path_constraints_function([vertcat([integrated_states_1,
                                                                      collocated_states_1,
                                                                      integrated_finite_differences,
@@ -469,7 +429,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 accumulation = accumulated.map(
                     'accumulation', n_collocation_times - 1, {'parallelization': 'openmp'})
 
-
             ensemble_store = []
             for ensemble_member in range(self.ensemble_size):
                 ensemble_data = {}
@@ -486,7 +445,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                             break
                 ensemble_data["dae_variables_parameters_values"] = vertcat(dae_variables_parameters_values)
                 if len(self.dae_variables['parameters'])==0: ensemble_data["dae_variables_parameters_values"] = MX(0,1)
-
 
                 # Constant inputs
                 constant_inputs = self.constant_inputs(ensemble_member)
@@ -507,7 +465,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                             variable.getName()] = n_collocation_times * [0.0]
                 ensemble_data["constant_inputs"] = constant_inputs_interpolated
                 if len(self.dae_variables['constant_inputs'])==0: ensemble_data["constant_inputs"] = MX(0,1)
-
 
                 # Compute initial residual, avoiding the use of expensive
                 # state_at().
@@ -535,24 +492,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
                 ensemble_data["initial_path_variables"] = vertcat(initial_path_variables)
 
-            def nullvertcat(L):
-                if len(L)==0: return MX(0,1)
-                return vertcat(L)
             ensemble_aggregate = {}
-            ensemble_aggregate["dae_variables_parameters_values"] = horzcat([ d["dae_variables_parameters_values"] for d in ensemble_store])
-            ensemble_aggregate["initial_state"] = horzcat([ d["initial_state"] for d in ensemble_store])
-
-            def jacobian_trick(e,p):
-                temp = MXFunction("temp",[],[jacobian(e, p)])
-                J = temp([])[0]
-                return reshape(mul(J, p), e.shape)
-
+            ensemble_aggregate["dae_variables_parameters_values"] = horzcat([d["dae_variables_parameters_values"] for d in ensemble_store])
+            ensemble_aggregate["initial_state"] = horzcat([d["initial_state"] for d in ensemble_store])
             ensemble_aggregate["initial_state"] = jacobian_trick(ensemble_aggregate["initial_state"], self.solver_input)
-            ensemble_aggregate["initial_derivatives"] = horzcat([ d["initial_derivatives"] for d in ensemble_store])
-            ensemble_aggregate["constant_inputs"] = horzcat([ nullvertcat([float(d["constant_inputs"][variable.getName()][0]) for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
-            ensemble_aggregate["initial_path_variables"] = horzcat([ d["initial_path_variables"] for d in ensemble_store])
+            ensemble_aggregate["initial_derivatives"] = horzcat([d["initial_derivatives"] for d in ensemble_store])
+            ensemble_aggregate["constant_inputs"] = horzcat([nullvertcat([float(d["constant_inputs"][variable.getName()][0]) for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
+            ensemble_aggregate["initial_path_variables"] = horzcat([d["initial_path_variables"] for d in ensemble_store])
 
-        for ensemble_member in range(self.ensemble_size):
             # Add initial conditions specified in data
             history = self.history(ensemble_member)
             for state in history.keys():
@@ -587,7 +534,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     lbg.append(float(xinit))
                     ubg.append(float(xinit))
 
-
+        # Add constraints for initial conditions
+        initial_residual_with_params_fun = MXFunction('initial_residual', [vertcat(self.dae_variables['parameters']), vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
+                                                  'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat([dae_residual, initial_residual])])
+        # Expand to SX for improved performance
+        initial_residual_with_params_fun = initial_residual_with_params_fun.expand()
 
         initial_residual_with_params_fun_map = initial_residual_with_params_fun.map('initial_residual_with_params_fun_map', self.ensemble_size)
         [res] = initial_residual_with_params_fun_map([ repmat(dae_variables_parameters_values,1,self.ensemble_size), vertcat([ensemble_aggregate["initial_state"], ensemble_aggregate["initial_derivatives"], ensemble_aggregate["constant_inputs"], repmat([0.0],1,self.ensemble_size)])], False, True)
@@ -604,13 +555,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             dae_variables_parameters_values = ensemble_aggregate["dae_variables_parameters_values"][:, ensemble_member]
 
             # Initialize an MXFunction for the DAE residual (integrated part)
-            initial_state =  ensemble_aggregate["initial_state"][:,ensemble_member]
-            initial_derivatives =  ensemble_aggregate["initial_derivatives"][:,ensemble_member]
+            initial_state = ensemble_aggregate["initial_state"][:,ensemble_member]
+            initial_derivatives = ensemble_aggregate["initial_derivatives"][:,ensemble_member]
             constant_inputs = ensemble_store[ensemble_member]["constant_inputs"]
-
-
-
-            # Add path constraints to map()
 
             # Initial conditions for integrator
             accumulation_X0 = []
@@ -674,8 +621,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     accumulation_U[len(collocated_variables) + j] *= nominal
 
             accumulation_U = transpose(horzcat(list(accumulation_U)))
-
             accumulation_U = matrix_expand(accumulation_U)
+
             # Map to all time steps
             logger.info("Mapping")
 
@@ -781,13 +728,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     logger.debug(
                         "Adding constraint {}, {}, {}".format(*constraint))
 
-            g_constraint = [f_constraint for (
-                f_constraint, lb, ub) in constraints]
+            g_constraint = [f_constraint for (f_constraint, lb, ub) in constraints]
             g.extend(g_constraint)
 
-            for (f_constraint, lb, ub) in constraints:
-                lbg.append(lb)
-                ubg.append(ub)
+            lbg_constraint = [lb for (f_constraint, lb, ub) in constraints]
+            lbg.extend(lbg_constraint)
+            
+            ubg_constraint = [ub for (f_constraint, lb, ub) in constraints]
+            ubg.extend(ubg_constraint)
 
             # Path constraints
             if len(path_constraints) > 0:
