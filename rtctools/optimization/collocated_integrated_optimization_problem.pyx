@@ -745,23 +745,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 lbg.extend(n_collocation_times * [0.0])
                 ubg.extend(n_collocation_times * [0.0])
 
-            # Initial path variables
-            initial_path_variables = []
-            for j, variable in enumerate(self.path_variables):
-                variable = variable.getName()
-                values = self.state_vector(
-                    variable, ensemble_member=ensemble_member)
-                initial_path_variables.append(values[0])
-
             # Objective
             f_member = self.objective(ensemble_member)
             if path_objective.size1() > 0:
-                initial_path_objective = path_objective_function([vertcat(initial_state
-                                                                          + initial_derivatives
-                                                                          + [float(constant_inputs[variable.getName()][0]) for variable in self.dae_variables[
-                                                                              'constant_inputs']]
-                                                                          + [0.0]
-                                                                          + initial_path_variables)], False, True)
+                initial_path_objective = path_objective_function([vertcat([initial_state
+                                                                              , initial_derivatives
+                                                                              , initial_constant_inputs,
+                                                                              0.0,
+                                                                              initial_path_variables])], False, True)
                 f_member += initial_path_objective[0] + sumRows(discretized_path_objective)
             f.append(self.ensemble_member_probability(ensemble_member) * f_member)
 
