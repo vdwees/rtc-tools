@@ -439,7 +439,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 'accumulation', n_collocation_times - 1, {'parallelization': 'openmp'})
 
         # Create a store of all ensemble-member-specific data for all ensemble members
-        ensemble_store = self.ensemble_size * [{}]
+        ensemble_store = [{} for i in range(self.ensemble_size)] # N.B. Don't use n * [{}], as it creates n refs to the same dict.
         for ensemble_member in range(self.ensemble_size):
             ensemble_data = ensemble_store[ensemble_member]
 
@@ -1242,9 +1242,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 offset += n_times
 
         # Could not find state.  Try controls.
-        tmp = self.control_vector(variable, ensemble_member=ensemble_member)
-        logger.error("For {} we have {}".format(ensemble_member, tmp))
-        return tmp
+        return self.control_vector(variable, ensemble_member=ensemble_member)
 
     def state_at(self, variable, t, ensemble_member=0, scaled=False, extrapolate=True):
         if isinstance(variable, MX):
