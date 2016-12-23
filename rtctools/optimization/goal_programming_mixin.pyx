@@ -806,16 +806,10 @@ class GoalProgrammingMixin(OptimizationProblem):
                         # Add a relaxation to appease the barrier method.
                         epsilon += options['constraint_relaxation']
                     else:
-                        # TODO cache somehow the mapped() path objective
-                        # CollocatedIntegrated function:  path_function_to_function, which we can then feed with solver_input.
-                        # Can also use this function internally for path constraints and objectives, instead of the splitting approach.
-                        states = self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
-                        f = MXFunction('f', [vertcat(states)], [goal.function(self, ensemble_member)])
-                        fmap = f.map('fmap', len(self.times()))
-                        # TODO path_objective
-                        X = vertcat([transpose(self.state_vector(state.getName())) for state in states])
-                        f2 = MXFunction('f2', [self.solver_input], fmap([X]))
-                        epsilon = transpose(f2([self.solver_output])[0])
+                        # Compute path expression
+                        expr = self.map_path_expression(goal.function(self, ensemble_member))
+                        f = MXFunction('f', [self.solver_input], [expr])
+                        epsilon = f([self.solver_output])[0]
 
                     # Add inequality constraint
                     self._add_path_goal_constraint(

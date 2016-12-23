@@ -927,3 +927,13 @@ class OptimizationProblem(object):
         :raises: KeyError
         """
         raise NotImplementedError
+
+    def map_path_expression(self, expr):
+        """
+        Maps the path expression `expr` over the entire time horizon of the optimization problem.
+
+        :param expr: An :class:`MX` path expression.
+
+        :returns: An :class:`MX` expression evaluating `expr` over the entire time horizon.
+        """
+        raise NotImplementedError

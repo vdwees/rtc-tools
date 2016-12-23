@@ -326,7 +326,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             # When using mapaccum, we also feed back the current
             # collocation constraints through accumulated_X.
             accumulated_X = MX.sym('accumulated_X', len(
-                integrated_variables) + dae_residual_collocated.size1())
+                integrated_variables) + dae_residual_collocated.size1() + len(path_constraints) + 1)
         else:
             accumulated_X = MX.sym('accumulated_X', 0)
         accumulated_U = MX.sym('accumulated_U', 2 * (len(collocated_variables) + len(
@@ -596,6 +596,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 if nominal != 1:
                     value *= nominal
                 accumulation_X0.append(value)
+            if len(self.integrated_states) > 0:
+                accumulation_X0.extend([0.0] * (dae_residual_collocated.size1() + 1))
             accumulation_X0 = vertcat(accumulation_X0)
 
             # Input for map
@@ -1557,3 +1559,40 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # t does not belong to any collocation point interval
         raise IndexError
+
+    def map_path_expression(self, expr):
+        # Expression as function of states and derivatives
+        states = self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
+        derivatives = self.dae_variables['derivatives'] + self._algebraic_and_control_derivatives
+
+        f = MXFunction('f', [vertcat(states), vertcat(derivatives)], [expr])
+        fmap = f.map('fmap', len(self.times()))
+
+        # Discretization settings
+        collocation_times = self.times()
+        n_collocation_times = len(collocation_times)
+        dt = collocation_times[1] - collocation_times[0]
+        t0 = self.initial_time
+
+        # Prepare interpolated state vectors
+        accumulation_states = [None] * len(states)
+        for i, state in enumerate(states):
+            state = state.getName()
+            times = self.times()
+            values = self.state_vector(state)
+            if len(times) != n_collocation_times:
+                accumulation_states[i] = interp1d(times, values, collocation_times)
+            else:
+                accumulation_states[i] = values
+        accumulation_states = transpose(horzcat(accumulation_states))
+
+        # Prepare derivatives (backwards differencing, consistent with the evaluation of path expressions during transcription)
+        accumulation_derivatives = [None] * len(derivatives)
+        for i, state in enumerate(states):
+            state = state.getName()
+            accumulation_derivatives[i] = horzcat([self.der_at(state, t0), (accumulation_states[i, 1:] - accumulation_states[i, :-1]) / dt])
+        accumulation_derivatives = vertcat(accumulation_derivatives)
+
+        # Map
+        [values] = fmap([accumulation_states, accumulation_derivatives])
+        return transpose(values)
