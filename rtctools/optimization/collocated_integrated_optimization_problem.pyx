@@ -442,9 +442,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     if alias.name in parameters:
                         dae_variables_parameters_values[i] = alias.sign * parameters[alias.name]
                         break
-            ensemble_data["dae_variables_parameters_values"] = vertcat(dae_variables_parameters_values)
-            # TODO nullcat
-            if len(self.dae_variables['parameters'])==0: ensemble_data["dae_variables_parameters_values"] = MX(0, 1)
+            ensemble_data["dae_variables_parameters_values"] = nullvertcat(dae_variables_parameters_values)
 
             # Constant inputs
             constant_inputs = self.constant_inputs(ensemble_member)
@@ -464,8 +462,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     constant_inputs_interpolated[
                         variable.getName()] = n_collocation_times * [0.0]
             ensemble_data["constant_inputs"] = constant_inputs_interpolated
-            # TODO nullcat
-            if len(self.dae_variables['constant_inputs'])==0: ensemble_data["constant_inputs"] = MX(0, 1)
 
             # Compute initial residual, avoiding the use of expensive
             # state_at().
