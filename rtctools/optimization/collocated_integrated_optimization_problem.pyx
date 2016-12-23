@@ -254,7 +254,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         "The DAE equation {} is non-linear.  The optimization problem is not convex.  This will, in general, result in the existence of multiple local optima and trouble finding a feasible initial solution.".format(dae_residual_collocated[j]))
 
         # Transcribe DAE using theta method collocation
-        f = MX(0)
+        f = []
         g = []
         lbg = []
         ubg = []
@@ -405,134 +405,137 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 accumulated_Y.append(
                     (1 - theta) * dae_residual_0 + theta * dae_residual_1)
 
-            # TODO also in nitegration
-            accumulated_Y.extend(path_constraints_function([vertcat([integrated_states_1,
-                                                                     collocated_states_1,
-                                                                     integrated_finite_differences,
-                                                                     collocated_finite_differences,
-                                                                     constant_inputs_1,
-                                                                     collocation_time_1 - t0,
-                                                                     path_variables_1])],
-                                                           False, True))
+        accumulated_Y.extend(path_constraints_function([vertcat([integrated_states_1,
+                                                                 collocated_states_1,
+                                                                 integrated_finite_differences,
+                                                                 collocated_finite_differences,
+                                                                 constant_inputs_1,
+                                                                 collocation_time_1 - t0,
+                                                                 path_variables_1])],
+                                                       False, True))
 
-            # Use map/mapaccum to capture integration and collocation constraint generation over the entire
-            # time horizon with one symbolic operation.  This saves a lot of
-            # memory.
-            accumulated = MXFunction('accumulated', [accumulated_X, accumulated_U, vertcat(self.dae_variables["parameters"])], [vertcat(accumulated_Y)])
+        # Use map/mapaccum to capture integration and collocation constraint generation over the entire
+        # time horizon with one symbolic operation.  This saves a lot of
+        # memory.
+        accumulated = MXFunction('accumulated', [accumulated_X, accumulated_U, vertcat(self.dae_variables["parameters"])], [vertcat(accumulated_Y)])
 
-            if len(integrated_variables) > 0:
-                accumulation = accumulated.mapaccum(
-                    'accumulation', n_collocation_times - 1)
-            else:
-                # Fully collocated problem.  Use map(), so that we can use
-                # parallelization along the time axis.
-                accumulation = accumulated.map(
-                    'accumulation', n_collocation_times - 1, {'parallelization': 'openmp'})
+        if len(integrated_variables) > 0:
+            accumulation = accumulated.mapaccum(
+                'accumulation', n_collocation_times - 1)
+        else:
+            # Fully collocated problem.  Use map(), so that we can use
+            # parallelization along the time axis.
+            accumulation = accumulated.map(
+                'accumulation', n_collocation_times - 1, {'parallelization': 'openmp'})
 
-            ensemble_store = []
-            for ensemble_member in range(self.ensemble_size):
-                ensemble_data = {}
-                ensemble_store.append(ensemble_data)
-                # Replace parameters and constant values
-                # We only replace those for which we have values are available.
-                parameters = self.parameters(ensemble_member)
-                dae_variables_parameters_values = [None]*len(self.dae_variables['parameters'])
-                values = []
-                for i, symbol in enumerate(self.dae_variables['parameters']):
-                    for alias in self.variable_aliases(symbol.getName()):
-                        if alias.name in parameters:
-                            dae_variables_parameters_values[i] = alias.sign * parameters[alias.name]
-                            break
-                ensemble_data["dae_variables_parameters_values"] = vertcat(dae_variables_parameters_values)
-                if len(self.dae_variables['parameters'])==0: ensemble_data["dae_variables_parameters_values"] = MX(0,1)
+        ensemble_store = []
+        for ensemble_member in range(self.ensemble_size):
+            ensemble_data = {}
+            ensemble_store.append(ensemble_data)
+            # Replace parameters and constant values
+            # We only replace those for which we have values are available.
+            parameters = self.parameters(ensemble_member)
+            dae_variables_parameters_values = [None]*len(self.dae_variables['parameters'])
+            values = []
+            for i, symbol in enumerate(self.dae_variables['parameters']):
+                for alias in self.variable_aliases(symbol.getName()):
+                    if alias.name in parameters:
+                        dae_variables_parameters_values[i] = alias.sign * parameters[alias.name]
+                        break
+            ensemble_data["dae_variables_parameters_values"] = vertcat(dae_variables_parameters_values)
+            # TODO nullcat
+            if len(self.dae_variables['parameters'])==0: ensemble_data["dae_variables_parameters_values"] = MX(0, 1)
 
-                # Constant inputs
-                constant_inputs = self.constant_inputs(ensemble_member)
-                constant_inputs_interpolated = {}
-                for variable in self.dae_variables['constant_inputs']:
-                    found = False
-                    for alias in self.variable_aliases(variable.getName()):
-                        if alias.name in constant_inputs:
-                            constant_input = constant_inputs[alias.name]
-                            # Always cast to built-in float type for compatibility
-                            # with CasADi.
-                            constant_inputs_interpolated[variable.getName()] = alias.sign * self.interpolate(
-                                collocation_times, constant_input.times, constant_input.values, 0.0, 0.0)
-                            found = True
-                            break
-                    if not found:
-                        constant_inputs_interpolated[
-                            variable.getName()] = n_collocation_times * [0.0]
-                ensemble_data["constant_inputs"] = constant_inputs_interpolated
-                if len(self.dae_variables['constant_inputs'])==0: ensemble_data["constant_inputs"] = MX(0,1)
+            # Constant inputs
+            constant_inputs = self.constant_inputs(ensemble_member)
+            constant_inputs_interpolated = {}
+            for variable in self.dae_variables['constant_inputs']:
+                found = False
+                for alias in self.variable_aliases(variable.getName()):
+                    if alias.name in constant_inputs:
+                        constant_input = constant_inputs[alias.name]
+                        # Always cast to built-in float type for compatibility
+                        # with CasADi.
+                        constant_inputs_interpolated[variable.getName()] = alias.sign * self.interpolate(
+                            collocation_times, constant_input.times, constant_input.values, 0.0, 0.0)
+                        found = True
+                        break
+                if not found:
+                    constant_inputs_interpolated[
+                        variable.getName()] = n_collocation_times * [0.0]
+            ensemble_data["constant_inputs"] = constant_inputs_interpolated
+            # TODO nullcat
+            if len(self.dae_variables['constant_inputs'])==0: ensemble_data["constant_inputs"] = MX(0, 1)
 
-                # Compute initial residual, avoiding the use of expensive
-                # state_at().
-                initial_state = []
-                initial_derivatives = ensemble_data["initial_derivatives"] = []
-                for variable in integrated_variables + collocated_variables:
+            # Compute initial residual, avoiding the use of expensive
+            # state_at().
+            initial_state = []
+            initial_derivatives = ensemble_data["initial_derivatives"] = []
+            for variable in integrated_variables + collocated_variables:
+                variable = variable.getName()
+                value = self.state_vector(
+                    variable, ensemble_member=ensemble_member)[0]
+                nominal = self.variable_nominal(variable)
+                if nominal != 1:
+                    value *= nominal
+                initial_state.append(value)
+                initial_derivatives.append(self.der_at(
+                    variable, t0, ensemble_member=ensemble_member))
+            ensemble_data["initial_state"] = vertcat(initial_state)
+            ensemble_data["initial_derivatives"] = vertcat(initial_derivatives)
+
+            initial_path_variables = []
+            for j, variable in enumerate(self.path_variables):
+                variable = variable.getName()
+                values = self.state_vector(
+                    variable, ensemble_member=ensemble_member)
+                initial_path_variables.append(values[0])
+
+            ensemble_data["initial_path_variables"] = nullvertcat(initial_path_variables)
+
+        ensemble_aggregate = {}
+        ensemble_aggregate["dae_variables_parameters_values"] = horzcat([d["dae_variables_parameters_values"] for d in ensemble_store])
+        ensemble_aggregate["constant_inputs"] = horzcat([nullvertcat([float(d["constant_inputs"][variable.getName()][0]) for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
+        ensemble_aggregate["initial_state"] = horzcat([d["initial_state"] for d in ensemble_store])
+        ensemble_aggregate["initial_state"] = reduce_matvec(ensemble_aggregate["initial_state"], self.solver_input)
+        ensemble_aggregate["initial_derivatives"] = horzcat([d["initial_derivatives"] for d in ensemble_store])
+        ensemble_aggregate["initial_derivatives"] = reduce_matvec(ensemble_aggregate["initial_derivatives"], self.solver_input)
+        ensemble_aggregate["initial_path_variables"] = horzcat([d["initial_path_variables"] for d in ensemble_store])
+        ensemble_aggregate["initial_path_variables"] = reduce_matvec(ensemble_aggregate["initial_path_variables"], self.solver_input)
+
+        # Add initial conditions specified in data
+        history = self.history(ensemble_member)
+        for state in history.keys():
+            try:
+                history_timeseries = history[state]
+                xinit = self.interpolate(
+                    t0, history_timeseries.times, history_timeseries.values, np.nan, np.nan)
+
+            except KeyError:
+                xinit = np.nan
+
+            if np.isfinite(xinit):
+                # Avoid the use of slow state_at().  We don't need
+                # interpolation or history values here.
+                value = None
+                for variable in self.dae_variables['free_variables']:
                     variable = variable.getName()
-                    value = self.state_vector(
-                        variable, ensemble_member=ensemble_member)[0]
-                    nominal = self.variable_nominal(variable)
-                    if nominal != 1:
-                        value *= nominal
-                    initial_state.append(value)
-                    initial_derivatives.append(self.der_at(
-                        variable, t0, ensemble_member=ensemble_member))
-                ensemble_data["initial_state"] = vertcat(initial_state)
-                ensemble_data["initial_derivatives"] = vertcat(initial_derivatives)
-
-                initial_path_variables = []
-                for j, variable in enumerate(self.path_variables):
-                    variable = variable.getName()
-                    values = self.state_vector(
-                        variable, ensemble_member=ensemble_member)
-                    initial_path_variables.append(values[0])
-
-                ensemble_data["initial_path_variables"] = nullvertcat(initial_path_variables)
-
-            ensemble_aggregate = {}
-            ensemble_aggregate["dae_variables_parameters_values"] = horzcat([d["dae_variables_parameters_values"] for d in ensemble_store])
-            ensemble_aggregate["initial_state"] = horzcat([d["initial_state"] for d in ensemble_store])
-            ensemble_aggregate["initial_state"] = jacobian_trick(ensemble_aggregate["initial_state"], self.solver_input)
-            ensemble_aggregate["initial_derivatives"] = horzcat([d["initial_derivatives"] for d in ensemble_store])
-            ensemble_aggregate["constant_inputs"] = horzcat([nullvertcat([float(d["constant_inputs"][variable.getName()][0]) for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
-            ensemble_aggregate["initial_path_variables"] = horzcat([d["initial_path_variables"] for d in ensemble_store])
-
-            # Add initial conditions specified in data
-            history = self.history(ensemble_member)
-            for state in history.keys():
-                try:
-                    history_timeseries = history[state]
-                    xinit = self.interpolate(
-                        t0, history_timeseries.times, history_timeseries.values, np.nan, np.nan)
-
-                except KeyError:
-                    xinit = np.nan
-
-                if np.isfinite(xinit):
-                    # Avoid the use of slow state_at().  We don't need
-                    # interpolation or history values here.
-                    value = None
-                    for variable in self.dae_variables['free_variables']:
-                        variable = variable.getName()
-                        for alias in self.variable_aliases(variable):
-                            if alias.name == state:
-                                value = self.state_vector(
-                                    variable, ensemble_member=ensemble_member)[0]
-                                nominal = self.variable_nominal(variable)
-                                if nominal != 1:
-                                    value *= nominal
-                                if alias.sign < 0:
-                                    value *= -1
-                                break
-                    if value == None:
-                        # This was no free variable.
-                        continue
-                    g.append(value)
-                    lbg.append(float(xinit))
-                    ubg.append(float(xinit))
+                    for alias in self.variable_aliases(variable):
+                        if alias.name == state:
+                            value = self.state_vector(
+                                variable, ensemble_member=ensemble_member)[0]
+                            nominal = self.variable_nominal(variable)
+                            if nominal != 1:
+                                value *= nominal
+                            if alias.sign < 0:
+                                value *= -1
+                            break
+                if value == None:
+                    # This was no free variable.
+                    continue
+                g.append(value)
+                lbg.append(float(xinit))
+                ubg.append(float(xinit))
 
         # Add constraints for initial conditions
         initial_residual_with_params_fun = MXFunction('initial_residual', [vertcat(self.dae_variables['parameters']), vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
@@ -549,6 +552,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         lbg.extend(zeros)
         ubg.extend(zeros)
 
+        # TODO use map in future
         for ensemble_member in range(self.ensemble_size):
             logger.info("Transcribing ensemble member {}/{}".format(ensemble_member + 1, self.ensemble_size))
 
@@ -587,6 +591,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 accumulation_U[j] = interpolated[0:n_collocation_times - 1]
                 accumulation_U[len(collocated_variables) +
                                j] = interpolated[1:n_collocation_times]
+            # TODO
+            # accumulation_U[:2 * len(collocated_variables)] = reduce_matvec(vertcat(list(accumulation_U[:2 * len(collocated_variables)])), self.solver_input)
 
             for j, variable in enumerate(self.dae_variables['constant_inputs']):
                 variable = variable.getName()
@@ -627,7 +633,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             logger.info("Mapping")
 
             [integrators_and_collocation_and_path_constraints] = accumulation(
-                [ accumulation_X0, accumulation_U, repmat(dae_variables_parameters_values, 1, n_collocation_times - 1)])
+                [accumulation_X0, accumulation_U, repmat(dae_variables_parameters_values, 1, n_collocation_times - 1)])
             if integrators_and_collocation_and_path_constraints.size2() > 0:
                 integrators = integrators_and_collocation_and_path_constraints[:len(integrated_variables), :]
                 collocation_constraints = vec(integrators_and_collocation_and_path_constraints[len(integrated_variables):len(
@@ -715,7 +721,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             # Objective
             f_member = self.objective(ensemble_member)
-            f += self.ensemble_member_probability(ensemble_member) * f_member
+            f.append(self.ensemble_member_probability(ensemble_member) * f_member)
 
             if logger.getEffectiveLevel() == logging.DEBUG:
                 logger.debug(
@@ -777,7 +783,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         logger.info("Creating NLP function")
 
         # , {'jit': True, 'compiler': 'shell'})
-        nlp = MXFunction('nlp', nlpIn(x=X), nlpOut(f=f, g=vertcat(g)))
+        nlp = MXFunction('nlp', nlpIn(x=X), nlpOut(f=sumRows(vertcat(f)), g=vertcat(g)))
 
         # Done
         logger.info("Done transcribing problem")

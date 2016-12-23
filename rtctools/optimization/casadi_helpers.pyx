@@ -1,18 +1,8 @@
 from casadi import MX, MXFunction, jacobian, vertcat, reshape, mul, IMatrix, sumCols
+import logging
 
+logger = logging.getLogger("rtctools")
 
-def depends_on(mx, sym):
-    # TODO rewrite using classify_linear
-    try:
-        if mx.getName() == sym.getName():
-            return True
-    except:
-        pass
-    for dep_index in range(mx.getNdeps()):
-        dep = mx.getDep(dep_index)
-        if depends_on(dep, sym):
-            return True
-    return False
 
 
 # Borrowed from
@@ -39,15 +29,33 @@ def classify_linear(e, v):
     return ret
 
 
+def depends_on(e, v):
+    """
+    Return True if e depends on v.
+    """
+    classification = classify_linear(e, v)
+    if sum(classification) > 0:
+        return True
+    else:
+        return False
+
+
 def nullvertcat(L):
+    """
+    Like vertcat, but creates an MX with consistent dimensions even if L is empty.
+    """
     if len(L) == 0:
         return MX(0, 1)
     else:
         return vertcat(L)
 
 
-# TODO document, use more
-def jacobian_trick(e, p):
+def reduce_matvec(e, p):
+    """
+    Reduces the MX graph e of linear operations on p into a matrix-vector product.
+
+    This reduces the number of nodes required to represent the linear operations.
+    """
     temp = MXFunction("temp", [], [jacobian(e, p)])
     J = temp([])[0]
     return reshape(mul(J, p), e.shape)
