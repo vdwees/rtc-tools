@@ -39,7 +39,6 @@ def classify_linear(e, v):
     return ret
 
 
-# TODO use also for path_variables
 def nullvertcat(L):
     if len(L) == 0:
         return MX(0, 1)

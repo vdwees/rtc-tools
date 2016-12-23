@@ -490,7 +490,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         variable, ensemble_member=ensemble_member)
                     initial_path_variables.append(values[0])
 
-                ensemble_data["initial_path_variables"] = vertcat(initial_path_variables)
+                ensemble_data["initial_path_variables"] = nullvertcat(initial_path_variables)
 
             ensemble_aggregate = {}
             ensemble_aggregate["dae_variables_parameters_values"] = horzcat([d["dae_variables_parameters_values"] for d in ensemble_store])
@@ -739,10 +739,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             # Path constraints
             if len(path_constraints) > 0:
-                if ensemble_aggregate["initial_path_variables"].size1() > 0 and ensemble_aggregate["initial_path_variables"].size2() > 0:
-                    initial_path_variables = ensemble_aggregate["initial_path_variables"][:,ensemble_member]
-                else:
-                    initial_path_variables = MX()
+                initial_path_variables = ensemble_aggregate["initial_path_variables"][:,ensemble_member]
                 constant_inputs = ensemble_aggregate["constant_inputs"][:,ensemble_member]
                 initial_path_constraints = path_constraints_function([vertcat([initial_state
                                                                               , initial_derivatives
