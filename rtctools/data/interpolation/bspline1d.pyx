@@ -41,7 +41,7 @@ class BSpline1D(BSpline):
         return y
 
     @classmethod
-    def fit(cls, x, y, k=3, monotonicity=0, curvature=0, num_test_points=100, epsilon=1e-7, delta=1e-4):
+    def fit(cls, x, y, k=3, monotonicity=0, curvature=0, num_test_points=100, epsilon=1e-7, delta=1e-4, interior_pts=None):
         """
         fit() returns a tck tuple like scipy.interpolate.splrep, but adjusts
         the weights to meet the desired constraints to the curvature of the spline curve.
@@ -72,18 +72,22 @@ class BSpline1D(BSpline):
             - ensures that the spline evaluates correctly at the first and last nodes, as
               well as the distance delta beyond these nodes
 
+        :param interior_pts:
+            - optional list of interior knots to use
+
         :returns: A tuple of spline knots, weights, and order.
         """
         x = np.asarray(x)
         y = np.asarray(y)
         N = len(x)
 
-        # Generate knots: This algorithm is based on the Fitpack algorithm by p.dierckx
-        # The original code lives here: http://www.netlib.org/dierckx/
-        if k % 2 == 1:
-            interior_pts = x[k // 2 + 1:-k // 2]
-        else:
-            interior_pts = (x[k // 2 + 1:-k // 2] + x[k // 2:-k // 2 - 1]) / 2
+        if interior_pts is None:
+            # Generate knots: This algorithm is based on the Fitpack algorithm by p.dierckx
+            # The original code lives here: http://www.netlib.org/dierckx/
+            if k % 2 == 1:
+                interior_pts = x[k // 2 + 1:-k // 2]
+            else:
+                interior_pts = (x[k // 2 + 1:-k // 2] + x[k // 2:-k // 2 - 1]) / 2
         t = np.concatenate(
             (np.full(k + 1, x[0] - delta), interior_pts, np.full(k + 1, x[-1] + delta)))
         num_knots = len(t)
@@ -135,6 +139,10 @@ class BSpline1D(BSpline):
         solver = NlpSolver("solver", my_solver, nlp, {
                            'print_time': 0, 'print_level': 0})
         sol = solver(lbg=lbg, ubg=ubg)
+        stats = solver.getStats()
+        return_status = stats['return_status']
+        if return_status not in ['Solve_Succeeded', 'Solved_To_Acceptable_Level', 'SUCCESS']:
+            raise Exception("Spline fitting failed with status {}".format(return_status))
 
         # Return the new tck tuple
         return (t, sol['x'].get(), k)
