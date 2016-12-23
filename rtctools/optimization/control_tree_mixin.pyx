@@ -2,7 +2,7 @@
 
 from optimization_problem import OptimizationProblem
 from timeseries import Timeseries
-from casadi import vertcat
+from casadi import vertcat, MX
 import numpy as np
 import logging
 import sys
@@ -243,8 +243,19 @@ class ControlTreeMixin(OptimizationProblem):
 
     def control_vector(self, variable, ensemble_member=0):
         X = self.solver_input
-
-        return X[self._control_indices[variable][ensemble_member, :]]
+        
+        if ensemble_member is None:
+            if not hasattr(self,"_mycache"):
+                self._mycache = {}
+            name = "control_vector_%s" % variable
+            if name in self._mycache:
+                return self._mycache[name]
+            else:
+                r = MX.sym(name, *self._control_indices[variable][0, :].shape)
+                self._mycache[name] = r
+                return r
+        else:
+            return X[self._control_indices[variable][ensemble_member, :]]
 
     def control_at(self, variable, t, ensemble_member=0, scaled=False, extrapolate=True):
         t0 = self.initial_time

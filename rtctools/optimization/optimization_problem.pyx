@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MXFunction, NlpSolver, MX, CasadiOptions
+from casadi import MXFunction, NlpSolver, MX, CasadiOptions, vertcat
 from abc import ABCMeta, abstractmethod, abstractproperty
 import numpy as np
 cimport numpy as np
@@ -156,8 +156,8 @@ class OptimizationProblem(object):
 
         solver.setInput(lbx, 'lbx')
         solver.setInput(ubx, 'ubx')
-        solver.setInput(lbg, 'lbg')
-        solver.setInput(ubg, 'ubg')
+        solver.setInput(vertcat(lbg), 'lbg')
+        solver.setInput(vertcat(ubg), 'ubg')
         solver.setInput(x0, 'x0')
 
         # Solve NLP
@@ -549,11 +549,11 @@ class OptimizationProblem(object):
 
     def path_constraints(self, ensemble_member):
         """
-        Returns a list of path constraints for the given ensemble member.
+        Returns a list of path constraints.  Path constraints apply to all times and ensemble members simultaneously.
 
-        Call :func:`OptimizationProblem.state` to return a time-independent symbol representing a model variable.
+        Call :func:`OptimizationProblem.state` to return a time- and ensemble-member-independent symbol representing a model variable.
 
-        :param ensemble_member: The ensemble member index.
+        :param ensemble_member: The ensemble member index.  This index may only be used to supply member-dependent bounds.
 
         :returns: A list of triples ``(f, m, M)``, with an :class:`MX` object representing the path constraint function ``f``, lower bound ``m``, and upper bound ``M``.  The bounds may be numbers or :class:`Timeseries` objects.
 

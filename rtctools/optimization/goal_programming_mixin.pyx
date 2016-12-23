@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, MXFunction, sumRows, substitute, constpow
+from casadi import MX, MXFunction, sumRows, substitute, constpow, vertcat
 from abc import ABCMeta, abstractmethod
 import numpy as np
 cimport numpy as np
@@ -329,9 +329,7 @@ class GoalProgrammingMixin(OptimizationProblem):
         return seed
 
     def objective(self, ensemble_member):
-        acc_objective = MX(0)
-        for o in self._subproblem_objectives:
-            acc_objective += o(self, ensemble_member)
+        acc_objective = sumRows(vertcat([o(self, ensemble_member) for o in self._subproblem_objectives]))
         return acc_objective / len(self._subproblem_objectives)
 
     def constraints(self, ensemble_member):
