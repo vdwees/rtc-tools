@@ -553,7 +553,7 @@ class OptimizationProblem(object):
 
         Call :func:`OptimizationProblem.state` to return a time- and ensemble-member-independent symbol representing a model variable.
 
-        :param ensemble_member: The ensemble member index.  This argument is currently ignored, and reserved for future use.
+        :param ensemble_member: The ensemble member index.  This index may only be used to supply member-dependent bounds.
 
         :returns: A list of triples ``(f, m, M)``, with an :class:`MX` object representing the path constraint function ``f``, lower bound ``m``, and upper bound ``M``.  The bounds may be numbers or :class:`Timeseries` objects.
 

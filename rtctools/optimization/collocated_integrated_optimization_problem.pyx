@@ -1,5 +1,10 @@
 # cython: embedsignature=True
 
+# TODO
+# - ensemble gp broken
+# - merge into master
+# - merge in path objectives
+
 from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, vertcat, horzcat, vec, substitute, sumRows, sumCols, interp1d, transpose, repmat, matrix_expand, reshape, mul
 from abc import ABCMeta, abstractmethod
 import numpy as np
@@ -303,15 +308,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             dae_residual_function_collocated = dae_residual_function_collocated.expand()
 
         # Initialize an MXFunction for the path constraints
+        # Note that we assume that the path constraint expression is the same for all ensemble members
         path_constraints = self.path_constraints(0)
         path_constraints_function = MXFunction('path_constraints',
                                                [vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
                                                         'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
                                                [vertcat([f_constraint for (f_constraint, lb, ub) in path_constraints])])
         path_constraints_function = path_constraints_function.expand()
-
-        if len(path_constraints) > 0 and self.ensemble_size > 1:
-            logger.warning("Using path constraints of ensemble member #0 for all members.")
 
         # Set up accumulation over time (integration, and generation of
         # collocation constraints)
@@ -472,7 +475,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             # Store initial state and derivatives
             initial_state = []
-            initial_derivatives = ensemble_data["initial_derivatives"] = []
+            initial_derivatives = []
             for variable in integrated_variables + collocated_variables:
                 variable = variable.getName()
                 value = self.state_vector(
@@ -506,40 +509,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         ensemble_aggregate["initial_path_variables"] = horzcat([d["initial_path_variables"] for d in ensemble_store])
         ensemble_aggregate["initial_path_variables"] = reduce_matvec(ensemble_aggregate["initial_path_variables"], self.solver_input)
 
-        # Add initial conditions specified in data
-        history = self.history(ensemble_member)
-        for state in history.keys():
-            try:
-                history_timeseries = history[state]
-                xinit = self.interpolate(
-                    t0, history_timeseries.times, history_timeseries.values, np.nan, np.nan)
-
-            except KeyError:
-                xinit = np.nan
-
-            if np.isfinite(xinit):
-                # Avoid the use of slow state_at().  We don't need
-                # interpolation or history values here.
-                value = None
-                for variable in self.dae_variables['free_variables']:
-                    variable = variable.getName()
-                    for alias in self.variable_aliases(variable):
-                        if alias.name == state:
-                            value = self.state_vector(
-                                variable, ensemble_member=ensemble_member)[0]
-                            nominal = self.variable_nominal(variable)
-                            if nominal != 1:
-                                value *= nominal
-                            if alias.sign < 0:
-                                value *= -1
-                            break
-                if value == None:
-                    # This was no free variable.
-                    continue
-                g.append(value)
-                lbg.append(float(xinit))
-                ubg.append(float(xinit))
-
         # Add constraints for initial conditions
         initial_residual_with_params_fun = MXFunction('initial_residual', [vertcat(self.dae_variables['parameters']), vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
                                                   'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat([dae_residual, initial_residual])])
@@ -571,6 +540,40 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             constant_inputs = ensemble_store[ensemble_member]["constant_inputs"]
 
+            # Initial conditions specified in history timeseries
+            history = self.history(ensemble_member)
+            for state in history.keys():
+                try:
+                    history_timeseries = history[state]
+                    xinit = self.interpolate(
+                        t0, history_timeseries.times, history_timeseries.values, np.nan, np.nan)
+
+                except KeyError:
+                    xinit = np.nan
+
+                if np.isfinite(xinit):
+                    # Avoid the use of slow state_at().  We don't need
+                    # interpolation or history values here.
+                    value = None
+                    for variable in self.dae_variables['free_variables']:
+                        variable = variable.getName()
+                        for alias in self.variable_aliases(variable):
+                            if alias.name == state:
+                                value = self.state_vector(
+                                    variable, ensemble_member=ensemble_member)[0]
+                                nominal = self.variable_nominal(variable)
+                                if nominal != 1:
+                                    value *= nominal
+                                if alias.sign < 0:
+                                    value *= -1
+                                break
+                    if value == None:
+                        # This was no free variable.
+                        continue
+                    g.append(value)
+                    lbg.append(float(xinit))
+                    ubg.append(float(xinit))
+
             # Initial conditions for integrator
             accumulation_X0 = []
             for variable in self.integrated_states:
@@ -585,10 +588,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             # Input for map
             logger.info("Interpolating states")
 
-            accumulation_U = [None] * (1 + 2 * len(
-                    self.dae_variables['constant_inputs']) + 2 + len(self.path_variables))
+            accumulation_U = [None] * (1 + 2 * len(self.dae_variables['constant_inputs']) + 3)
 
-            interpolated_states = np.zeros((2 * len(collocated_variables),), dtype=object)
+            interpolated_states = [None] * (2 * len(collocated_variables))
             for j, variable in enumerate(collocated_variables):
                 variable = variable.getName()
                 times = self.times(variable)
@@ -603,7 +605,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 interpolated_states[j] = nominal * interpolated[0:n_collocation_times - 1]
                 interpolated_states[len(collocated_variables) +
                                j] = nominal * interpolated[1:n_collocation_times]
-            accumulation_U[0] = reduce_matvec(horzcat(list(interpolated_states)), self.solver_input)
+            accumulation_U[0] = reduce_matvec(horzcat(interpolated_states), self.solver_input)
 
             for j, variable in enumerate(self.dae_variables['constant_inputs']):
                 variable = variable.getName()
@@ -618,12 +620,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             accumulation_U[1 + 2 * len(self.dae_variables[
                 'constant_inputs']) + 1] = MX(collocation_times[1:n_collocation_times])
 
+            path_variables = [None] * len(self.path_variables)
             for j, variable in enumerate(self.path_variables):
                 variable = variable.getName()
                 values = self.state_vector(
                     variable, ensemble_member=ensemble_member)
-                accumulation_U[1 + 2 * len(
-                    self.dae_variables['constant_inputs']) + 2 + j] = values[1:n_collocation_times]
+                path_variables[j] = values[1:n_collocation_times]
+            accumulation_U[1 + 2 * len(
+                self.dae_variables['constant_inputs']) + 2] = reduce_matvec(horzcat(path_variables), self.solver_input)
 
             # Construct matrix using O(states) CasADi operations
             # This is faster than using blockcat, presumably because of the
@@ -634,7 +638,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             accumulation_U = matrix_expand(accumulation_U)
 
             # Map to all time steps
-            logger.info("Mapping")
+            logger.info("Mapping {} x {} / {} x {}".format(accumulation_U.size1(), accumulation_U.size2(), accumulated_U.size1(), accumulated_U.size2()))
 
             [integrators_and_collocation_and_path_constraints] = accumulation(
                 [accumulation_X0, accumulation_U, repmat(parameters, 1, n_collocation_times - 1)])
@@ -749,6 +753,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             ubg.extend(ubg_constraint)
 
             # Path constraints
+            # We need to call self.path_constraints() again here, as the bounds may change from ensemble member to member.
+            path_constraints = self.path_constraints(ensemble_member)
             if len(path_constraints) > 0:
                 # We need to evaluate the path constraints at t0, as the initial time is not included in the accumulation.
                 initial_path_constraints = path_constraints_function([vertcat([initial_state
@@ -1236,7 +1242,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 offset += n_times
 
         # Could not find state.  Try controls.
-        return self.control_vector(variable, ensemble_member=ensemble_member)
+        tmp = self.control_vector(variable, ensemble_member=ensemble_member)
+        logger.error("For {} we have {}".format(ensemble_member, tmp))
+        return tmp
 
     def state_at(self, variable, t, ensemble_member=0, scaled=False, extrapolate=True):
         if isinstance(variable, MX):
