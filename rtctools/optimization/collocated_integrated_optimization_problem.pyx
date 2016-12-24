@@ -1571,7 +1571,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Discretization settings
         collocation_times = self.times()
         n_collocation_times = len(collocation_times)
-        dt = collocation_times[1] - collocation_times[0]
+        dt = transpose(collocation_times[1:] - collocation_times[:-1])
         t0 = self.initial_time
 
         # Prepare interpolated state vectors
@@ -1590,7 +1590,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         accumulation_derivatives = [None] * len(derivatives)
         for i, state in enumerate(states):
             state = state.getName()
-            accumulation_derivatives[i] = horzcat([self.der_at(state, t0), (accumulation_states[i, 1:] - accumulation_states[i, :-1]) / dt])
+            accumulation_derivatives[i] = horzcat([self.der_at(state, t0),
+                (accumulation_states[i, 1:] - accumulation_states[i, :-1]) / dt])
         accumulation_derivatives = vertcat(accumulation_derivatives)
 
         # Map
