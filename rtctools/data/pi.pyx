@@ -190,7 +190,7 @@ class ParameterConfig:
                     continue
 
             el = group.find("pi:parameter[@id='{}']".format(parameter_id), ns)
-            if el == None:
+            if el is None:
                 raise KeyError
             return self._parse_parameter(el)
 
@@ -221,7 +221,7 @@ class ParameterConfig:
                     continue
 
             el = group.find("pi:parameter[@id='{}']".format(parameter_id), ns)
-            if el == None:
+            if el is None:
                 raise KeyError
             for child in el:
                 if child.tag.endswith('boolValue'):
@@ -392,7 +392,7 @@ class Timeseries:
                     dt = _parse_time_step(header.find('pi:timeStep', ns))
                 except ValueError:
                     raise Exception('PI: Multiplier of time step of variable {} must be a positive integer per the PI schema.'.format(variable))
-                if self._dt == None:
+                if self._dt is None:
                     self._dt = dt
                 else:
                     if dt != self._dt:
@@ -401,7 +401,7 @@ class Timeseries:
                 try:
                     start_datetime = _parse_date_time(
                         header.find('pi:startDate', ns))
-                    if self._start_datetime == None:
+                    if self._start_datetime is None:
                         self._start_datetime = start_datetime
                     else:
                         if start_datetime < self._start_datetime:
@@ -412,7 +412,7 @@ class Timeseries:
 
                 try:
                     end_datetime = _parse_date_time(header.find('pi:endDate', ns))
-                    if self._end_datetime == None:
+                    if self._end_datetime is None:
                         self._end_datetime = end_datetime
                     else:
                         if end_datetime > self._end_datetime:
@@ -428,7 +428,7 @@ class Timeseries:
                     # the timeseries has no forecastDate, so the forecastDate
                     # is set to the startDate (per the PI-schema)
                     forecast_datetime = start_datetime
-                if self._forecast_datetime == None:
+                if self._forecast_datetime is None:
                     self._forecast_datetime = forecast_datetime
                 else:
                     if forecast_datetime != self._forecast_datetime:
@@ -503,7 +503,7 @@ class Timeseries:
                         self._values.append({})
                 else:
                     ensemble_member = 0
-                if el == None and self.contains_ensemble == True:
+                if el is None and self.contains_ensemble == True:
                     # Expand values dict to accomodate referencing of (virtual)
                     # ensemble series to the input values. This is e.g. needed
                     # for initial states that have a single historical values.
@@ -651,7 +651,7 @@ class Timeseries:
 
         if self.timezone != None:
             timezone = self._xml_root.find('pi:timeZone', ns)
-            if timezone == None:
+            if timezone is None:
                 timezone = ET.Element('{%s}' % (ns['pi'], ) + 'timeZone')
                 # timeZone has to be the first element according to the schema
                 self._xml_root.insert(0, timezone)

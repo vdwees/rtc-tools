@@ -114,7 +114,7 @@ def run_simulation_problem(simulation_problem_class, base_folder=None, log_level
     :param log_level:                The log level to use.
     """
 
-    if base_folder == None:
+    if base_folder is None:
         # Check command line arguments
         if len(sys.argv) != 2:
             raise Exception("Usage: {} BASE_FOLDER".format(sys.argv[0]))

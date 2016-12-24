@@ -580,7 +580,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                 if alias.sign < 0:
                                     value *= -1
                                 break
-                    if value == None:
+                    if value is None:
                         # This was no free variable.
                         continue
                     g.append(value)
@@ -1426,9 +1426,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         times = self.times(variable)
 
         # Set default values
-        if t0 == None:
+        if t0 is None:
             t0 = times[0]
-        if tf == None:
+        if tf is None:
             tf = times[-1]
 
         # Compute combined points
@@ -1462,9 +1462,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         times = self.times(variable)
 
         # Set default values
-        if t0 == None:
+        if t0 is None:
             t0 = times[0]
-        if tf == None:
+        if tf is None:
             tf = times[-1]
 
         # Compute combined points

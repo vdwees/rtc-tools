@@ -86,7 +86,7 @@ class SimulationProblem:
         :param dt:    Time step size.
         :param tol:   Tolerance of the underlying FMU method.
         """
-        if tol == None:
+        if tol is None:
             tol = self._model.get_default_experiment_tolerance()
         self._start = start
         self._stop = stop

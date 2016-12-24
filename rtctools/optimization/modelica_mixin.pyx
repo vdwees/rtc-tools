@@ -298,7 +298,7 @@ class ModelicaMixin(OptimizationProblem):
 
     def variable_is_discrete(self, variable):
         var = self._jm_model.getVariable(variable)
-        if var == None:
+        if var is None:
             return False
         else:
             return (var.getVariability() == var.DISCRETE)

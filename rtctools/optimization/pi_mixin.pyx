@@ -134,7 +134,7 @@ class PIMixin(OptimizationProblem):
         options = super(PIMixin, self).solver_options()
 
         # Only do this if we have a rtcParameterConfig_Numerical
-        if self._parameter_config_numerical == None:
+        if self._parameter_config_numerical is None:
             return options
 
         # Load solver options from parameter config
