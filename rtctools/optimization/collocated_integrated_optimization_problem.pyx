@@ -1560,7 +1560,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # t does not belong to any collocation point interval
         raise IndexError
 
-    def map_path_expression(self, expr):
+    def map_path_expression(self, expr, ensemble_member):
         # Expression as function of states and derivatives
         states = self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
         derivatives = self.dae_variables['derivatives'] + self._algebraic_and_control_derivatives
@@ -1579,7 +1579,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         for i, state in enumerate(states):
             state = state.getName()
             times = self.times()
-            values = self.state_vector(state)
+            values = self.state_vector(state, ensemble_member)
             if len(times) != n_collocation_times:
                 accumulation_states[i] = interp1d(times, values, collocation_times)
             else:
@@ -1590,7 +1590,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         accumulation_derivatives = [None] * len(derivatives)
         for i, state in enumerate(states):
             state = state.getName()
-            accumulation_derivatives[i] = horzcat([self.der_at(state, t0),
+            accumulation_derivatives[i] = horzcat([self.der_at(state, t0, ensemble_member),
                 (accumulation_states[i, 1:] - accumulation_states[i, :-1]) / dt])
         accumulation_derivatives = vertcat(accumulation_derivatives)
 

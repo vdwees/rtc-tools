@@ -928,7 +928,7 @@ class OptimizationProblem(object):
         """
         raise NotImplementedError
 
-    def map_path_expression(self, expr):
+    def map_path_expression(self, expr, ensemble_member):
         """
         Maps the path expression `expr` over the entire time horizon of the optimization problem.
 

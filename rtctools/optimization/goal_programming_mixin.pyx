@@ -807,7 +807,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                         epsilon += options['constraint_relaxation']
                     else:
                         # Compute path expression
-                        expr = self.map_path_expression(goal.function(self, ensemble_member))
+                        expr = self.map_path_expression(goal.function(self, ensemble_member), ensemble_member)
                         f = MXFunction('f', [self.solver_input], [expr])
                         epsilon = f([self.solver_output])[0]
 
