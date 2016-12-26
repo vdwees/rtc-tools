@@ -1563,9 +1563,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
     def map_path_expression(self, expr, ensemble_member):
         # Expression as function of states and derivatives
         states = self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
+        states_and_path_variables = states + self.path_variables
         derivatives = self.dae_variables['derivatives'] + self._algebraic_and_control_derivatives
 
-        f = MXFunction('f', [vertcat(states), vertcat(derivatives)], [expr])
+        f = MXFunction('f', [vertcat(states_and_path_variables), vertcat(derivatives)], [expr])
         fmap = f.map('fmap', len(self.times()))
 
         # Discretization settings
@@ -1574,9 +1575,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         dt = transpose(collocation_times[1:] - collocation_times[:-1])
         t0 = self.initial_time
 
-        # Prepare interpolated state vectors
-        accumulation_states = [None] * len(states)
-        for i, state in enumerate(states):
+        # Prepare interpolated state and path variable vectors
+        accumulation_states = [None] * len(states_and_path_variables)
+        for i, state in enumerate(states_and_path_variables):
             state = state.getName()
             times = self.times()
             values = self.state_vector(state, ensemble_member)
