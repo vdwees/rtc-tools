@@ -306,7 +306,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Note that we assume that the path objective expression is the same for all ensemble members
         path_objective = self.path_objective(0)
         path_objective_function = MXFunction('path_objective',
-                                               [vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
+                                               [vertcat(self.dae_variables['parameters']),
+                                                vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
                                                         'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
                                                [path_objective])
         path_objective_function = path_objective_function.expand()
@@ -315,7 +316,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Note that we assume that the path constraint expression is the same for all ensemble members
         path_constraints = self.path_constraints(0)
         path_constraints_function = MXFunction('path_constraints',
-                                               [vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
+                                               [vertcat(self.dae_variables['parameters']),
+                                                vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
                                                         'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
                                                [vertcat([f_constraint for (f_constraint, lb, ub) in path_constraints])])
         path_constraints_function = path_constraints_function.expand()
@@ -418,7 +420,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 accumulated_Y.append(
                     (1 - theta) * dae_residual_0 + theta * dae_residual_1)
 
-        accumulated_Y.extend(path_objective_function([vertcat([integrated_states_1,
+        accumulated_Y.extend(path_objective_function([vertcat(self.dae_variables['parameters']),
+                                                      vertcat([integrated_states_1,
                                                                collocated_states_1,
                                                                integrated_finite_differences,
                                                                collocated_finite_differences,
@@ -427,7 +430,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                                                path_variables_1])],
                                                        False, True))
 
-        accumulated_Y.extend(path_constraints_function([vertcat([integrated_states_1,
+        accumulated_Y.extend(path_constraints_function([vertcat(self.dae_variables['parameters']),
+                                                        vertcat([integrated_states_1,
                                                                  collocated_states_1,
                                                                  integrated_finite_differences,
                                                                  collocated_finite_differences,
@@ -766,7 +770,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             # Objective
             f_member = self.objective(ensemble_member)
             if path_objective.size1() > 0:
-                initial_path_objective = path_objective_function([vertcat([initial_state
+                initial_path_objective = path_objective_function([parameters, 
+                                                                  vertcat([initial_state
                                                                               , initial_derivatives
                                                                               , initial_constant_inputs,
                                                                               0.0,
@@ -799,7 +804,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             path_constraints = self.path_constraints(ensemble_member)
             if len(path_constraints) > 0:
                 # We need to evaluate the path constraints at t0, as the initial time is not included in the accumulation.
-                initial_path_constraints = path_constraints_function([vertcat([initial_state
+                initial_path_constraints = path_constraints_function([parameters,
+                                                                      vertcat([initial_state
                                                                               , initial_derivatives
                                                                               , initial_constant_inputs,
                                                                               0.0,
