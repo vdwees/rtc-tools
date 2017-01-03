@@ -465,6 +465,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     if alias.name in parameters:
                         parameter_values[i] = alias.sign * parameters[alias.name]
                         break
+                if parameter_values[i] is None:
+                    raise Exception("No value specified for parameter {}".format(symbol.getName()))
             ensemble_data["parameters"] = nullvertcat(parameter_values)
 
             # Store constant inputs
