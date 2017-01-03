@@ -56,16 +56,15 @@ def nullvertcat(L):
         return vertcat(L)
 
 
-def reduce_matvec(e, p):
+def reduce_matvec(e, v):
     """
     Reduces the MX graph e of linear operations on p into a matrix-vector product.
 
     This reduces the number of nodes required to represent the linear operations.
     """
-    return e
-    temp = MXFunction("temp", [], [jacobian(e, p)])
+    temp = MXFunction("temp", [], [jacobian(e, v)])
     J = temp([])[0]
-    return reshape(mul(J, p), e.shape)
+    return reshape(mul(J, v), e.shape)
 
 
 def resolve_interdependencies(e, v, max_recursion_depth=10):
