@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MXFunction, MX, substitute, repmat
+from casadi import MX, substitute, repmat
 import numpy as np
 import logging
 import pyjmi
@@ -108,10 +108,8 @@ class ModelicaMixin(OptimizationProblem):
 
         self._mx['parameters'] = []
         for parameter_kind in parameter_kinds:
-            # Don't handle parameters starting with '_'.  These will generally
-            # be settings that have been added by the compiler.
             self._mx['parameters'].extend([var.getVar() for var in self._jm_model.getVariables(
-                parameter_kind) if not var.getName().startswith("_") and not var.isAlias()])
+                parameter_kind) if not var.isAlias()])
 
         # Output variables
         logger.debug("ModelicaMixin: Found states {}".format(
@@ -211,9 +209,8 @@ class ModelicaMixin(OptimizationProblem):
         # Return parameter values from JModelica model
         for variable in self._mx['parameters']:
             var = self._jm_model.getVariable(variable.getName())
-            value = var.getAttribute('bindingExpression')
-            if value is not None:
-                parameters[variable.getName()] = value
+            if var.hasAttributeSet('bindingExpression'):
+                parameters[variable.getName()] = var.getAttribute('bindingExpression')
                 logger.debug("Read parameter {} from Modelica model".format(
                     variable.getName()))
             else:
@@ -230,8 +227,8 @@ class ModelicaMixin(OptimizationProblem):
         times = self.times()
         for variable in self._mx['constant_inputs']:
             var = self._jm_model.getVariable(variable.getName())
-            value = var.getAttribute('bindingExpression')
-            if value is not None:
+            if var.hasAttributeSet('bindingExpression'):
+                value = var.getAttribute('bindingExpression')
                 constant_inputs[variable.getName()] = Timeseries(
                     times, repmat([value], len(times)))
                 logger.debug("Read constant input {} from Modelica model".format(
