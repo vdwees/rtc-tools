@@ -461,11 +461,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             parameter_values = [None] * len(self.dae_variables['parameters'])
             values = []
             for i, symbol in enumerate(self.dae_variables['parameters']):
+                found = False
                 for alias in self.variable_aliases(symbol.getName()):
                     if alias.name in parameters:
                         parameter_values[i] = alias.sign * parameters[alias.name]
+                        found = True
                         break
-                if parameter_values[i] is None:
+                if not found:
                     raise Exception("No value specified for parameter {}".format(symbol.getName()))
             ensemble_data["parameters"] = nullvertcat(parameter_values)
 
@@ -484,8 +486,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         found = True
                         break
                 if not found:
-                    constant_inputs_interpolated[
-                        variable.getName()] = n_collocation_times * [0.0]
+                    raise Exception("No values found for constant input {}".format(variable.getName()))
             ensemble_data["constant_inputs"] = constant_inputs_interpolated
 
             # Store initial state and derivatives
