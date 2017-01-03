@@ -473,16 +473,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         break
                 if not found:
                     raise Exception("No value specified for parameter {}".format(symbol.getName()))
-
-            # Resolve interdependencies between parameters
-            recursion_depth = 0
-            max_recursion_depth = 10
-            while np.any([not MX(value).isConstant() for value in parameter_values]):
-                parameter_values = substitute(parameter_values, self.dae_variables['parameters'], parameter_values)
-                recursion_depth += 1
-                if recursion_depth > max_recursion_depth:
-                    raise Exception("Parameter resolution:  Maximum recursion depth exceeded")
-
+            parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
             ensemble_data["parameters"] = nullvertcat(parameter_values)
 
             # Store constant inputs

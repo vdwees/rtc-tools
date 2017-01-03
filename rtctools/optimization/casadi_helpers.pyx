@@ -1,8 +1,8 @@
-from casadi import MX, MXFunction, jacobian, vertcat, reshape, mul, IMatrix, sumCols
+from casadi import MX, MXFunction, jacobian, vertcat, reshape, mul, IMatrix, sumCols, substitute
+import numpy as np
 import logging
 
 logger = logging.getLogger("rtctools")
-
 
 
 # Borrowed from
@@ -66,3 +66,17 @@ def reduce_matvec(e, p):
     temp = MXFunction("temp", [], [jacobian(e, p)])
     J = temp([])[0]
     return reshape(mul(J, p), e.shape)
+
+
+def resolve_interdependencies(e, v, max_recursion_depth=10):
+    """
+    Replaces occurences of the symbols in v with the expressions of e,
+    until all symbols have been resolved or a maximum recursion depth is reached.
+    """
+    recursion_depth = 0
+    while np.any([not MX(value).isConstant() for value in e]):
+        e = substitute(e, v, e)
+        recursion_depth += 1
+        if recursion_depth > max_recursion_depth:
+            raise Exception("Interdependency resolution:  Maximum recursion depth exceeded")
+    return e

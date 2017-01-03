@@ -8,6 +8,7 @@ import os
 
 from timeseries import Timeseries
 from optimization_problem import OptimizationProblem, Alias
+from casadi_helpers import resolve_interdependencies
 
 logger = logging.getLogger("rtctools")
 
@@ -256,25 +257,19 @@ class ModelicaMixin(OptimizationProblem):
         # Load additional bounds from model
         # If a bound contains a parameter, we assume this parameter to be equal for all ensemble
         # members.
-        parameters = self.parameters(0)
-
-        def substitute_parameters(attr):
-            # Replace parameters and constant values
-            # We only replace those for which we have values are available.
-            symbols = []
-            values = []
-            for symbol in self.dae_variables['parameters']:
-                for alias in self.variable_aliases(symbol.getName()):
-                    if alias.name in parameters:
-                        symbols.append(symbol)
-                        values.append(alias.sign * parameters[alias.name])
-                        break
-            [val] = substitute([attr], symbols, values)
-            if val.isConstant():
-                return float(val)
-            else:
-                deps = [val.getDep(i).getName() for i in range(val.getNdeps())]
-                raise Exception("Parameters with names {} not set.".format(deps))
+        parameters = self.parameters(0)        
+        parameter_values = [None] * len(self.dae_variables['parameters'])
+        values = []
+        for i, symbol in enumerate(self.dae_variables['parameters']):
+            found = False
+            for alias in self.variable_aliases(symbol.getName()):
+                if alias.name in parameters:
+                    parameter_values[i] = alias.sign * parameters[alias.name]
+                    found = True
+                    break
+            if not found:
+                raise Exception("No value specified for parameter {}".format(symbol.getName()))
+        parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
 
         for sym in self._mx['states'] + self._mx['algebraics'] + self._mx['control_inputs']:
             variable = sym.getName()
@@ -284,9 +279,11 @@ class ModelicaMixin(OptimizationProblem):
             else:
                 m, M = None, None
             if var.hasAttributeSet('min'):
-                m = substitute_parameters(var.getAttribute('min'))
+                [m] = substitute([var.getAttribute('min')], self.dae_variables['parameters'], parameter_values)
+                m = float(m)
             if var.hasAttributeSet('max'):
-                M = substitute_parameters(var.getAttribute('max'))
+                [M] = substitute([var.getAttribute('max')], self.dae_variables['parameters'], parameter_values)
+                M = float(M)
             bounds[variable] = (m, M)
 
         return bounds
