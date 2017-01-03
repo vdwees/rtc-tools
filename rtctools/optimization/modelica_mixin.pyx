@@ -209,7 +209,6 @@ class ModelicaMixin(OptimizationProblem):
         parameters = super(ModelicaMixin, self).parameters(ensemble_member)
 
         # Return parameter values from JModelica model
-        parameters = {}
         for parameter in self._mx['parameters']:
             try:
                 parameters[parameter.getName()] = self._jm_model.get(
@@ -228,7 +227,6 @@ class ModelicaMixin(OptimizationProblem):
         constant_inputs = super(ModelicaMixin, self).constant_inputs(ensemble_member)
 
         # Return input values from JModelica model
-        constant_inputs = {}
         times = self.times()
         for variable in self._mx['constant_inputs']:
             try:
