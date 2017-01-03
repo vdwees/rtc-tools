@@ -469,6 +469,16 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         break
                 if not found:
                     raise Exception("No value specified for parameter {}".format(symbol.getName()))
+
+            # Resolve interdependencies between parameters
+            recursion_depth = 0
+            max_recursion_depth = 10
+            while np.any([not MX(value).isConstant() for value in parameter_values]):
+                parameter_values = substitute(parameter_values, self.dae_variables['parameters'], parameter_values)
+                recursion_depth += 1
+                if recursion_depth > max_recursion_depth:
+                    raise Exception("Parameter resolution:  Maximum recursion depth exceeded")
+
             ensemble_data["parameters"] = nullvertcat(parameter_values)
 
             # Store constant inputs
@@ -479,10 +489,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 for alias in self.variable_aliases(variable.getName()):
                     if alias.name in constant_inputs:
                         constant_input = constant_inputs[alias.name]
-                        # Always cast to built-in float type for compatibility
-                        # with CasADi.
+                        values = constant_input.values
+                        if isinstance(values, MX):
+                            [values] = substitute([values], self.dae_variables['parameters'], parameter_values)
+                        elif np.any([not MX(value).isConstant() for value in values]):
+                            values = substitute(values, self.dae_variables['parameters'], parameter_values)
                         constant_inputs_interpolated[variable.getName()] = alias.sign * self.interpolate(
-                            collocation_times, constant_input.times, constant_input.values, 0.0, 0.0)
+                            collocation_times, constant_input.times, values, 0.0, 0.0)
                         found = True
                         break
                 if not found:

@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MXFunction, MX, substitute
+from casadi import MXFunction, MX, substitute, repmat
 import numpy as np
 import logging
 import pyjmi
@@ -209,17 +209,17 @@ class ModelicaMixin(OptimizationProblem):
         parameters = super(ModelicaMixin, self).parameters(ensemble_member)
 
         # Return parameter values from JModelica model
-        for parameter in self._mx['parameters']:
-            try:
-                parameters[parameter.getName()] = self._jm_model.get(
-                    parameter.getName())
+        for variable in self._mx['parameters']:
+            var = self._jm_model.getVariable(variable.getName())
+            value = var.getAttribute('bindingExpression')
+            if value is not None:
+                parameters[variable.getName()] = value
                 logger.debug("Read parameter {} from Modelica model".format(
-                    parameter.getName()))
-            except RuntimeError:
-                # We have a bindingExpression here (probably). Don't evaluate
-                # it just yet; we may still be overriding its inputs in a
-                # subclass.
+                    variable.getName()))
+            else:
+                # Value will be provided by a subclass.
                 pass
+
         return parameters
 
     def constant_inputs(self, ensemble_member):
@@ -229,17 +229,16 @@ class ModelicaMixin(OptimizationProblem):
         # Return input values from JModelica model
         times = self.times()
         for variable in self._mx['constant_inputs']:
-            try:
-                constant_value = self._jm_model.get(variable.getName())
+            var = self._jm_model.getVariable(variable.getName())
+            value = var.getAttribute('bindingExpression')
+            if value is not None:
                 constant_inputs[variable.getName()] = Timeseries(
-                    times, constant_value * np.ones(len(times)))
+                    times, repmat([value], len(times)))
                 logger.debug("Read constant input {} from Modelica model".format(
                     variable.getName()))
-            except RuntimeError:
-                # We have a bindingExpression here (probably). Don't evaluate
-                # it just yet; we may still be overriding its inputs in a
-                # subclass.
-                continue
+            else:
+                # Value will be provided by a subclass.
+                pass
 
         return constant_inputs
 
@@ -292,6 +291,7 @@ class ModelicaMixin(OptimizationProblem):
             if var.hasAttributeSet('max'):
                 M = substitute_parameters(var.getAttribute('max'))
             bounds[variable] = (m, M)
+
         return bounds
 
     def variable_is_discrete(self, variable):
