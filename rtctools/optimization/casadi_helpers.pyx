@@ -62,9 +62,20 @@ def reduce_matvec(e, v):
 
     This reduces the number of nodes required to represent the linear operations.
     """
-    temp = MXFunction("temp", [], [jacobian(e, v)])
-    J = temp([])[0]
-    return reshape(mul(J, v), e.shape)
+    Af = MXFunction("Af", [v], [jacobian(e, v)])
+    A = Af([v])[0]
+    return reshape(mul(A, v), e.shape)
+
+
+def reduce_matvec_plus_b(e, v):
+    """
+    Reduces the MX graph e of linear operations on p into a matrix-vector product plus a constant term.
+
+    This reduces the number of nodes required to represent the affine operations.
+    """
+    bf = MXFunction("bf", [v], [e])
+    b = bf([0])[0]
+    return reduce_matvec(e, v) + b
 
 
 def resolve_interdependencies(e, v, max_recursion_depth=10):

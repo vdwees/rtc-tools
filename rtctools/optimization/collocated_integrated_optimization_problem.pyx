@@ -241,14 +241,15 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         dae_residual_collocated = vertcat(dae_residual_collocated)
 
         # Check linearity of collocated part
-        self._linear_collocation_constraints = True
+        self._affine_collocation_constraints = True
         if self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
             # Check linearity of collocation constraints, which is a necessary condition for the optimization problem to be convex
             classification = classify_linear(dae_residual_collocated, vertcat(
-                collocated_variables + collocated_derivatives))
+                collocated_variables + integrated_variables + collocated_derivatives + integrated_derivatives))
             for j in range(len(classification)):
+                # TODO detect conditionals!
                 if classification[j] == 2:
-                    self._linear_collocation_constraints = False
+                    self._affine_collocation_constraints = False
 
                     logger.warning(
                         "The DAE equation {} is non-linear.  The optimization problem is not convex.  This will, in general, result in the existence of multiple local optima and trouble finding a feasible initial solution.".format(dae_residual_collocated[j]))
@@ -597,6 +598,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     g.append(value)
                     lbg.append(float(xinit))
                     ubg.append(float(xinit))
+                else:
+                    logger.warning("No ")
 
             # Initial conditions for integrator
             accumulation_X0 = []
@@ -696,7 +699,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             # Add collocation constraints
             if collocation_constraints.size1() > 0:
-                # TODO if linear, reduce to Ax + b.
+                if self._affine_collocation_constraints:
+                    collocation_constraints = reduce_matvec_plus_b(collocation_constraints, self.solver_input)
                 g.append(collocation_constraints)
                 zeros = collocation_constraints.size1() * [0.0]
                 lbg.extend(zeros)
@@ -862,7 +866,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
     def solver_options(self):
         options = super(CollocatedIntegratedOptimizationProblem,
                         self).solver_options()
-        if self._linear_collocation_constraints:
+        if self._affine_collocation_constraints:
             options['jac_c_constant'] = 'yes'
         return options
 
