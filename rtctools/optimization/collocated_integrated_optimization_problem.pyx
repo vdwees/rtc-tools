@@ -1579,7 +1579,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         states_and_path_variables = states + self.path_variables
         derivatives = self.dae_variables['derivatives'] + self._algebraic_and_control_derivatives
 
-        f = MXFunction('f', [vertcat(states_and_path_variables), vertcat(derivatives)], [expr])
+        f = MXFunction('f', [vertcat(states_and_path_variables), vertcat(derivatives),
+            vertcat(self.dae_variables['constant_inputs']), vertcat(self.dae_variables['parameters'])], [expr])
         fmap = f.map('fmap', len(self.times()))
 
         # Discretization settings
@@ -1608,6 +1609,39 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 (accumulation_states[i, 1:] - accumulation_states[i, :-1]) / dt])
         accumulation_derivatives = vertcat(accumulation_derivatives)
 
+        # Prepare parameters
+        parameters = self.parameters(ensemble_member)
+        parameter_values = [None] * len(self.dae_variables['parameters'])
+        values = []
+        for i, symbol in enumerate(self.dae_variables['parameters']):
+            found = False
+            for alias in self.variable_aliases(symbol.getName()):
+                if alias.name in parameters:
+                    parameter_values[i] = alias.sign * parameters[alias.name]
+                    found = True
+                    break
+            if not found:
+                raise Exception("No value specified for parameter {}".format(symbol.getName()))
+        parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
+
+        # Prepare constant inputs
+        constant_inputs = self.constant_inputs(ensemble_member)
+        accumulation_constant_inputs = [None] * len(self.dae_variables['constant_inputs'])
+        for i, variable in enumerate(self.dae_variables['constant_inputs']):
+            for alias in self.variable_aliases(variable.getName()):
+                if alias.name in constant_inputs:
+                    constant_input = constant_inputs[alias.name]
+                    values = constant_input.values
+                    if isinstance(values, MX):
+                        [values] = substitute([values], self.dae_variables['parameters'], parameter_values)
+                    elif np.any([not MX(value).isConstant() for value in values]):
+                        values = substitute(values, self.dae_variables['parameters'], parameter_values)
+                    accumulation_constant_inputs[i] = alias.sign * self.interpolate(
+                        collocation_times, constant_input.times, values, 0.0, 0.0)
+                    break
+        accumulation_constant_inputs = vertcat(accumulation_constant_inputs)
+
         # Map
-        [values] = fmap([accumulation_states, accumulation_derivatives])
+        [values] = fmap([accumulation_states, accumulation_derivatives,
+            accumulation_constant_inputs, repmat(vertcat(parameter_values), 1, n_collocation_times)])
         return transpose(values)

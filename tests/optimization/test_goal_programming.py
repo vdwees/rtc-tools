@@ -214,6 +214,24 @@ class PathGoal3(Goal):
     priority = 3
 
 
+class PathGoal4(Goal):
+
+    def function(self, optimization_problem, ensemble_member):
+        return optimization_problem.state('constant_input')
+
+    function_range = (-1e1, 1e1)
+    priority = 4
+
+
+class PathGoal5(Goal):
+
+    def function(self, optimization_problem, ensemble_member):
+        return optimization_problem.state('k')
+
+    function_range = (-1e1, 1e1)
+    priority = 5
+
+
 class TestProblemPathGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
@@ -238,7 +256,7 @@ class TestProblemPathGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegr
         return bounds
 
     def path_goals(self):
-        return [PathGoal1(), PathGoal2(), PathGoal3()]
+        return [PathGoal1(), PathGoal2(), PathGoal3(), PathGoal4(), PathGoal5()]
 
 
 class TestGoalProgrammingPathGoals(TestCase):
