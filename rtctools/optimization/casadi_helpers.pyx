@@ -1,4 +1,4 @@
-from casadi import MX, MXFunction, jacobian, vertcat, reshape, mul, IMatrix, sumCols, substitute
+from casadi import MX, MXFunction, SXFunction, jacobian, vertcat, reshape, mul, IMatrix, sumCols, substitute
 import numpy as np
 import logging
 
@@ -19,31 +19,31 @@ def classify_linear(e, v):
     This method can be sped up a lot with JacSparsityTraits::sp
     """
 
-    f = MXFunction("f", [v], [jacobian(e, v)])
-    ret = ((sumCols(IMatrix(f.outputSparsity(0), 1))
-            == 0) == 0).nonzeros()
-    pattern = IMatrix(f.jacSparsity(
-        0, 0), 1).reshape((e.shape[0], -1))
-    for k in sumCols(pattern).row():
+    try:
+        f = SXFunction("f", [v], [jacobian(e, v)])
+    except:
+        f = MXFunction("f", [v], [jacobian(e, v)])
+    ret = list(sumCols(IMatrix(f.outputSparsity(0), 1)) > 0)
+    pattern = IMatrix(f.jacSparsity(0, 0), 1).reshape((e.shape[0], -1))
+    if pattern.isscalar() and pattern.size() == 0:
+        s2 = pattern
+    else:
+        s2 = sumCols(pattern)
+    for k in s2.row():
         ret[k] = 2
     return ret
 
 
-def depends_on(mx, sym):
+def depends_on(e, v):
     """
     Return True if e depends on v.
     """
-    # TODO rewrite using classify_linear
+
     try:
-        if mx.getName() == sym.getName():
-            return True
+        f = SXFunction("f", [v], [jacobian(e, v)])
     except:
-        pass
-    for dep_index in range(mx.getNdeps()):
-        dep = mx.getDep(dep_index)
-        if depends_on(dep, sym):
-            return True
-    return False
+        f = MXFunction("f", [v], [jacobian(e, v)])
+    return (f.outputSparsity(0).nnz() > 0)
 
 
 def nullvertcat(L):
@@ -77,5 +77,6 @@ def resolve_interdependencies(e, v, max_recursion_depth=10):
         e = substitute(e, v, e)
         recursion_depth += 1
         if recursion_depth > max_recursion_depth:
-            raise Exception("Interdependency resolution:  Maximum recursion depth exceeded")
+            raise Exception(
+                "Interdependency resolution:  Maximum recursion depth exceeded")
     return e
