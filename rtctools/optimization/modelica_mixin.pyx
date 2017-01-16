@@ -97,13 +97,10 @@ class ModelicaMixin(OptimizationProblem):
 
         # Initialize constants and parameters by eliminating them from the DAE
         # residual
-        parameter_kinds = [self._jm_model.BOOLEAN_CONSTANT,
-                           self._jm_model.BOOLEAN_PARAMETER_DEPENDENT,
+        parameter_kinds = [self._jm_model.BOOLEAN_PARAMETER_DEPENDENT,
                            self._jm_model.BOOLEAN_PARAMETER_INDEPENDENT,
-                           self._jm_model.INTEGER_CONSTANT,
                            self._jm_model.INTEGER_PARAMETER_DEPENDENT,
                            self._jm_model.INTEGER_PARAMETER_INDEPENDENT,
-                           self._jm_model.REAL_CONSTANT,
                            self._jm_model.REAL_PARAMETER_INDEPENDENT,
                            self._jm_model.REAL_PARAMETER_DEPENDENT]
 
@@ -209,11 +206,12 @@ class ModelicaMixin(OptimizationProblem):
 
         # Return parameter values from JModelica model
         for variable in self._mx['parameters']:
-            var = self._jm_model.getVariable(variable.getName())
+            variable = variable.getName()
+            var = self._jm_model.getVariable(variable)
             if var.hasAttributeSet('bindingExpression'):
-                parameters[variable.getName()] = var.getAttribute('bindingExpression')
+                parameters[variable] = var.getAttribute('bindingExpression')
                 logger.debug("Read parameter {} from Modelica model".format(
-                    variable.getName()))
+                    variable))
             else:
                 # Value will be provided by a subclass.
                 pass
@@ -227,13 +225,14 @@ class ModelicaMixin(OptimizationProblem):
         # Return input values from JModelica model
         times = self.times()
         for variable in self._mx['constant_inputs']:
-            var = self._jm_model.getVariable(variable.getName())
+            variable = variable.getName()
+            var = self._jm_model.getVariable(variable)
             if var.hasAttributeSet('bindingExpression'):
                 value = var.getAttribute('bindingExpression')
-                constant_inputs[variable.getName()] = Timeseries(
+                constant_inputs[variable] = Timeseries(
                     times, repmat([value], len(times)))
                 logger.debug("Read constant input {} from Modelica model".format(
-                    variable.getName()))
+                    variable))
             else:
                 # Value will be provided by a subclass.
                 pass
@@ -271,8 +270,8 @@ class ModelicaMixin(OptimizationProblem):
                 raise Exception("No value specified for parameter {}".format(symbol.getName()))
         parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
 
-        for sym in self._mx['states'] + self._mx['algebraics'] + self._mx['control_inputs']:
-            variable = sym.getName()
+        for variable in self._mx['states'] + self._mx['algebraics'] + self._mx['control_inputs']:
+            variable = variable.getName()
             var = self._jm_model.getVariable(variable)
             if var.getType() == var.BOOLEAN:
                 m, M = 0, 1
