@@ -1590,7 +1590,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         derivatives = self.dae_variables['derivatives'] + self._algebraic_and_control_derivatives
 
         f = MXFunction('f', [vertcat(states_and_path_variables), vertcat(derivatives),
-            vertcat(self.dae_variables['constant_inputs']), vertcat(self.dae_variables['parameters'])], [expr])
+            vertcat(self.dae_variables['constant_inputs']), vertcat(self.dae_variables['parameters']), self.solver_input], [expr])
         fmap = f.map('fmap', len(self.times()))
 
         # Discretization settings
@@ -1653,5 +1653,5 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Map
         [values] = fmap([accumulation_states, accumulation_derivatives,
-            accumulation_constant_inputs, repmat(vertcat(parameter_values), 1, n_collocation_times)])
+            accumulation_constant_inputs, repmat(vertcat(parameter_values), 1, n_collocation_times), repmat(self.solver_input, 1, n_collocation_times)])
         return transpose(values)
