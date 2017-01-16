@@ -62,8 +62,8 @@ def reduce_matvec(e, v):
 
     This reduces the number of nodes required to represent the linear operations.
     """
-    Af = MXFunction("Af", [v], [jacobian(e, v)])
-    A = Af([v])[0]
+    Af = MXFunction("Af", [], [jacobian(e, v)])
+    A = Af([])[0]
     return reshape(mul(A, v), e.shape)
 
 
