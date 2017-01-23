@@ -77,8 +77,17 @@ class ControlTreeMixin(OptimizationProblem):
                 return
             distances = np.zeros((n_branch_members, n_branch_members))
 
+            # Decide branching on a segment of the time horizon, the
+            # position and extent of which depends on the integration method
             branching_time_0 = branching_times[len(current_branch) + 0]
-            branching_time_1 = branching_times[len(current_branch) + 1]
+            branching_time_1 = branching_times[len(current_branch) + 2]
+            if hasattr(self, 'theta'):
+                if self.theta == 0.0:
+                    branching_time_0 = branching_times[len(current_branch) + 0]
+                    branching_time_1 = branching_times[len(current_branch) + 1]
+                elif self.theta == 1.0:
+                    branching_time_0 = branching_times[len(current_branch) + 1]
+                    branching_time_1 = branching_times[len(current_branch) + 2]
 
             # Compute reverse ensemble member index-to-distance index map.
             reverse = {}
@@ -97,10 +106,10 @@ class ControlTreeMixin(OptimizationProblem):
 
                 # Compute distance between ensemble members
                 for i, member_i in enumerate(branches[current_branch]):
-                    timeseries_i = self.constant_inputs(ensemble_member=i)[
+                    timeseries_i = self.constant_inputs(ensemble_member=member_i)[
                         forecast_variable]
                     for j, member_j in enumerate(branches[current_branch]):
-                        timeseries_j = self.constant_inputs(ensemble_member=j)[
+                        timeseries_j = self.constant_inputs(ensemble_member=member_j)[
                             forecast_variable]
                         distances[
                             i, j] += np.linalg.norm(timeseries_i.values[els] - timeseries_j.values[els])
@@ -108,18 +117,23 @@ class ControlTreeMixin(OptimizationProblem):
             # Keep track of ensemble members that have not yet been allocated
             # to a new branch
             available = set(branches[current_branch])
-
-            sum_distances = [sum(distances[i, j] for j in range(
-                n_branch_members) if j != i) for i in range(n_branch_members)]
+            
+            idx = 0
             for i in range(options['k']):
-                idx = np.argmax(sum_distances)
-                if np.isfinite(sum_distances[idx]):
+                if idx >= 0:
                     branches[current_branch +
                              str(i)] = [branches[current_branch][idx]]
 
                     available.remove(branches[current_branch][idx])
 
-                    sum_distances[idx] = -np.inf
+                    # We select the scenario with the max min distance to the other branches
+                    min_distances = np.array([min([np.inf] + [distances[j, k] for j, member_j in enumerate(
+                        branches[current_branch]) if member_j not in available and member_k in available]) for k, member_k in enumerate(branches[current_branch])], dtype=np.float64)
+                    min_distances[np.where(min_distances == np.inf)] = -np.inf
+
+                    idx = np.argmax(min_distances)
+                    if min_distances[idx] <= 0:
+                        idx = -1
                 else:
                     branches[current_branch + str(i)] = []
 
