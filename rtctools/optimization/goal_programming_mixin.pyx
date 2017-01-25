@@ -561,11 +561,11 @@ class GoalProgrammingMixin(OptimizationProblem):
             elif constraint.goal.has_target_min:
                 if np.any(goal_m < constraint_m):
                     raise Exception(
-                        "Minimum value of goal less than minimum of a higher priority goal")
+                        "Target minimum of goal {} must be greater or equal than target minimum of goal {}.".format(goal, constraint.goal))
             elif constraint.goal.has_target_max:
                 if np.any(goal_M > constraint_M):
                     raise Exception(
-                        "Maximum value of goal greater than maximum of a higher priority goal")
+                        "Target maximum of goal {} must be less or equal than target maximum of goal {}".format(goal, constraint.goal))
 
         # Check goal consistency
         if goal.has_target_min and goal.has_target_max:
