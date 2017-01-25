@@ -163,8 +163,11 @@ class PIMixin(OptimizationProblem):
         for variable in self.dae_variables['constant_inputs']:
             for alias in self.variable_aliases(variable.getName()):
                 try:
-                    constant_inputs[variable.getName()] = Timeseries(
+                    timeseries = Timeseries(
                         self._timeseries_import_times, alias.sign * self._timeseries_import.get(alias.name, ensemble_member=ensemble_member))
+                    if np.any(np.isnan(timeseries.values[self._timeseries_import.forecast_index:])):
+                        raise Exception("Constant input {} contains NaN".format(variable.getName()))
+                    constant_inputs[variable.getName()] = timeseries
                     logger.debug("Read constant input {} from {}".format(
                         variable.getName(), alias.name))
                     break
