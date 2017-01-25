@@ -176,7 +176,8 @@ class Goal(object):
         return self.function_key
 
     def __repr__(self):
-        return '{}(priority={}, target_min={}, target_max={})'.format(self.__class__, self.priority, self.target_min, self.target_max)
+        return '{}(priority={}, target_min={}, target_max={}, function_key={})'.format(
+            self.__class__, self.priority, self.target_min, self.target_max, self.function_key)
 
 
 class StateGoal(Goal):
