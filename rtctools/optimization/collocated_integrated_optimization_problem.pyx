@@ -1638,6 +1638,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         constant_inputs = self.constant_inputs(ensemble_member)
         accumulation_constant_inputs = [None] * len(self.dae_variables['constant_inputs'])
         for i, variable in enumerate(self.dae_variables['constant_inputs']):
+            found = False
             for alias in self.variable_aliases(variable.getName()):
                 if alias.name in constant_inputs:
                     constant_input = constant_inputs[alias.name]
@@ -1648,8 +1649,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         values = substitute(values, self.dae_variables['parameters'], parameter_values)
                     accumulation_constant_inputs[i] = alias.sign * self.interpolate(
                         collocation_times, constant_input.times, values, 0.0, 0.0)
+                    found = True
                     break
-        accumulation_constant_inputs = vertcat(accumulation_constant_inputs)
+            if not found:
+                raise Exception("No data specified for constant input {}".format(variable.getName()))
+        accumulation_constant_inputs = transpose(horzcat(accumulation_constant_inputs))
 
         # Map
         [values] = fmap([accumulation_states, accumulation_derivatives,
