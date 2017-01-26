@@ -635,9 +635,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 else:
                     interpolated = values
                 nominal = self.variable_nominal(variable)
-                interpolated_states[j] = nominal * interpolated[0:n_collocation_times - 1]
+                if nominal != 1:
+                    interpolated *= nominal
+                interpolated_states[j] = interpolated[0:n_collocation_times - 1]
                 interpolated_states[len(collocated_variables) +
-                               j] = nominal * interpolated[1:n_collocation_times]
+                               j] = interpolated[1:n_collocation_times]
             accumulation_U[0] = reduce_matvec(horzcat(interpolated_states), self.solver_input)
 
             for j, variable in enumerate(self.dae_variables['constant_inputs']):
@@ -1609,6 +1611,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 accumulation_states[i] = interp1d(times, values, collocation_times)
             else:
                 accumulation_states[i] = values
+            nominal = self.variable_nominal(state)
+            if nominal != 1:
+                accumulation_states[i] *= nominal
         accumulation_states = transpose(horzcat(accumulation_states))
 
         # Prepare derivatives (backwards differencing, consistent with the evaluation of path expressions during transcription)
