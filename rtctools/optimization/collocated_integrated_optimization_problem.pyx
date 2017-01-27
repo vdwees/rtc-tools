@@ -134,6 +134,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         x0[:len(x0_control)] = x0_control
         x0[len(x0_control):] = x0_state
 
+        # Path objective
+        path_objective = self.path_objective(0)
+
+        # Path constraints
+        path_constraints = self.path_constraints(0)
+        path_constraint_expressions = vertcat([f_constraint for (f_constraint, lb, ub) in path_constraints])
+
         # Delayed feedback
         delayed_feedback = self.delayed_feedback()
 
@@ -221,244 +228,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             self._algebraic_and_control_derivatives.append(sym)
             collocated_derivatives.append(sym)
 
-        # Split DAE into integrated and into a collocated part
-        dae_residual_integrated = []
-        dae_residual_collocated = []
-        for output_index in range(dae_residual.size1()):
-            output = dae_residual[output_index]
-
-            contains = False
-            for derivative in integrated_derivatives:
-                if depends_on(output, derivative):
-                    contains = True
-                    break
-
-            if contains:
-                dae_residual_integrated.append(output)
-            else:
-                dae_residual_collocated.append(output)
-        dae_residual_integrated = vertcat(dae_residual_integrated)
-        dae_residual_collocated = vertcat(dae_residual_collocated)
-
-        # Check linearity of collocated part
-        self._affine_collocation_constraints = True
-        if self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
-            # Check linearity of collocation constraints, which is a necessary condition for the optimization problem to be convex
-            classification = classify_linear(dae_residual_collocated, vertcat(
-                collocated_variables + integrated_variables + collocated_derivatives + integrated_derivatives))
-            for j in range(len(classification)):
-                # TODO detect conditionals!
-                if classification[j] == 2:
-                    self._affine_collocation_constraints = False
-
-                    logger.warning(
-                        "The DAE equation {} is non-linear.  The optimization problem is not convex.  This will, in general, result in the existence of multiple local optima and trouble finding a feasible initial solution.".format(dae_residual_collocated[j]))
-
-        # Transcribe DAE using theta method collocation
-        f = []
-        g = []
-        lbg = []
-        ubg = []
+        # Collocation times
         collocation_times = self.times()
         n_collocation_times = len(collocation_times)
-
-        if len(integrated_variables) > 0:
-            I = MX.sym('I', len(integrated_variables))
-            I0 = MX.sym('I0', len(integrated_variables))
-            C0 = [MX.sym('C0[{}]'.format(i)) for i in range(len(collocated_variables))]
-            CI0 = [MX.sym('CI0[{}]'.format(i)) for i in range(len(self.dae_variables['constant_inputs']))]
-            dt_sym = MX.sym('dt')
-
-            integrated_finite_differences = (I - I0) / dt_sym
-
-            [dae_residual_integrated_0] = substitute([dae_residual_integrated], integrated_variables + collocated_variables + integrated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'], [I0[i] for i in range(len(integrated_variables))] + [
-                                                     C0[i] for i in range(len(collocated_variables))] + [integrated_finite_differences[i] for i in range(len(integrated_derivatives))] + [CI0[i] for i in range(len(self.dae_variables['constant_inputs']))] + [self.dae_variables['time'][0] - dt_sym])
-            [dae_residual_integrated_1] = substitute([dae_residual_integrated], integrated_variables + integrated_derivatives, [
-                                                     I[i] for i in range(len(integrated_variables))] + [integrated_finite_differences[i] for i in range(len(integrated_derivatives))])
-
-            if theta == 0:
-                dae_residual_integrated = dae_residual_integrated_0
-            elif theta == 1:
-                dae_residual_integrated = dae_residual_integrated_1
-            else:
-                dae_residual_integrated = (
-                    1 - theta) * dae_residual_integrated_0 + theta * dae_residual_integrated_1
-
-            dae_residual_function_integrated = MXFunction('dae_residual_function_integrated', [I, I0, vertcat(self.dae_variables['parameters']), vertcat([C0[i] for i in range(len(collocated_variables))] + [CI0[i] for i in range(len(
-                self.dae_variables['constant_inputs']))] + [dt_sym] + collocated_variables + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_integrated])
-            # Expand to SX for improved performance
-            # We do not expand the overall problem, as that would unroll
-            # map/mapaccum as well into an SX tree.
-            dae_residual_function_integrated = dae_residual_function_integrated.expand()
-
-            options = self.integrator_options()
-            integrator_step_function = ImplicitFunction('integrator_step_function', 'newton', dae_residual_function_integrated, options)
-
-        # Initialize an MXFunction for the DAE residual (collocated part)
-        if len(collocated_variables) > 0:
-            dae_residual_function_collocated = MXFunction('dae_residual_function_collocated', [vertcat(self.dae_variables['parameters']), vertcat(
-                integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_collocated])
-            # Expand to SX for improved performance
-            # We do not expand the overall problem, as that would unroll
-            # map/mapaccum as well into an SX tree.
-            dae_residual_function_collocated = dae_residual_function_collocated.expand()
-
-        # Initialize an MXFunction for the path objective
-        # Note that we assume that the path objective expression is the same for all ensemble members
-        path_objective = self.path_objective(0)
-        path_objective_function = MXFunction('path_objective',
-                                               [vertcat(self.dae_variables['parameters']),
-                                                vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
-                                                        'constant_inputs'] + self.dae_variables['time'] + self.path_variables),
-                                                X],
-                                               [path_objective])
-        path_objective_function = path_objective_function.expand()
-
-        # Initialize an MXFunction for the path constraints
-        # Note that we assume that the path constraint expression is the same for all ensemble members
-        path_constraints = self.path_constraints(0)
-        path_constraints_function = MXFunction('path_constraints',
-                                               [vertcat(self.dae_variables['parameters']),
-                                                vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
-                                                        'constant_inputs'] + self.dae_variables['time'] + self.path_variables),
-                                                X],
-                                               [vertcat([f_constraint for (f_constraint, lb, ub) in path_constraints])])
-        path_constraints_function = path_constraints_function.expand()
-
-        # Set up accumulation over time (integration, and generation of
-        # collocation constraints)
-        if len(integrated_variables) > 0:
-            # When using mapaccum, we also feed back the current
-            # collocation constraints through accumulated_X.
-            accumulated_X = MX.sym('accumulated_X', len(
-                integrated_variables) + dae_residual_collocated.size1() + len(path_constraints) + 1)
-        else:
-            accumulated_X = MX.sym('accumulated_X', 0)
-        accumulated_U = MX.sym('accumulated_U', 2 * (len(collocated_variables) + len(
-            self.dae_variables['constant_inputs']) + 1) + len(self.path_variables))
-
-        integrated_states_0 = accumulated_X[0:len(integrated_variables)]
-        integrated_states_1 = MX.sym(
-            'integrated_states_1', len(integrated_variables))
-        collocated_states_0 = accumulated_U[0:len(collocated_variables)]
-        collocated_states_1 = accumulated_U[
-            len(collocated_variables):2 * len(collocated_variables)]
-        constant_inputs_0 = accumulated_U[2 * len(collocated_variables):2 * len(
-            collocated_variables) + len(self.dae_variables['constant_inputs'])]
-        constant_inputs_1 = accumulated_U[2 * len(collocated_variables) + len(self.dae_variables[
-            'constant_inputs']):2 * len(collocated_variables) + 2 * len(self.dae_variables['constant_inputs'])]
-        collocation_time_0 = accumulated_U[
-            2 * (len(collocated_variables) + len(self.dae_variables['constant_inputs'])) + 0]
-        collocation_time_1 = accumulated_U[
-            2 * (len(collocated_variables) + len(self.dae_variables['constant_inputs'])) + 1]
-        path_variables_1 = accumulated_U[
-            2 * (len(collocated_variables) + len(self.dae_variables['constant_inputs']) + 1):]
-
-        # Approximate derivatives using backwards finite differences
-        dt = collocation_time_1 - collocation_time_0
-        collocated_finite_differences = (
-            collocated_states_1 - collocated_states_0) / dt
-
-        # We use vertcat to compose the list into an MX.  This is, in
-        # CasADi 2.4, faster.
-        accumulated_Y = []
-
-        # Integrate integrated states
-        if len(integrated_variables) > 0:
-            # Perform step by computing implicit function
-            # CasADi shares subexpressions that are bundled into the same Function.
-            # The first argument is the guess for the new value of
-            # integrated_states.
-            [integrated_states_1] = integrator_step_function([integrated_states_0,
-                                                              integrated_states_0,
-                                                              vertcat(self.dae_variables["parameters"]),
-                                                              vertcat([collocated_states_0,
-                                                                       constant_inputs_0,
-                                                                       dt,
-                                                                       collocated_states_1,
-                                                                       collocated_finite_differences,
-                                                                       constant_inputs_1,
-                                                                       collocation_time_1 - t0])],
-                                                             False, True)
-            accumulated_Y.append(integrated_states_1)
-
-            # Recompute finite differences with computed new state, for use in the collocation part below
-            # We don't use substititute() for this, as it becomes expensive
-            # over long integration horizons.
-            if len(collocated_variables) > 0:
-                integrated_finite_differences = (
-                    integrated_states_1 - integrated_states_0) / dt
-        else:
-            integrated_finite_differences = MX()
-
-        # Call DAE residual at collocation point
-        # Time stamp following paragraph 3.6.7 of the Modelica
-        # specifications, version 3.3.
-        if len(collocated_variables) > 0:
-            if theta < 1:
-                # Obtain state vector
-                [dae_residual_0] = dae_residual_function_collocated([vertcat(self.dae_variables["parameters"]),
-                                                                     vertcat([integrated_states_0,
-                                                                              collocated_states_0,
-                                                                              integrated_finite_differences,
-                                                                              collocated_finite_differences,
-                                                                              constant_inputs_0,
-                                                                              collocation_time_0 - t0])],
-                                                                    False, True)
-            if theta > 0:
-                # Obtain state vector
-                [dae_residual_1] = dae_residual_function_collocated([vertcat(self.dae_variables["parameters"]),
-                                                                     vertcat([integrated_states_1,
-                                                                              collocated_states_1,
-                                                                              integrated_finite_differences,
-                                                                              collocated_finite_differences,
-                                                                              constant_inputs_1,
-                                                                              collocation_time_1 - t0])],
-                                                                    False, True)
-            if theta == 0:
-                accumulated_Y.append(dae_residual_0)
-            elif theta == 1:
-                accumulated_Y.append(dae_residual_1)
-            else:
-                accumulated_Y.append(
-                    (1 - theta) * dae_residual_0 + theta * dae_residual_1)
-
-        accumulated_Y.extend(path_objective_function([vertcat(self.dae_variables['parameters']),
-                                                      vertcat([integrated_states_1,
-                                                               collocated_states_1,
-                                                               integrated_finite_differences,
-                                                               collocated_finite_differences,
-                                                               constant_inputs_1,
-                                                               collocation_time_1 - t0,
-                                                               path_variables_1]),
-                                                      X],
-                                                       False, True))
-
-        accumulated_Y.extend(path_constraints_function([vertcat(self.dae_variables['parameters']),
-                                                        vertcat([integrated_states_1,
-                                                                 collocated_states_1,
-                                                                 integrated_finite_differences,
-                                                                 collocated_finite_differences,
-                                                                 constant_inputs_1,
-                                                                 collocation_time_1 - t0,
-                                                                 path_variables_1]),
-                                                        X],
-                                                       False, True))
-
-        # Use map/mapaccum to capture integration and collocation constraint generation over the entire
-        # time horizon with one symbolic operation.  This saves a lot of
-        # memory.
-        accumulated = MXFunction('accumulated',
-            [accumulated_X, accumulated_U, vertcat(self.dae_variables["parameters"]), X], [vertcat(accumulated_Y)])
-
-        if len(integrated_variables) > 0:
-            accumulation = accumulated.mapaccum(
-                'accumulation', n_collocation_times - 1)
-        else:
-            # Fully collocated problem.  Use map(), so that we can use
-            # parallelization along the time axis.
-            accumulation = accumulated.map(
-                'accumulation', n_collocation_times - 1, {'parallelization': 'openmp'})
 
         # Create a store of all ensemble-member-specific data for all ensemble members
         ensemble_store = [{} for i in range(self.ensemble_size)] # N.B. Don't use n * [{}], as it creates n refs to the same dict.
@@ -527,8 +299,32 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 initial_path_variables.append(values[0])
             ensemble_data["initial_path_variables"] = nullvertcat(initial_path_variables)
 
+        # Replace parameters which are constant across the entire ensemble
+        ensemble_const_parameters = []
+        ensemble_const_parameter_values = []
+
+        ensemble_parameters = []
+        ensemble_parameter_values = [[] for i in range(self.ensemble_size)]
+        
+        for i, parameter in enumerate(self.dae_variables['parameters']):
+            values = [ensemble_store[ensemble_member]["parameters"][i] for ensemble_member in range(self.ensemble_size)]
+            if np.min(values) == np.max(values):
+                ensemble_const_parameters.append(parameter)
+                ensemble_const_parameter_values.append(values[0])
+            else:
+                ensemble_parameters.append(parameter)
+                for ensemble_member in range(self.ensemble_size):
+                    ensemble_parameter_values[ensemble_member].append(values[ensemble_member])
+
+        [dae_residual, initial_residual, path_objective, path_constraint_expressions] = \
+            substitute([dae_residual, initial_residual, path_objective, path_constraint_expressions],
+                ensemble_const_parameters, ensemble_const_parameter_values)
+
+        ensemble_parameters = vertcat(ensemble_parameters)
+
+        # Aggregate ensemble data
         ensemble_aggregate = {}
-        ensemble_aggregate["parameters"] = horzcat([d["parameters"] for d in ensemble_store])
+        ensemble_aggregate["parameters"] = horzcat([nullvertcat(l) for l in ensemble_parameter_values])
         ensemble_aggregate["initial_constant_inputs"] = horzcat([nullvertcat([float(d["constant_inputs"][variable.getName()][0]) 
             for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
         ensemble_aggregate["initial_state"] = horzcat([d["initial_state"] for d in ensemble_store])
@@ -538,8 +334,243 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         ensemble_aggregate["initial_path_variables"] = horzcat([d["initial_path_variables"] for d in ensemble_store])
         ensemble_aggregate["initial_path_variables"] = reduce_matvec(ensemble_aggregate["initial_path_variables"], self.solver_input)
 
+        # Split DAE into integrated and into a collocated part
+        dae_residual_integrated = []
+        dae_residual_collocated = []
+        for output_index in range(dae_residual.size1()):
+            output = dae_residual[output_index]
+
+            contains = False
+            for derivative in integrated_derivatives:
+                if depends_on(output, derivative):
+                    contains = True
+                    break
+
+            if contains:
+                dae_residual_integrated.append(output)
+            else:
+                dae_residual_collocated.append(output)
+        dae_residual_integrated = vertcat(dae_residual_integrated)
+        dae_residual_collocated = vertcat(dae_residual_collocated)
+
+        # Check linearity of collocated part
+        self._affine_collocation_constraints = True
+        if self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
+            # Check linearity of collocation constraints, which is a necessary condition for the optimization problem to be convex
+            classification = classify_linear(dae_residual_collocated, vertcat(
+                collocated_variables + integrated_variables + collocated_derivatives + integrated_derivatives))
+            for j in range(len(classification)):
+                # TODO detect conditionals!
+                if classification[j] == 2:
+                    self._affine_collocation_constraints = False
+
+                    logger.warning(
+                        "The DAE equation {} is non-linear.  The optimization problem is not convex.  This will, in general, result in the existence of multiple local optima and trouble finding a feasible initial solution.".format(dae_residual_collocated[j]))
+
+        # Transcribe DAE using theta method collocation
+        f = []
+        g = []
+        lbg = []
+        ubg = []
+
+        if len(integrated_variables) > 0:
+            I = MX.sym('I', len(integrated_variables))
+            I0 = MX.sym('I0', len(integrated_variables))
+            C0 = [MX.sym('C0[{}]'.format(i)) for i in range(len(collocated_variables))]
+            CI0 = [MX.sym('CI0[{}]'.format(i)) for i in range(len(self.dae_variables['constant_inputs']))]
+            dt_sym = MX.sym('dt')
+
+            integrated_finite_differences = (I - I0) / dt_sym
+
+            [dae_residual_integrated_0] = substitute([dae_residual_integrated], integrated_variables + collocated_variables + integrated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'], [I0[i] for i in range(len(integrated_variables))] + [
+                                                     C0[i] for i in range(len(collocated_variables))] + [integrated_finite_differences[i] for i in range(len(integrated_derivatives))] + [CI0[i] for i in range(len(self.dae_variables['constant_inputs']))] + [self.dae_variables['time'][0] - dt_sym])
+            [dae_residual_integrated_1] = substitute([dae_residual_integrated], integrated_variables + integrated_derivatives, [
+                                                     I[i] for i in range(len(integrated_variables))] + [integrated_finite_differences[i] for i in range(len(integrated_derivatives))])
+
+            if theta == 0:
+                dae_residual_integrated = dae_residual_integrated_0
+            elif theta == 1:
+                dae_residual_integrated = dae_residual_integrated_1
+            else:
+                dae_residual_integrated = (
+                    1 - theta) * dae_residual_integrated_0 + theta * dae_residual_integrated_1
+
+            dae_residual_function_integrated = MXFunction('dae_residual_function_integrated', [I, I0, ensemble_parameters, vertcat([C0[i] for i in range(len(collocated_variables))] + [CI0[i] for i in range(len(
+                self.dae_variables['constant_inputs']))] + [dt_sym] + collocated_variables + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_integrated])
+            # Expand to SX for improved performance
+            # We do not expand the overall problem, as that would unroll
+            # map/mapaccum as well into an SX tree.
+            dae_residual_function_integrated = dae_residual_function_integrated.expand()
+
+            options = self.integrator_options()
+            integrator_step_function = ImplicitFunction('integrator_step_function', 'newton', dae_residual_function_integrated, options)
+
+        # Initialize an MXFunction for the DAE residual (collocated part)
+        if len(collocated_variables) > 0:
+            dae_residual_function_collocated = MXFunction('dae_residual_function_collocated', [ensemble_parameters, vertcat(
+                integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_collocated])
+            # Expand to SX for improved performance
+            # We do not expand the overall problem, as that would unroll
+            # map/mapaccum as well into an SX tree.
+            dae_residual_function_collocated = dae_residual_function_collocated.expand()
+
+        # Initialize an MXFunction for the path objective
+        # Note that we assume that the path objective expression is the same for all ensemble members
+        path_objective_function = MXFunction('path_objective',
+                                               [ensemble_parameters,
+                                                vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
+                                                        'constant_inputs'] + self.dae_variables['time'] + self.path_variables),
+                                                X],
+                                               [path_objective])
+        path_objective_function = path_objective_function.expand()
+
+        # Initialize an MXFunction for the path constraints
+        # Note that we assume that the path constraint expression is the same for all ensemble members
+        path_constraints_function = MXFunction('path_constraints',
+                                               [ensemble_parameters,
+                                                vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
+                                                        'constant_inputs'] + self.dae_variables['time'] + self.path_variables),
+                                                X],
+                                               [path_constraint_expressions])
+        path_constraints_function = path_constraints_function.expand()
+
+        # Set up accumulation over time (integration, and generation of
+        # collocation constraints)
+        if len(integrated_variables) > 0:
+            # When using mapaccum, we also feed back the current
+            # collocation constraints through accumulated_X.
+            accumulated_X = MX.sym('accumulated_X', len(
+                integrated_variables) + dae_residual_collocated.size1() + len(path_constraints) + 1)
+        else:
+            accumulated_X = MX.sym('accumulated_X', 0)
+        accumulated_U = MX.sym('accumulated_U', 2 * (len(collocated_variables) + len(
+            self.dae_variables['constant_inputs']) + 1) + len(self.path_variables))
+
+        integrated_states_0 = accumulated_X[0:len(integrated_variables)]
+        integrated_states_1 = MX.sym(
+            'integrated_states_1', len(integrated_variables))
+        collocated_states_0 = accumulated_U[0:len(collocated_variables)]
+        collocated_states_1 = accumulated_U[
+            len(collocated_variables):2 * len(collocated_variables)]
+        constant_inputs_0 = accumulated_U[2 * len(collocated_variables):2 * len(
+            collocated_variables) + len(self.dae_variables['constant_inputs'])]
+        constant_inputs_1 = accumulated_U[2 * len(collocated_variables) + len(self.dae_variables[
+            'constant_inputs']):2 * len(collocated_variables) + 2 * len(self.dae_variables['constant_inputs'])]
+        collocation_time_0 = accumulated_U[
+            2 * (len(collocated_variables) + len(self.dae_variables['constant_inputs'])) + 0]
+        collocation_time_1 = accumulated_U[
+            2 * (len(collocated_variables) + len(self.dae_variables['constant_inputs'])) + 1]
+        path_variables_1 = accumulated_U[
+            2 * (len(collocated_variables) + len(self.dae_variables['constant_inputs']) + 1):]
+
+        # Approximate derivatives using backwards finite differences
+        dt = collocation_time_1 - collocation_time_0
+        collocated_finite_differences = (
+            collocated_states_1 - collocated_states_0) / dt
+
+        # We use vertcat to compose the list into an MX.  This is, in
+        # CasADi 2.4, faster.
+        accumulated_Y = []
+
+        # Integrate integrated states
+        if len(integrated_variables) > 0:
+            # Perform step by computing implicit function
+            # CasADi shares subexpressions that are bundled into the same Function.
+            # The first argument is the guess for the new value of
+            # integrated_states.
+            [integrated_states_1] = integrator_step_function([integrated_states_0,
+                                                              integrated_states_0,
+                                                              ensemble_parameters,
+                                                              vertcat([collocated_states_0,
+                                                                       constant_inputs_0,
+                                                                       dt,
+                                                                       collocated_states_1,
+                                                                       collocated_finite_differences,
+                                                                       constant_inputs_1,
+                                                                       collocation_time_1 - t0])],
+                                                             False, True)
+            accumulated_Y.append(integrated_states_1)
+
+            # Recompute finite differences with computed new state, for use in the collocation part below
+            # We don't use substititute() for this, as it becomes expensive
+            # over long integration horizons.
+            if len(collocated_variables) > 0:
+                integrated_finite_differences = (
+                    integrated_states_1 - integrated_states_0) / dt
+        else:
+            integrated_finite_differences = MX()
+
+        # Call DAE residual at collocation point
+        # Time stamp following paragraph 3.6.7 of the Modelica
+        # specifications, version 3.3.
+        if len(collocated_variables) > 0:
+            if theta < 1:
+                # Obtain state vector
+                [dae_residual_0] = dae_residual_function_collocated([ensemble_parameters,
+                                                                     vertcat([integrated_states_0,
+                                                                              collocated_states_0,
+                                                                              integrated_finite_differences,
+                                                                              collocated_finite_differences,
+                                                                              constant_inputs_0,
+                                                                              collocation_time_0 - t0])],
+                                                                    False, True)
+            if theta > 0:
+                # Obtain state vector
+                [dae_residual_1] = dae_residual_function_collocated([ensemble_parameters,
+                                                                     vertcat([integrated_states_1,
+                                                                              collocated_states_1,
+                                                                              integrated_finite_differences,
+                                                                              collocated_finite_differences,
+                                                                              constant_inputs_1,
+                                                                              collocation_time_1 - t0])],
+                                                                    False, True)
+            if theta == 0:
+                accumulated_Y.append(dae_residual_0)
+            elif theta == 1:
+                accumulated_Y.append(dae_residual_1)
+            else:
+                accumulated_Y.append(
+                    (1 - theta) * dae_residual_0 + theta * dae_residual_1)
+
+        accumulated_Y.extend(path_objective_function([ensemble_parameters,
+                                                      vertcat([integrated_states_1,
+                                                               collocated_states_1,
+                                                               integrated_finite_differences,
+                                                               collocated_finite_differences,
+                                                               constant_inputs_1,
+                                                               collocation_time_1 - t0,
+                                                               path_variables_1]),
+                                                      X],
+                                                       False, True))
+
+        accumulated_Y.extend(path_constraints_function([ensemble_parameters,
+                                                        vertcat([integrated_states_1,
+                                                                 collocated_states_1,
+                                                                 integrated_finite_differences,
+                                                                 collocated_finite_differences,
+                                                                 constant_inputs_1,
+                                                                 collocation_time_1 - t0,
+                                                                 path_variables_1]),
+                                                        X],
+                                                       False, True))
+
+        # Use map/mapaccum to capture integration and collocation constraint generation over the entire
+        # time horizon with one symbolic operation.  This saves a lot of
+        # memory.
+        accumulated = MXFunction('accumulated',
+            [accumulated_X, accumulated_U, ensemble_parameters, X], [vertcat(accumulated_Y)])
+
+        if len(integrated_variables) > 0:
+            accumulation = accumulated.mapaccum(
+                'accumulation', n_collocation_times - 1)
+        else:
+            # Fully collocated problem.  Use map(), so that we can use
+            # parallelization along the time axis.
+            accumulation = accumulated.map(
+                'accumulation', n_collocation_times - 1, {'parallelization': 'openmp'})
+
         # Add constraints for initial conditions
-        initial_residual_with_params_fun = MXFunction('initial_residual', [vertcat(self.dae_variables['parameters']), vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
+        initial_residual_with_params_fun = MXFunction('initial_residual', [ensemble_parameters, vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
                                                   'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat([dae_residual, initial_residual])])
         # Expand to SX for improved performance
         initial_residual_with_params_fun = initial_residual_with_params_fun.expand()
