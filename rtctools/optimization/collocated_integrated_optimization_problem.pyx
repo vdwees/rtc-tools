@@ -836,15 +836,15 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             path_constraints = self.path_constraints(ensemble_member)
             if len(path_constraints) > 0:
                 # We need to evaluate the path constraints at t0, as the initial time is not included in the accumulation.
-                initial_path_constraints = path_constraints_function([parameters,
+                [initial_path_constraints] = path_constraints_function([parameters,
                                                                       vertcat([initial_state
                                                                               , initial_derivatives
                                                                               , initial_constant_inputs,
                                                                               0.0,
                                                                               initial_path_variables]),
                                                                       X], False, True)
-                g.extend(initial_path_constraints)
-                g.extend(discretized_path_constraints)
+                g.append(initial_path_constraints)
+                g.append(discretized_path_constraints)
 
                 lbg_path_constraints = np.empty(
                     (len(path_constraints), n_collocation_times))
