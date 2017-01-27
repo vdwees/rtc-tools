@@ -305,7 +305,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         ensemble_parameters = []
         ensemble_parameter_values = [[] for i in range(self.ensemble_size)]
-        
+
         for i, parameter in enumerate(self.dae_variables['parameters']):
             values = [ensemble_store[ensemble_member]["parameters"][i] for ensemble_member in range(self.ensemble_size)]
             if np.min(values) == np.max(values):
@@ -701,7 +701,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             logger.info("Aggregating and de-scaling variables")     
 
             accumulation_U = transpose(horzcat(accumulation_U))
-            accumulation_U = matrix_expand(accumulation_U)
 
             # Map to all time steps
             logger.info("Mapping")
