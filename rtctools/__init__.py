@@ -1,4 +1,4 @@
-__version__ = '2.0.0-beta3'
+__version__ = '2.0.0-beta4'
 
 print \
 """
