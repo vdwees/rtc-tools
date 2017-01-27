@@ -1562,11 +1562,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         for i, variable in enumerate(self.differentiated_states):
             for alias in self.variable_aliases(variable):
                 if alias.name == variable:
-                    return self.dae_variables['derivatives'][i]
+                    return alias.sign * self.dae_variables['derivatives'][i]
         for i, variable in enumerate(itertools.chain(self.algebraic_states, self.controls)):
             for alias in self.variable_aliases(variable):
                 if alias.name == variable:
-                    return self._algebraic_and_control_derivatives[i]
+                    return alias.sign * self._algebraic_and_control_derivatives[i]
         raise KeyError
 
     def der_at(self, variable, t, ensemble_member=0):
@@ -1576,10 +1576,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             X = self.solver_input
             control_size = self._control_size
             ensemble_member_size = self._state_size / self.ensemble_size
+
             for i, state in enumerate(self.differentiated_states):
                 for alias in self.variable_aliases(state):
                     if alias.name == variable:
-                        return X[control_size + (ensemble_member + 1) * ensemble_member_size - len(self.dae_variables['derivatives']) + i]
+                        return alias.sign * X[control_size + (ensemble_member + 1) * ensemble_member_size - len(self.dae_variables['derivatives']) + i]
             # Fall through, in case 'variable' is not a differentiated state.
 
         # Time stamps for this variale
