@@ -49,16 +49,18 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
     # Set up logging
     logger = logging.getLogger("rtctools")
 
-    # Add pi.DiagHandler, if using PIMixin
-    if issubclass(optimization_problem_class, PIMixin):
+    # Add pi.DiagHandler, if using PIMixin. Only add it if it does not already exist.
+    if (issubclass(optimization_problem_class, PIMixin) and
+        not any((isinstance(h, pi.DiagHandler) for h in logger.handlers))):
         handler = pi.DiagHandler(output_folder)
         logger.addHandler(handler)
 
-    # Add stream handler
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    # Add stream handler if it does not already exist.
+    if not any((isinstance(h, logging.StreamHandler) for h in logger.handlers)):
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
     # Set log level
     logger.setLevel(log_level)
@@ -130,11 +132,12 @@ def run_simulation_problem(simulation_problem_class, base_folder=None, log_level
     output_folder = os.path.join(base_folder, 'output')
 
     # Set up logging
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    handler.setFormatter(formatter)
     logger = logging.getLogger("rtctools")
-    logger.addHandler(handler)
+    if not any((isinstance(h, logging.StreamHandler) for h in logger.handlers)):
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
     logger.setLevel(log_level)
 
