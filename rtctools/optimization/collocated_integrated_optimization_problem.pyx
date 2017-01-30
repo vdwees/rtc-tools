@@ -766,6 +766,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                     [history[variable].times[:-1], out_times])
                                 out_values = vertcat(
                                     [history[variable].values[:-1], out_values])
+                            else:
+                                logger.warning("No history available for delayed variable {}. Extrapolatig t0 value backwards in time.".format(out_variable_name))
                             out_values *= alias.sign
                     if in_times is not None and out_times is not None:
                         break
