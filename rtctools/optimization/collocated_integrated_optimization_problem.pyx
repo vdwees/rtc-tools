@@ -1565,12 +1565,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
     def der(self, variable):
         # Look up the derivative variable for the given non-derivative variable
-        for i, variable in enumerate(self.differentiated_states):
-            for alias in self.variable_aliases(variable):
+        for i, var in enumerate(self.differentiated_states):
+            for alias in self.variable_aliases(var):
                 if alias.name == variable:
                     return alias.sign * self.dae_variables['derivatives'][i]
-        for i, variable in enumerate(itertools.chain(self.algebraic_states, self.controls)):
-            for alias in self.variable_aliases(variable):
+        for i, var in enumerate(itertools.chain(self.algebraic_states, self.controls)):
+            for alias in self.variable_aliases(var):
                 if alias.name == variable:
                     return alias.sign * self._algebraic_and_control_derivatives[i]
         raise KeyError
