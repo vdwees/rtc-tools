@@ -34,18 +34,6 @@ def classify_linear(e, v):
     return ret
 
 
-def depends_on(e, v):
-    """
-    Return True if e depends on v.
-    """
-
-    try:
-        f = SXFunction("f", [v], [jacobian(e, v)])
-    except:
-        f = MXFunction("f", [v], [jacobian(e, v)])
-    return (f.outputSparsity(0).nnz() > 0)
-
-
 def nullvertcat(L):
     """
     Like vertcat, but creates an MX with consistent dimensions even if L is empty.

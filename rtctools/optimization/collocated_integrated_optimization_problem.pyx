@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, vertcat, horzcat, vec, substitute, sumRows, sumCols, interp1d, transpose, repmat, matrix_expand, reshape, mul
+from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, vertcat, horzcat, vec, substitute, sumRows, sumCols, interp1d, transpose, repmat, dependsOn, reshape, mul
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools
@@ -342,7 +342,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             contains = False
             for derivative in integrated_derivatives:
-                if depends_on(output, derivative):
+                if dependsOn(output, derivative):
                     contains = True
                     break
 
