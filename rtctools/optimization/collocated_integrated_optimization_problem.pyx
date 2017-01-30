@@ -1701,5 +1701,5 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Map
         [values] = fmap([accumulation_states, accumulation_derivatives,
             accumulation_constant_inputs, repmat(vertcat(parameter_values), 1, n_collocation_times),
-            horzcat(collocation_times), repmat(self.solver_input, 1, n_collocation_times)])
+            np.transpose(collocation_times), repmat(self.solver_input, 1, n_collocation_times)])
         return transpose(values)
