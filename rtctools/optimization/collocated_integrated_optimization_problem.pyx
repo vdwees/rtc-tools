@@ -134,6 +134,45 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         x0[:len(x0_control)] = x0_control
         x0[len(x0_control):] = x0_state
 
+        # Provide a state for self.state_at() and self.der() to work with.
+        self._control_size = control_size
+        self._state_size = state_size
+        self._symbol_cache = {}
+
+        # Free variables for the collocated optimization problem
+        integrated_variables = []
+        collocated_variables = []
+        for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics']):
+            if variable.getName() in self.integrated_states:
+                integrated_variables.append(variable)
+            else:
+                collocated_variables.append(variable)
+        for variable in self.dae_variables['control_inputs']:
+            # TODO treat these separately.
+            collocated_variables.append(variable)
+
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            logger.debug("Integrating variables {}".format(
+                repr(integrated_variables)))
+            logger.debug("Collocating variables {}".format(
+                repr(collocated_variables)))
+
+        # Split derivatives into "integrated" and "collocated" lists.
+        integrated_derivatives = []
+        collocated_derivatives = []
+        for k, var in enumerate(self.dae_variables['states']):
+            if var.getName() in self.integrated_states:
+                integrated_derivatives.append(
+                    self.dae_variables['derivatives'][k])
+            else:
+                collocated_derivatives.append(
+                    self.dae_variables['derivatives'][k])
+        self._algebraic_and_control_derivatives = []
+        for k, var in enumerate(itertools.chain(self.dae_variables['algebraics'], self.dae_variables['control_inputs'])):
+            sym = MX.sym('der({})'.format(var.getName()))
+            self._algebraic_and_control_derivatives.append(sym)
+            collocated_derivatives.append(sym)
+
         # Path objective
         path_objective = self.path_objective(0)
 
@@ -149,11 +188,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Establish integrator theta
         theta = self.theta
-
-        # Provide a state for self.state_at() to work with.
-        self._control_size = control_size
-        self._state_size = state_size
-        self._symbol_cache = {}
 
         # Insert lookup tables.  No support yet for different lookup tables per ensemble member.
         lookup_tables = self.lookup_tables(0)
@@ -193,40 +227,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         if len(self.dae_variables['lookup_tables']) > 0 and self.ensemble_size > 1:
             logger.warning("Using lookup tables of ensemble member #0 for all members.")
-
-        # Free variables for the collocated optimization problem
-        integrated_variables = []
-        collocated_variables = []
-        for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics']):
-            if variable.getName() in self.integrated_states:
-                integrated_variables.append(variable)
-            else:
-                collocated_variables.append(variable)
-        for variable in self.dae_variables['control_inputs']:
-            # TODO treat these separately.
-            collocated_variables.append(variable)
-
-        if logger.getEffectiveLevel() == logging.DEBUG:
-            logger.debug("Integrating variables {}".format(
-                repr(integrated_variables)))
-            logger.debug("Collocating variables {}".format(
-                repr(collocated_variables)))
-
-        # Split derivatives into "integrated" and "collocated" lists.
-        integrated_derivatives = []
-        collocated_derivatives = []
-        for k, var in enumerate(self.dae_variables['states']):
-            if var.getName() in self.integrated_states:
-                integrated_derivatives.append(
-                    self.dae_variables['derivatives'][k])
-            else:
-                collocated_derivatives.append(
-                    self.dae_variables['derivatives'][k])
-        self._algebraic_and_control_derivatives = []
-        for k, var in enumerate(itertools.chain(self.dae_variables['algebraics'], self.dae_variables['control_inputs'])):
-            sym = MX.sym('der({})'.format(var.getName()))
-            self._algebraic_and_control_derivatives.append(sym)
-            collocated_derivatives.append(sym)
 
         # Collocation times
         collocation_times = self.times()
