@@ -419,8 +419,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         path_objective_function = MXFunction('path_objective',
                                                [ensemble_parameters,
                                                 vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
-                                                        'constant_inputs'] + self.dae_variables['time'] + self.path_variables),
-                                                X],
+                                                        'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
                                                [path_objective])
         path_objective_function = path_objective_function.expand()
 
@@ -429,8 +428,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         path_constraints_function = MXFunction('path_constraints',
                                                [ensemble_parameters,
                                                 vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
-                                                        'constant_inputs'] + self.dae_variables['time'] + self.path_variables),
-                                                X],
+                                                        'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
                                                [path_constraint_expressions])
         path_constraints_function = path_constraints_function.expand()
 
@@ -539,8 +537,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                                                collocated_finite_differences,
                                                                constant_inputs_1,
                                                                collocation_time_1 - t0,
-                                                               path_variables_1]),
-                                                      X],
+                                                               path_variables_1])],
                                                        False, True))
 
         accumulated_Y.extend(path_constraints_function([ensemble_parameters,
@@ -550,15 +547,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                                                  collocated_finite_differences,
                                                                  constant_inputs_1,
                                                                  collocation_time_1 - t0,
-                                                                 path_variables_1]),
-                                                        X],
+                                                                 path_variables_1])],
                                                        False, True))
 
         # Use map/mapaccum to capture integration and collocation constraint generation over the entire
         # time horizon with one symbolic operation.  This saves a lot of
         # memory.
         accumulated = MXFunction('accumulated',
-            [accumulated_X, accumulated_U, ensemble_parameters, X], [vertcat(accumulated_Y)])
+            [accumulated_X, accumulated_U, ensemble_parameters], [vertcat(accumulated_Y)])
 
         if len(integrated_variables) > 0:
             accumulation = accumulated.mapaccum(
@@ -706,7 +702,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             logger.info("Mapping")
 
             [integrators_and_collocation_and_path_constraints] = accumulation(
-                [accumulation_X0, accumulation_U, repmat(parameters, 1, n_collocation_times - 1), repmat(X, 1, n_collocation_times - 1)])
+                [accumulation_X0, accumulation_U, repmat(parameters, 1, n_collocation_times - 1)])
             if integrators_and_collocation_and_path_constraints.size2() > 0:
                 integrators = integrators_and_collocation_and_path_constraints[:len(integrated_variables), :]
                 collocation_constraints = vec(integrators_and_collocation_and_path_constraints[len(integrated_variables):len(
@@ -812,8 +808,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                                                               , initial_derivatives
                                                                               , initial_constant_inputs,
                                                                               0.0,
-                                                                              initial_path_variables]),
-                                                                  X], False, True)
+                                                                              initial_path_variables])], False, True)
                 f_member += initial_path_objective[0] + sumRows(discretized_path_objective)
             f.append(self.ensemble_member_probability(ensemble_member) * f_member)
 
@@ -847,8 +842,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                                                               , initial_derivatives
                                                                               , initial_constant_inputs,
                                                                               0.0,
-                                                                              initial_path_variables]),
-                                                                      X], False, True)
+                                                                              initial_path_variables])], False, True)
                 g.append(initial_path_constraints)
                 g.append(discretized_path_constraints)
 
@@ -1630,7 +1624,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         f = MXFunction('f', [vertcat(states_and_path_variables), vertcat(derivatives),
             vertcat(self.dae_variables['constant_inputs']), vertcat(self.dae_variables['parameters']),
-            self.dae_variables['time'][0], self.solver_input], [expr])
+            self.dae_variables['time'][0]], [expr])
         fmap = f.map('fmap', len(self.times()))
 
         # Discretization settings
@@ -1701,5 +1695,5 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Map
         [values] = fmap([accumulation_states, accumulation_derivatives,
             accumulation_constant_inputs, repmat(vertcat(parameter_values), 1, n_collocation_times),
-            np.transpose(collocation_times), repmat(self.solver_input, 1, n_collocation_times)])
+            np.transpose(collocation_times)])
         return transpose(values)
