@@ -40,7 +40,7 @@ class ControlTreeMixin(OptimizationProblem):
 
         options['forecast_variables'] = [var.getName()
                                          for var in self.dae_variables['constant_inputs']]
-        options['branching_times'] = self.times()
+        options['branching_times'] = self.times()[1:]
         options['k'] = 2
 
         return options
@@ -51,23 +51,31 @@ class ControlTreeMixin(OptimizationProblem):
 
         # Make sure braching times contain initial and final time.  The
         # presence of these is assumed below.
+        times = self.times()
         t0 = self.initial_time
-        tf = self.times()[-1]
+        tf = times[-1]
         branching_times = options['branching_times']
-        if branching_times[0] != t0:
-            branching_times = np.concatenate(([t0], branching_times))
-        if branching_times[-1] != tf:
-            branching_times = np.concatenate((branching_times, [tf]))
+        n_branching_times = len(branching_times)
+        if n_branching_times > len(times) - 1:
+            raise Exception("Too many branching points specified")
+        branching_times = np.concatenate(([t0], branching_times, [np.inf]))
 
         logger.debug("ControlTreeMixin: Branching times:")
         logger.debug(branching_times)
 
+        # Branches start at branching times, so that the tree looks like the following:
+        #
+        #         *-----
+        #   *-----
+        #         *-----
+        #
+        #   t0    t1
+        #
+        # with branching time t1.
         branches = {}
 
         def branch(current_branch):
-            # We branch at most len(branching_points) - 2 times, due to the
-            # inclusion of t0 and tf.
-            if len(current_branch) >= len(branching_times) - 2:
+            if len(current_branch) >= n_branching_times:
                 return
 
             # Branch stats
@@ -77,17 +85,9 @@ class ControlTreeMixin(OptimizationProblem):
                 return
             distances = np.zeros((n_branch_members, n_branch_members))
 
-            # Decide branching on a segment of the time horizon, the
-            # position and extent of which depends on the integration method
-            branching_time_0 = branching_times[len(current_branch) + 0]
+            # Decide branching on a segment of the time horizon
+            branching_time_0 = branching_times[len(current_branch) + 1]
             branching_time_1 = branching_times[len(current_branch) + 2]
-            if hasattr(self, 'theta'):
-                if self.theta == 0.0:
-                    branching_time_0 = branching_times[len(current_branch) + 0]
-                    branching_time_1 = branching_times[len(current_branch) + 1]
-                elif self.theta == 1.0:
-                    branching_time_0 = branching_times[len(current_branch) + 1]
-                    branching_time_1 = branching_times[len(current_branch) + 2]
 
             # Compute reverse ensemble member index-to-distance index map.
             reverse = {}
@@ -173,12 +173,8 @@ class ControlTreeMixin(OptimizationProblem):
             for branch, members in branches.iteritems():
                 branching_time_0 = branching_times[len(branch) + 0]
                 branching_time_1 = branching_times[len(branch) + 1]
-                if len(branch) < len(branching_times) - 2:
-                    els = np.logical_and(
-                        times >= branching_time_0, times < branching_time_1)
-                else:
-                    # Make sure the final element is included.
-                    els = times >= branching_time_0
+                els = np.logical_and(
+                    times >= branching_time_0, times < branching_time_1)
                 nnz = np.count_nonzero(els)
                 for member in members:
                     self._control_indices[control_input][
