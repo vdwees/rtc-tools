@@ -148,15 +148,14 @@ class PIMixin(OptimizationProblem):
         # Load parameters from parameter config
         for parameter_config in self._parameter_config:
             for location_id, model_id, parameter_id, value in parameter_config:
-
                 try:
                     parameter = self._data_config.parameter(parameter_id, location_id, model_id)
                 except KeyError:
                     parameter = parameter_id
 
                 if self.pi_check_for_duplicate_parameters:
-                    pass
-                    # TODO: add check on duplicates? Give warning.
+                    if parameter in parameters.keys():
+                        logger.warning("PIMixin: parameter {} defined in file {} was already present. Using value {}.".format(parameter, parameter_config._path_xml, value))
 
                 parameters[parameter] = value
 
