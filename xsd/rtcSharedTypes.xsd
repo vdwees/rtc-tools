@@ -108,4 +108,9 @@
 			<minLength value="1"/>
 		</restriction>
 	</simpleType>
+		<simpleType name="ParameterSimpleType">
+		<restriction base="string">
+			<minLength value="1"/>
+		</restriction>
+	</simpleType>
 </schema>

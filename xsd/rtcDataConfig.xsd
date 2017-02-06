@@ -3,15 +3,26 @@
 	<include schemaLocation="rtcSharedTypes.xsd"/>
 	<element name="rtcDataConfig" type="rtc:RTCDataConfigComplexType"/>
 	<complexType name="RTCDataConfigComplexType">
-		<choice>
-			<sequence>
-				<element name="timeSeries" type="rtc:RTCTimeSeriesComplexType" maxOccurs="unbounded">
-					<annotation>
-						<documentation>Time series for importing and exporting optionally including the mapping from to Delft-FEWS or OpenMI </documentation>
-					</annotation>
-				</element>
-			</sequence>
-		</choice>
+		<sequence>
+			<choice>
+				<sequence>
+					<element name="timeSeries" type="rtc:RTCTimeSeriesComplexType" maxOccurs="unbounded">
+						<annotation>
+							<documentation>Time series for importing and exporting optionally including the mapping from to Delft-FEWS or OpenMI </documentation>
+						</annotation>
+					</element>
+				</sequence>
+			</choice>
+			<choice>
+				<sequence>
+					<element name="parameter" type="rtc:RTCParameterComplexType" minOccurs="0" maxOccurs="unbounded">
+						<annotation>
+							<documentation>Parameter used in an RTC-Tools 2 model and the associated parameter, location Id (optional) and model (optional) filled in by Delft-FEWS. NOT USED in RTC-Tools 1. </documentation>
+						</annotation>
+					</element>
+				</sequence>
+			</choice>
+		</sequence>
 	</complexType>
 	<complexType name="RTCTimeSeriesComplexType">
 		<annotation>
@@ -57,5 +68,48 @@
 			</element>
 		</sequence>
 	</complexType>
-	
+	<complexType name="RTCParameterComplexType">
+		<annotation>
+			<documentation>The header is used to specify the link to the location
+                and the contents</documentation>
+		</annotation>
+		<sequence>
+			<element name="PIParameter" type="rtc:PIParameterComplexType" minOccurs="0">
+				<annotation>
+					<documentation>Parameter definition of the PI XML parameter format of Delft-FEWS</documentation>
+				</annotation>
+			</element>
+		</sequence>
+		<attribute name="id" use="required">
+			<annotation>
+				<documentation>ID of parameter in RTC Tools configuration.</documentation>
+			</annotation>
+			<simpleType>
+				<restriction base="rtc:ParameterSimpleType"/>
+			</simpleType>
+		</attribute>
+	</complexType>	
+	<complexType name="PIParameterComplexType">
+		<annotation>
+			<documentation>The header is used to specify the link to the location
+                and the contents</documentation>
+		</annotation>
+		<sequence>
+			<element name="modelId" type="string" minOccurs="0">
+				<annotation>
+					<documentation>Optional model ID in Delft-FEWS PI-XML file</documentation>
+				</annotation>
+			</element>
+			<element name="locationId" type="string" minOccurs="0">
+				<annotation>
+					<documentation>Optional location ID in Delft-FEWS PI-XML file</documentation>
+				</annotation>
+			</element>
+			<element name="parameterId" type="string">
+				<annotation>
+					<documentation>Parameter ID in Delft-FEWS PI-XML file</documentation>
+				</annotation>
+			</element>
+		</sequence>
+	</complexType>
 </schema>
