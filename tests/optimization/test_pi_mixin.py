@@ -13,6 +13,9 @@ import os
 
 class TestProblem(PIMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
+    pi_parameter_config_basenames = ['rtcParameterConfig', 'rtcParameterConfig_extra']
+    pi_check_for_duplicate_parameters = True
+
     pi_binary_timeseries   = False
     pi_validate_timeseries = False
 
@@ -47,6 +50,10 @@ class TestPIMixin(TestCase):
     def test_parameter(self):
         params = self.problem.parameters(0)
         self.assertEqual(params['k'], 1.01)
+        self.assertEqual(params['j'], 12.01)
+        self.assertEqual(params['y'], 12.02)
+        self.assertEqual(params['SV_H_y'], 22.02)
+        self.assertEqual(params['SV_H_y'], params['SV_V_y'])
 
     def test_initial_state(self):
         initial_state = self.problem.initial_state(0)

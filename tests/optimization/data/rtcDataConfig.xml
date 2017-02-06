@@ -54,4 +54,18 @@
 			<parameterId>K</parameterId>
 		</PITimeSeries>
 	</timeSeries>
+	<parameter id="SV_H_y">
+		<PIParameter>
+			<modelId>SV</modelId>
+			<locationId>H</locationId>
+			<parameterId>y</parameterId>
+		</PIParameter>
+	</parameter>
+	<parameter id="SV_V_y">
+		<PIParameter>
+			<modelId>SV</modelId>
+			<locationId>V</locationId>
+			<parameterId>y</parameterId>
+		</PIParameter>
+	</parameter>
 </rtcDataConfig>
