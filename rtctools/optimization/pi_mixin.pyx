@@ -24,24 +24,19 @@ class PIMixin(OptimizationProblem):
 
     During postprocessing, a file named ``timeseries_export.xml`` is written to the ``output`` subfolder.
 
-    :cvar pi_binary_timeseries:   Whether to use PI binary timeseries format.  Default is ``False``.
-    :cvar pi_parameter_group:     Group of model parameters in rtcParameterConfig files.  Default is ``parameters``.
-    :cvar pi_parameter_model:     Model ID of model parameters in rtcParameterConfig files.  Default is ``Model``.
-    :cvar pi_solver_group:        Group of solver parameters in rtcParameterConfig files.  Default is ``solver``.
-    :cvar pi_solver_model:        Model ID of solver parameters in rtcParameterConfig files.  Default is ``Solver``.
+    :cvar pi_binary_timeseries: Whether to use PI binary timeseries format.  Default is ``False``.
+    :cvar pi_parameter_config_basenames: List of parameter config file basenames to read. Default is [``rtcParameterConfig``].
+    :cvar pi_parameter_config_numerical_basename: Numerical config file basename to read. Default is ``rtcParameterConfig_Numerical``.
+    :cvar pi_check_for_duplicate_parameters: Check if duplicate parameters are read. Default is ``False``.
     :cvar pi_validate_timeseries: Check consistency of timeseries.  Default is ``True``.
     """
 
     #: Whether to use PI binary timeseries format
     pi_binary_timeseries = False
 
-    #: Location of model parameters in rtcParameterConfig files
-    pi_parameter_group = 'parameters'
-    pi_parameter_model = 'Model'
-
-    #: Location of solver parameters in rtcParameterConfig files
-    pi_solver_group = 'solver'
-    pi_solver_model = 'Solver'
+    #: Location of rtcParameterConfig files
+    pi_parameter_config_basenames           = ['rtcParameterConfig']
+    pi_parameter_config_numerical_basename  = 'rtcParameterConfig_Numerical'
 
     #: Check consistency of timeseries
     pi_validate_timeseries = True
@@ -69,17 +64,19 @@ class PIMixin(OptimizationProblem):
         # Call parent class first for default behaviour.
         super(PIMixin, self).pre()
 
-        # rtcParameterConfig.xml
+        # rtcParameterConfig
+        self._parameter_config = []
         try:
-            self._parameter_config = pi.ParameterConfig(
-                self._input_folder, 'rtcParameterConfig')
+            for pi_parameter_config_basename in self.pi_parameter_config_basenames:
+                self._parameter_config.append(pi.ParameterConfig(
+                    self._input_folder, pi_parameter_config_basename))
         except IOError:
             raise Exception(
-                "PI: rtcParameterConfig.xml not found in {}.".format(self._input_folder))
+                "PI: {}.xml not found in {}.".format(pi_parameter_config_basename, self._input_folder))
 
         try:
             self._parameter_config_numerical = pi.ParameterConfig(
-                self._input_folder, 'rtcParameterConfig_Numerical')
+                  self._input_folder, self.pi_parameter_config_numerical_basename)
         except IOError:
             self._parameter_config_numerical = None
 
@@ -138,7 +135,7 @@ class PIMixin(OptimizationProblem):
             return options
 
         # Load solver options from parameter config
-        for option, value in self._parameter_config_numerical:
+        for location_id, model, option, value in self._parameter_config_numerical:
             options[option] = value
 
         # Done
@@ -149,8 +146,19 @@ class PIMixin(OptimizationProblem):
         parameters = super(PIMixin, self).parameters(ensemble_member)
 
         # Load parameters from parameter config
-        for parameter, value in self._parameter_config:
-            parameters[parameter] = value
+        for parameter_config in self._parameter_config:
+            for location_id, model_id, parameter_id, value in parameter_config:
+
+                try:
+                    parameter = self._data_config.parameter(parameter_id, location_id, model_id)
+                except KeyError:
+                    parameter = parameter_id
+
+                if self.pi_check_for_duplicate_parameters:
+                    pass
+                    # TODO: add check on duplicates? Give warning.
+
+                parameters[parameter] = value
 
         # Done
         return parameters

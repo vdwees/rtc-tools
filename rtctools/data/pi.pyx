@@ -312,9 +312,21 @@ class ParameterConfig:
         # Iterate over all parameter key, value pairs.
         groups = self._xml_root.findall("pi:group", ns)
         for group in groups:
+            el = group.find("pi:locationId", ns)
+            if el is not None:
+                location_id = el.text
+            else:
+                location_id = None
+
+            el = group.find("pi:model", ns)
+            if el is not None:
+                model_id = el.text
+            else:
+                model_id = None
+
             parameters = group.findall("pi:parameter", ns)
             for parameter in parameters:
-                yield parameter.attrib['id'], self._parse_parameter(parameter)
+                yield location_id, model_id, parameter.attrib['id'], self._parse_parameter(parameter)
 
 
 class Timeseries:
