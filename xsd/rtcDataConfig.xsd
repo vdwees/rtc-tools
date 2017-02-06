@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns:rtc="http://www.wldelft.nl/fews" xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.wldelft.nl/fews" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.0">
+	<include schemaLocation="rtcSharedTypes.xsd"/>
+	<element name="rtcDataConfig" type="rtc:RTCDataConfigComplexType"/>
+	<complexType name="RTCDataConfigComplexType">
+		<choice>
+			<sequence>
+				<element name="timeSeries" type="rtc:RTCTimeSeriesComplexType" maxOccurs="unbounded">
+					<annotation>
+						<documentation>Time series for importing and exporting optionally including the mapping from to Delft-FEWS or OpenMI </documentation>
+					</annotation>
+				</element>
+			</sequence>
+		</choice>
+	</complexType>
+	<complexType name="RTCTimeSeriesComplexType">
+		<annotation>
+			<documentation>The header is used to specify the link to the location
+                and the contents</documentation>
+		</annotation>
+		<sequence>
+			<element name="PITimeSeries" type="rtc:PITimeSeriesComplexType" minOccurs="0">
+				<annotation>
+					<documentation>Time series definition of the PI XML time series format of Delft-FEWS</documentation>
+				</annotation>
+			</element>
+		</sequence>
+		<attribute name="id" use="required">
+			<annotation>
+				<documentation>ID of time series in RTC Tools configuration.</documentation>
+			</annotation>
+			<simpleType>
+				<restriction base="rtc:TimeSeriesSimpleType"/>
+			</simpleType>
+		</attribute>
+	</complexType>	
+	<complexType name="PITimeSeriesComplexType">
+		<annotation>
+			<documentation>The header is used to specify the link to the location
+                and the contents</documentation>
+		</annotation>
+		<sequence>
+			<element name="locationId" type="string">
+				<annotation>
+					<documentation>Location ID in Delft-FEWS PI-XML file</documentation>
+				</annotation>
+			</element>
+			<element name="parameterId" type="string">
+				<annotation>
+					<documentation>Parameter ID in Delft-FEWS PI-XML file</documentation>
+				</annotation>
+			</element>
+			<element name="qualifierId" type="string" minOccurs="0" maxOccurs="unbounded">
+				<annotation>
+					<documentation>Optional qualifier ID in Delft-FEWS PI-XML file</documentation>
+				</annotation>
+			</element>
+		</sequence>
+	</complexType>
+	
+</schema>
