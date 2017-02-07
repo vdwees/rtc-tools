@@ -305,6 +305,8 @@ class ParameterConfig:
                     table[columnId[key]][i_row] = value
                 i_row += 1
             return table
+        elif child.tag.endswith('description'):
+            pass
         else:
             raise Exception("Unsupported tag {}".format(child.tag))
 
@@ -312,9 +314,21 @@ class ParameterConfig:
         # Iterate over all parameter key, value pairs.
         groups = self._xml_root.findall("pi:group", ns)
         for group in groups:
+            el = group.find("pi:locationId", ns)
+            if el is not None:
+                location_id = el.text
+            else:
+                location_id = None
+
+            el = group.find("pi:model", ns)
+            if el is not None:
+                model_id = el.text
+            else:
+                model_id = None
+
             parameters = group.findall("pi:parameter", ns)
             for parameter in parameters:
-                yield parameter.attrib['id'], self._parse_parameter(parameter)
+                yield location_id, model_id, parameter.attrib['id'], self._parse_parameter(parameter)
 
 
 class Timeseries:
@@ -660,7 +674,7 @@ class Timeseries:
         if self.make_new_file:
             for ensemble_member in range(len(self._values)):
                 for variable in self._values[ensemble_member].keys():
-                    location_parameter_id = self._data_config.location_parameter_id(variable)
+                    location_parameter_id = self._data_config.pi_variable_ids(variable)
                     self._add_header(variable, location_parameter_id, ensemble_member=ensemble_member, miss_val=-999)
 
         for ensemble_member in range(len(self._values)):

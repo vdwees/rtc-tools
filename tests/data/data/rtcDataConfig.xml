@@ -1,17 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rtcDataConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:rtc="http://www.wldelft.nl/fews" xmlns="http://www.wldelft.nl/fews" xsi:schemaLocation="http://www.wldelft.nl/fews ../../../../RTCTools/xsd/rtcDataConfig.xsd">
-	<import>
-		<PITimeSeriesFile>
-			<timeSeriesFile>timeseries_import.xml</timeSeriesFile>
-			<useBinFile>false</useBinFile>
-		</PITimeSeriesFile>
-	</import>
-	<export>
-		<PITimeSeriesFile>
-			<timeSeriesFile>timeseries_export.xml</timeSeriesFile>
-			<useBinFile>false</useBinFile>
-		</PITimeSeriesFile>
-	</export>
+<rtcDataConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:rtc="http://www.wldelft.nl/fews" xmlns="http://www.wldelft.nl/fews" xsi:schemaLocation="http://www.wldelft.nl/fews ../../../xsd/rtcDataConfig.xsd">
 	<timeSeries id="S">
 		<PITimeSeries>
 			<locationId>Reservoir</locationId>
