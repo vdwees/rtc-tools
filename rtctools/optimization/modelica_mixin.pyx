@@ -280,9 +280,13 @@ class ModelicaMixin(OptimizationProblem):
             if var.hasAttributeSet('min'):
                 [m] = substitute([var.getAttribute('min')], self.dae_variables['parameters'], parameter_values)
                 m = float(m)
+                if np.isnan(m):
+                    m = -np.inf
             if var.hasAttributeSet('max'):
                 [M] = substitute([var.getAttribute('max')], self.dae_variables['parameters'], parameter_values)
                 M = float(M)
+                if np.isnan(M):
+                    M = np.inf
             bounds[variable] = (m, M)
 
         return bounds
