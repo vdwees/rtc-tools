@@ -305,6 +305,8 @@ class ParameterConfig:
                     table[columnId[key]][i_row] = value
                 i_row += 1
             return table
+        elif child.tag.endswith('description'):
+            pass
         else:
             raise Exception("Unsupported tag {}".format(child.tag))
 
