@@ -321,7 +321,7 @@ class PIMixin(OptimizationProblem):
 
                 # Check if ID mapping is present
                 try:
-                    location_parameter_id = self._timeseries_export._data_config.location_parameter_id(variable)
+                    location_parameter_id = self._timeseries_export._data_config.pi_variable_ids(variable)
                 except KeyError:
                     logger.error('PIMixin: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(variable))
                     continue

@@ -672,7 +672,7 @@ class Timeseries:
         if self.make_new_file:
             for ensemble_member in range(len(self._values)):
                 for variable in self._values[ensemble_member].keys():
-                    location_parameter_id = self._data_config.location_parameter_id(variable)
+                    location_parameter_id = self._data_config.pi_variable_ids(variable)
                     self._add_header(variable, location_parameter_id, ensemble_member=ensemble_member, miss_val=-999)
 
         for ensemble_member in range(len(self._values)):

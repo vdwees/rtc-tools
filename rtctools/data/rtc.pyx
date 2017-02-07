@@ -18,7 +18,7 @@ ns = {'fews': 'http://www.wldelft.nl/fews',
 
 logger = logging.getLogger("rtctools")
 
-def pi_parameter_id(parameter_id, location_id=None, model_id=None):
+def long_parameter_id(parameter_id, location_id=None, model_id=None):
     """
     Convert a model, location and parameter combination to a single parameter id
     of the form model:location:parameter.
@@ -122,7 +122,7 @@ class DataConfig:
         location_id = el.find(namespace + ':locationId', ns).text
         parameter_id = el.find(namespace + ':parameterId', ns).text
 
-        return pi_parameter_id(parameter_id, location_id, model_id)
+        return long_parameter_id(parameter_id, location_id, model_id)
 
     def _pi_model_parameter_id(self, el, namespace):
         model_id = el.find(namespace + ':modelId', ns).text
@@ -137,7 +137,7 @@ class DataConfig:
 
     def variable(self, pi_header):
         """
-        Map a PI timeseries header to a RTC-Tools timeseries ID.
+        Map a PI timeseries header to an RTC-Tools timeseries ID.
 
         :param pi_header: XML ElementTree node containing a PI timeseries header.
 
@@ -150,9 +150,9 @@ class DataConfig:
         except KeyError:
             return series_id
 
-    def location_parameter_id(self, variable):
+    def pi_variable_ids(self, variable):
         """
-        Map a RTC-Tools timeseries ID to a named tuple of location, parameter
+        Map an RTC-Tools timeseries ID to a named tuple of location, parameter
         and qualifier ID's.
 
         :param variable: A timeseries ID.
@@ -165,7 +165,7 @@ class DataConfig:
 
     def parameter(self, parameter_id, location_id=None, model_id=None):
         """
-        Map a combination of parameter ID, location ID, model ID to a
+        Map a combination of parameter ID, location ID, model ID to an
         RTC-Tools parameter ID.
 
         :param parameter_id: String with parameter ID
@@ -176,13 +176,13 @@ class DataConfig:
         :rtype: string
         :raises KeyError: If the combination has no mapping in rtcDataConfig.
         """
-        parameter_id_long = pi_parameter_id(parameter_id, location_id, model_id)
+        parameter_id_long = long_parameter_id(parameter_id, location_id, model_id)
 
         return self._parameter_map[parameter_id_long]
 
-    def model_parameter_id(self, parameter):
+    def pi_parameter_ids(self, parameter):
         """
-        Map a RTC-Tools model parameter ID to a named tuple of model, location
+        Map an RTC-Tools model parameter ID to a named tuple of model, location
         and parameter ID's.
 
         :param parameter: A model parameter ID.
