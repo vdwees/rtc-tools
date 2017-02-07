@@ -41,6 +41,9 @@ class PIMixin(OptimizationProblem):
     #: Check consistency of timeseries
     pi_validate_timeseries = True
 
+    #: Check for duplicate parameters
+    pi_check_for_duplicate_parameters = True
+
     def __init__(self, **kwargs):
         # Check arguments
         assert('input_folder' in kwargs)
