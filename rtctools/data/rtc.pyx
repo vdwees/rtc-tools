@@ -18,16 +18,6 @@ ns = {'fews': 'http://www.wldelft.nl/fews',
 
 logger = logging.getLogger("rtctools")
 
-def long_parameter_id(parameter_id, location_id=None, model_id=None):
-    """
-    Convert a model, location and parameter combination to a single parameter id
-    of the form model:location:parameter.
-    """
-    if location_id is not None:
-        parameter_id = location_id + ':' + parameter_id
-    if model_id is not None:
-        parameter_id = model_id + ':' + parameter_id
-    return parameter_id
 
 class DataConfig:
     """
@@ -122,7 +112,7 @@ class DataConfig:
         location_id = el.find(namespace + ':locationId', ns).text
         parameter_id = el.find(namespace + ':parameterId', ns).text
 
-        return long_parameter_id(parameter_id, location_id, model_id)
+        return self._long_parameter_id(parameter_id, location_id, model_id)
 
     def _pi_model_parameter_id(self, el, namespace):
         model_id = el.find(namespace + ':modelId', ns).text
@@ -134,6 +124,17 @@ class DataConfig:
                                     parameter_id = (parameter_id if parameter_id is not None else ""))
 
         return model_parameter_ids
+
+    def _long_parameter_id(self, parameter_id, location_id=None, model_id=None):
+        """
+        Convert a model, location and parameter combination to a single parameter id
+        of the form model:location:parameter.
+        """
+        if location_id is not None:
+            parameter_id = location_id + ':' + parameter_id
+        if model_id is not None:
+            parameter_id = model_id + ':' + parameter_id
+        return parameter_id
 
     def variable(self, pi_header):
         """
@@ -176,7 +177,7 @@ class DataConfig:
         :rtype: string
         :raises KeyError: If the combination has no mapping in rtcDataConfig.
         """
-        parameter_id_long = long_parameter_id(parameter_id, location_id, model_id)
+        parameter_id_long = self._long_parameter_id(parameter_id, location_id, model_id)
 
         return self._parameter_map[parameter_id_long]
 
