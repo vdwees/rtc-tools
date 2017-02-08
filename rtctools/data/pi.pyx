@@ -445,7 +445,7 @@ class Timeseries:
                 if self._forecast_datetime is None:
                     self._forecast_datetime = forecast_datetime
                 else:
-                    if forecast_datetime != self._forecast_datetime:
+                    if el != None and forecast_datetime != self._forecast_datetime:
                         raise Exception(
                             'PI: Not all timeseries share the same forecastDate.')
 
