@@ -85,6 +85,18 @@ class TestPI(TestCase):
         timeseries.set('S', orig, ensemble_member=0)
         timeseries.write()
 
+        # Change unit
+        timeseries = pi.Timeseries(
+            self.data_config, data_path(), "timeseries_import", binary=False)
+        timeseries._set_unit('S', unit='kcfs', ensemble_member=0)
+        timeseries.write()
+
+        timeseries = pi.Timeseries(
+            self.data_config, data_path(), "timeseries_import", binary=False)
+        self.assertEquals(timeseries._get_unit('S', ensemble_member=0), 'kcfs')
+        timeseries._set_unit('S', unit='m3/s', ensemble_member=0)
+        timeseries.write()
+
         # Remove last item
         timeseries = pi.Timeseries(
             self.data_config, data_path(), "timeseries_import", binary=False)

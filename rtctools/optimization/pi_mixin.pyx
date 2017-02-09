@@ -293,6 +293,9 @@ class PIMixin(OptimizationProblem):
         while self._timeseries_export._ensemble_size > len(self._timeseries_export._values):
             self._timeseries_export._values.append({})
 
+        # Transfer units from import timeseries
+        self._timeseries_export._units = self._timeseries_import._units
+
         # Start looping over the ensembles for extraction of the output values.
         times = self.times()
         for ensemble_member in range(self.ensemble_size):
@@ -349,7 +352,7 @@ class PIMixin(OptimizationProblem):
     def get_timeseries(self, variable, ensemble_member=0):
         return Timeseries(self._timeseries_import_times, self._timeseries_import.get(variable, ensemble_member=ensemble_member))
 
-    def set_timeseries(self, variable, timeseries, ensemble_member=0, output=True, check_consistency=True):
+    def set_timeseries(self, variable, timeseries, ensemble_member=0, output=True, check_consistency=True, unit=None):
         if output:
             self._output_timeseries.add(variable)
         if isinstance(timeseries, Timeseries):
@@ -360,8 +363,10 @@ class PIMixin(OptimizationProblem):
         else:
             timeseries = Timeseries(self.times(), timeseries)
             assert(len(timeseries.times) == len(timeseries.values))
+        if unit is None:
+            unit = self._timeseries_import._get_unit(variable, ensemble_member=ensemble_member)
         self._timeseries_import.set(
-            variable, timeseries.values, ensemble_member=ensemble_member)
+            variable, timeseries.values, ensemble_member=ensemble_member, unit=unit)
 
     def get_forecast_index(self):
         return self._timeseries_import.forecast_index

@@ -370,10 +370,11 @@ class Timeseries:
             self._xml_root = self._tree.getroot()
 
         self._values = [{}]
+        self._units  = [{}]
 
         self._binary = binary
 
-        if not make_new_file:
+        if not self.make_new_file:
             f = None
             if self._binary:
                 try:
@@ -515,6 +516,8 @@ class Timeseries:
                     ensemble_member = int(el.text)
                     while ensemble_member >= len(self._values):
                         self._values.append({})
+                    while ensemble_member >= len(self._units):
+                        self._units.append({})
                 else:
                     ensemble_member = 0
                 if el is None and self.contains_ensemble == True:
@@ -555,6 +558,9 @@ class Timeseries:
                 miss_val = float(header.find('pi:missVal', ns).text)
                 self._values[ensemble_member][variable][self._values[
                     ensemble_member][variable] == miss_val] = np.nan
+
+                unit = header.find('pi:units', ns).text
+                self._set_unit(variable, unit=unit, ensemble_member=ensemble_member)
 
                 if make_virtual_ensemble:
                     # Make references to the original input series for the virtual
@@ -597,7 +603,7 @@ class Timeseries:
             if f != None and self._binary:
                 f.close()
 
-    def _add_header(self, variable, location_parameter_id, ensemble_member=0, miss_val=-999):
+    def _add_header(self, variable, location_parameter_id, ensemble_member=0, miss_val=-999, unit='unit_unknown'):
         """
         Add a timeseries header to the timeseries object.
         """
@@ -606,15 +612,15 @@ class Timeseries:
 
         # Define the basic structure of the header
         header_elements       = ['type', 'locationId', 'parameterId', 'timeStep', 'startDate', 'endDate', 'missVal', 'stationName', 'units', 'creationDate', 'creationTime']
-        header_element_texts  = ['instantaneous', location_parameter_id.location_id, location_parameter_id.parameter_id, '', '', '', str(miss_val), location_parameter_id.location_id, 'unit_unknown', now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')]
+        header_element_texts  = ['instantaneous', location_parameter_id.location_id, location_parameter_id.parameter_id, '', '', '', str(miss_val), location_parameter_id.location_id, unit, now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')]
 
         # Add ensembleMemberIndex, forecastDate and qualifierId if necessary.
-        if self.contains_ensemble:
-            header_elements.insert(3, 'ensembleMemberIndex')
-            header_element_texts.insert(3, str(ensemble_member))
         if self._forecast_datetime != self._start_datetime:
             header_elements.insert(6, 'forecastDate')
             header_element_texts.insert(6, '')
+        if self.contains_ensemble:
+            header_elements.insert(3, 'ensembleMemberIndex')
+            header_element_texts.insert(3, str(ensemble_member))
         if len(location_parameter_id.qualifier_id) > 0:
             # Track relative index to preserve original ordering of qualifier ID's
             i = 0
@@ -675,7 +681,8 @@ class Timeseries:
             for ensemble_member in range(len(self._values)):
                 for variable in self._values[ensemble_member].keys():
                     location_parameter_id = self._data_config.pi_variable_ids(variable)
-                    self._add_header(variable, location_parameter_id, ensemble_member=ensemble_member, miss_val=-999)
+                    unit = self._get_unit(variable, ensemble_member)
+                    self._add_header(variable, location_parameter_id, ensemble_member=ensemble_member, miss_val=-999, unit=unit)
 
         for ensemble_member in range(len(self._values)):
             for series in self._xml_root.findall('pi:series', ns):
@@ -701,6 +708,10 @@ class Timeseries:
 
                 miss_val = float(header.find('pi:missVal', ns).text)
                 l = self._values[ensemble_member][variable]
+
+                # Update the header, which may have changed
+                el = header.find('pi:units', ns)
+                el.text = self._get_unit(variable, ensemble_member)
 
                 # No values to be written, so the entire element is removed from
                 # the XML, and the loop restarts.
@@ -829,15 +840,43 @@ class Timeseries:
         """
         return self._values[ensemble_member][variable]
 
-    def set(self, variable, new_values, ensemble_member=0):
+    def set(self, variable, new_values, unit=None, ensemble_member=0):
         """
-        Fill a time series with new values.
+        Fill a time series with new values, and set the unit.
 
         :param variable:        Time series ID.
         :param new_values:      List of new values.
+        :param unit:            Unit.
         :param ensemble_member: Ensemble member index.
         """
         self._values[ensemble_member][variable] = new_values
+        if unit is None:
+            unit = self._get_unit(variable, ensemble_member)
+        self._set_unit(variable, unit, ensemble_member)
+
+    def _get_unit(self, variable, ensemble_member=0):
+        """
+        Look up the unit of a time series.
+
+        :param variable:        Time series ID.
+        :param ensemble_member: Ensemble member index.
+
+        :returns: A :string: containing the unit. If this has not been set for the variable, it will return 'unit_unknown'.
+        """
+        try:
+            return self._units[ensemble_member][variable]
+        except KeyError:
+            return 'unit_unknown'
+
+    def _set_unit(self, variable, unit, ensemble_member=0):
+        """
+        Set the unit of a time series.
+
+        :param variable:        Time series ID.
+        :param unit:            Unit.
+        :param ensemble_member: Ensemble member index.
+        """
+        self._units[ensemble_member][variable] = unit
 
     def resize(self, start_datetime, end_datetime):
         """
