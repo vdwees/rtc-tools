@@ -758,6 +758,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                             history_found = False
                             for history_alias in self.variable_aliases(variable):
                                 if history_alias.name in history:
+                                    if np.any(np.isnan(history[history_alias.name].values[:-1])):
+                                        raise Exception('History for delayed variable {} contains NaN.'.format(out_variable_name))
                                     out_times = np.concatenate(
                                         [history[history_alias.name].times[:-1], out_times])
                                     out_values = vertcat(
