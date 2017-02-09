@@ -293,6 +293,9 @@ class PIMixin(OptimizationProblem):
         while self._timeseries_export._ensemble_size > len(self._timeseries_export._values):
             self._timeseries_export._values.append({})
 
+        # Transfer units from import timeseries
+        self._timeseries_export._units = self._timeseries_import._units
+
         # Start looping over the ensembles for extraction of the output values.
         times = self.times()
         for ensemble_member in range(self.ensemble_size):
