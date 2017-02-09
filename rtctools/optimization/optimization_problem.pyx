@@ -137,7 +137,8 @@ class OptimizationProblem(object):
         logger.debug("Collecting solver options")
 
         self._mixed_integer = np.any(discrete)
-        options = self.solver_options()
+        options = {}
+        options.update(self.solver_options()) # Create a copy
         if self._mixed_integer:
             options['discrete'] = discrete
 
