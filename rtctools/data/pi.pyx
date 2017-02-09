@@ -260,55 +260,55 @@ class ParameterConfig:
             return np.dtype('S128')
 
     def _parse_parameter(self, parameter):
-        child = parameter[0]
-        if child.tag.endswith('boolValue'):
-            if child.text.lower() == 'true':
-                return True
+        for child in parameter:
+            if child.tag.endswith('boolValue'):
+                if child.text.lower() == 'true':
+                    return True
+                else:
+                    return False
+            elif child.tag.endswith('intValue'):
+                return int(child.text)
+            elif child.tag.endswith('dblValue'):
+                return float(child.text)
+            elif child.tag.endswith('stringValue'):
+                return child.text
+            # return dict of lisstart_datetime
+            elif child.tag.endswith('table'):
+                columnId = {}
+                columnType = {}
+                for key in child.find("pi:row", ns).attrib:
+                    # default Id
+                    columnId[key] = key
+                    columnType[key] = np.dtype(
+                        'S128')                     # default Type
+
+                # get Id's if present
+                el_columnIds = child.find("pi:columnIds", ns)
+                if el_columnIds != None:
+                    for key, value in el_columnIds.attrib.iteritems():
+                        columnId[key] = value
+
+                # get Types if present
+                el_columnTypes = child.find("pi:columnTypes", ns)
+                if el_columnTypes != None:
+                    for key, value in el_columnTypes.attrib.iteritems():
+                        columnType[key] = self._parse_type(value)
+
+                # get table contenstart_datetime
+                el_row = child.findall("pi:row", ns)
+                table = {columnId[key]: np.empty(len(el_row),            # initialize table
+                                                 columnType[key]) for key in columnId}
+
+                i_row = 0
+                for row in el_row:
+                    for key, value in row.attrib.iteritems():
+                        table[columnId[key]][i_row] = value
+                    i_row += 1
+                return table
+            elif child.tag.endswith('description'):
+                pass
             else:
-                return False
-        elif child.tag.endswith('intValue'):
-            return int(child.text)
-        elif child.tag.endswith('dblValue'):
-            return float(child.text)
-        elif child.tag.endswith('stringValue'):
-            return child.text
-        # return dict of lisstart_datetime
-        elif child.tag.endswith('table'):
-            columnId = {}
-            columnType = {}
-            for key in child.find("pi:row", ns).attrib:
-                # default Id
-                columnId[key] = key
-                columnType[key] = np.dtype(
-                    'S128')                     # default Type
-
-            # get Id's if present
-            el_columnIds = child.find("pi:columnIds", ns)
-            if el_columnIds != None:
-                for key, value in el_columnIds.attrib.iteritems():
-                    columnId[key] = value
-
-            # get Types if present
-            el_columnTypes = child.find("pi:columnTypes", ns)
-            if el_columnTypes != None:
-                for key, value in el_columnTypes.attrib.iteritems():
-                    columnType[key] = self._parse_type(value)
-
-            # get table contenstart_datetime
-            el_row = child.findall("pi:row", ns)
-            table = {columnId[key]: np.empty(len(el_row),            # initialize table
-                                             columnType[key]) for key in columnId}
-
-            i_row = 0
-            for row in el_row:
-                for key, value in row.attrib.iteritems():
-                    table[columnId[key]][i_row] = value
-                i_row += 1
-            return table
-        elif child.tag.endswith('description'):
-            pass
-        else:
-            raise Exception("Unsupported tag {}".format(child.tag))
+                raise Exception("Unsupported tag {}".format(child.tag))
 
     def __iter__(self):
         # Iterate over all parameter key, value pairs.
