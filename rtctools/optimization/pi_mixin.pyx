@@ -364,7 +364,7 @@ class PIMixin(OptimizationProblem):
             timeseries = Timeseries(self.times(), timeseries)
             assert(len(timeseries.times) == len(timeseries.values))
         if unit is None:
-            unit = self._timeseries_import.get_unit(variable, ensemble_member=ensemble_member)
+            unit = self._timeseries_import._get_unit(variable, ensemble_member=ensemble_member)
         self._timeseries_import.set(
             variable, timeseries.values, ensemble_member=ensemble_member, unit=unit)
 

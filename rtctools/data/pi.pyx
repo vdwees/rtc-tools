@@ -560,7 +560,7 @@ class Timeseries:
                     ensemble_member][variable] == miss_val] = np.nan
 
                 unit = header.find('pi:units', ns).text
-                self.set_unit(variable, unit=unit, ensemble_member=ensemble_member)
+                self._set_unit(variable, unit=unit, ensemble_member=ensemble_member)
 
                 if make_virtual_ensemble:
                     # Make references to the original input series for the virtual
@@ -681,7 +681,7 @@ class Timeseries:
             for ensemble_member in range(len(self._values)):
                 for variable in self._values[ensemble_member].keys():
                     location_parameter_id = self._data_config.pi_variable_ids(variable)
-                    unit = self.get_unit(variable, ensemble_member)
+                    unit = self._get_unit(variable, ensemble_member)
                     self._add_header(variable, location_parameter_id, ensemble_member=ensemble_member, miss_val=-999, unit=unit)
 
         for ensemble_member in range(len(self._values)):
@@ -711,7 +711,7 @@ class Timeseries:
 
                 # Update the header, which may have changed
                 el = header.find('pi:units', ns)
-                el.text = self.get_unit(variable, ensemble_member)
+                el.text = self._get_unit(variable, ensemble_member)
 
                 # No values to be written, so the entire element is removed from
                 # the XML, and the loop restarts.
@@ -851,10 +851,10 @@ class Timeseries:
         """
         self._values[ensemble_member][variable] = new_values
         if unit is None:
-            unit = self.get_unit(variable, ensemble_member)
-        self.set_unit(variable, unit, ensemble_member)
+            unit = self._get_unit(variable, ensemble_member)
+        self._set_unit(variable, unit, ensemble_member)
 
-    def get_unit(self, variable, ensemble_member=0):
+    def _get_unit(self, variable, ensemble_member=0):
         """
         Look up the unit of a time series.
 
@@ -868,7 +868,7 @@ class Timeseries:
         except KeyError:
             return 'unit_unknown'
 
-    def set_unit(self, variable, unit, ensemble_member=0):
+    def _set_unit(self, variable, unit, ensemble_member=0):
         """
         Set the unit of a time series.
 

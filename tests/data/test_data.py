@@ -88,13 +88,13 @@ class TestPI(TestCase):
         # Change unit
         timeseries = pi.Timeseries(
             self.data_config, data_path(), "timeseries_import", binary=False)
-        timeseries.set_unit('S', unit='kcfs', ensemble_member=0)
+        timeseries._set_unit('S', unit='kcfs', ensemble_member=0)
         timeseries.write()
 
         timeseries = pi.Timeseries(
             self.data_config, data_path(), "timeseries_import", binary=False)
-        self.assertEquals(timeseries.get_unit('S', ensemble_member=0), 'kcfs')
-        timeseries.set_unit('S', unit='m3/s', ensemble_member=0)
+        self.assertEquals(timeseries._get_unit('S', ensemble_member=0), 'kcfs')
+        timeseries._set_unit('S', unit='m3/s', ensemble_member=0)
         timeseries.write()
 
         # Remove last item
