@@ -629,8 +629,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     g.append(value)
                     lbg.append(float(xinit))
                     ubg.append(float(xinit))
-                else:
-                    logger.warning("No ")
 
             # Initial conditions for integrator
             accumulation_X0 = []
