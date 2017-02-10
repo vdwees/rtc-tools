@@ -368,7 +368,7 @@ class PIMixin(OptimizationProblem):
             if not np.array_equal(self._timeseries_import_times, timeseries.times):
                 if check_consistency:
                     if not set(self._timeseries_import_times).issuperset(timeseries.times):
-                        raise Exception("PI: Trying to set/append timeseries {} with different times (in seconds) than the imported timeseries. Please make sure the timeseries covers startDate through endData of the longest imported timeseries with timestep {}..".format(variable, self._timeseries_import._dt))
+                        raise Exception("PI: Trying to set/append timeseries {} with different times (in seconds) than the imported timeseries. Please make sure the timeseries covers startDate through endDate of the longest imported timeseries with timestep {}..".format(variable, self._timeseries_import._dt))
 
                 # Determine position of first times of added timeseries within the
                 # import times. For this we assume that both time ranges are ordered,
@@ -384,11 +384,11 @@ class PIMixin(OptimizationProblem):
                 try:
                     assert(len(self.times()) == len(timeseries))
                 except AssertionError:
-                    raise Exception("PI: Trying to set/append values {} with a different length than the forecast length. Please make sure the values cover forecastDate through endData with timestep {}.".format(variable, self._timeseries_import._dt))
+                    raise Exception("PI: Trying to set/append values {} with a different length than the forecast length. Please make sure the values cover forecastDate through endDate with timestep {}.".format(variable, self._timeseries_import._dt))
 
             # If times is not supplied with the timeseries, we add the
             # forecast times range to a new Timeseries object. Hereby
-            # we assume that the supplied values strecht from T0 to end.
+            # we assume that the supplied values stretch from T0 to end.
             t_pos = self.get_forecast_index()
 
             # Construct a new values range and construct the Timeseries objet
