@@ -4,6 +4,7 @@ from datetime import timedelta
 from casadi import MX
 import numpy as np
 import logging
+import bisect
 
 import rtctools.data.rtc as rtc
 import rtctools.data.pi as pi
@@ -353,16 +354,46 @@ class PIMixin(OptimizationProblem):
         return Timeseries(self._timeseries_import_times, self._timeseries_import.get(variable, ensemble_member=ensemble_member))
 
     def set_timeseries(self, variable, timeseries, ensemble_member=0, output=True, check_consistency=True, unit=None):
+
+        def stretch_values(values, t_pos):
+            # Construct a values range with preceding and possibly following nans
+            new_values = [np.nan] * len(self._timeseries_import_times)
+            new_values[t_pos:] = values
+            return new_values
+
         if output:
             self._output_timeseries.add(variable)
+
         if isinstance(timeseries, Timeseries):
-            # TODO: add better check on timeseries.times?
-            if check_consistency:
-                if not np.array_equal(self._timeseries_import_times, timeseries.times):
-                    raise Exception("PI: Trying to set/append timeseries {} with different times (in seconds) than the imported timeseries. Please make sure the timeseries covers startDate through endData of the longest imported timeseries.".format(variable))
+            if not np.array_equal(self._timeseries_import_times, timeseries.times):
+                if check_consistency:
+                    if not set(self._timeseries_import_times).issuperset(timeseries.times):
+                        raise Exception("PI: Trying to set/append timeseries {} with different times (in seconds) than the imported timeseries. Please make sure the timeseries covers startDate through endData of the longest imported timeseries with timestep {}..".format(variable, self._timeseries_import._dt))
+
+                # Determine position of first times of added timeseries within the
+                # import times. For this we assume that both time ranges are ordered,
+                # and that the times of the added series is a subset of the import
+                # times.
+                t_pos = bisect.bisect_left(self._timeseries_import_times, timeseries.times[0])
+
+                # Construct a new values range and reconstruct the Timeseries object
+                timeseries = Timeseries(self._timeseries_import_times, stretch_values(timeseries.values, t_pos))
+
         else:
-            timeseries = Timeseries(self.times(), timeseries)
-            assert(len(timeseries.times) == len(timeseries.values))
+            if check_consistency:
+                try:
+                    assert(len(self.times()) == len(timeseries))
+                except AssertionError:
+                    raise Exception("PI: Trying to set/append values {} with a different length than the forecast length. Please make sure the values cover forecastDate through endData with timestep {}.".format(variable, self._timeseries_import._dt))
+
+            # If times is not supplied with the timeseries, we add the
+            # forecast times range to a new Timeseries object. Hereby
+            # we assume that the supplied values strecht from T0 to end.
+            t_pos = self.get_forecast_index()
+
+            # Construct a new values range and construct the Timeseries objet
+            timeseries = Timeseries(self._timeseries_import_times, stretch_values(timeseries, t_pos))
+
         if unit is None:
             unit = self._timeseries_import._get_unit(variable, ensemble_member=ensemble_member)
         self._timeseries_import.set(
