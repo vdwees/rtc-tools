@@ -10,5 +10,5 @@ Multi-objective optimization
     :show-inheritance:
 
 .. autoclass:: rtctools.optimization.goal_programming_mixin.GoalProgrammingMixin
-    :members: goal_programming_options, goals, path_goals, priority_completed
+    :members: goal_programming_options, goals, path_goals, priority_started, priority_completed
     :show-inheritance:

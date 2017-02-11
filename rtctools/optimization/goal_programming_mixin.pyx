@@ -694,6 +694,9 @@ class GoalProgrammingMixin(OptimizationProblem):
         for i, (priority, goals, path_goals) in enumerate(subproblems):
             logger.info("Solving goals at priority {}".format(priority))
 
+            # Call the pre priority hook
+            self.priority_started(priority)
+
             # Reset epsilons
             self._subproblem_epsilons = []
             self._subproblem_path_epsilons = []
@@ -829,6 +832,14 @@ class GoalProgrammingMixin(OptimizationProblem):
 
         # Done
         return success
+
+    def priority_started(self, priority):
+        """
+        Called when optimization for goals of certain priority is started.
+
+        :param priority: The priority level that was started.
+        """
+        pass
 
     def priority_completed(self, priority):
         """
