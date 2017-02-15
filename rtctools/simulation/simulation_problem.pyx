@@ -37,7 +37,9 @@ class SimulationProblem(object):
         model_folder = kwargs['model_folder']
         if not os.path.isdir(model_folder):
             raise RuntimeError("Directory does not exist" + model_folder)
-        if not os.path.isfile(os.path.join(model_folder, model_name)):
+
+        fmu_filename = os.path.join(model_folder, model_name + '.fmu')
+        if not os.path.isfile(fmu_filename):
             # compile .mo files into .fmu
             mo_files = []
             for f in os.listdir(model_folder):
@@ -45,14 +47,12 @@ class SimulationProblem(object):
                     mo_files.append(os.path.join(model_folder, f))
             try:
                 compiler_options = {'extra_lib_dirs': self.modelica_library_folder}
-                compile_fmu(model_name.replace(".fmu", ""), mo_files, version=2.0, target='cs',
+                compile_fmu(model_name, mo_files, version=2.0, target='cs',
                             compiler_options=compiler_options, compiler_log_level='i:compile_fmu_log.txt')
             except ModelicaClassNotFoundError:
                 raise RuntimeError("Could not find files to compile FMU.")
 
-        self._model_folder = model_folder
-        self._model_name = model_name
-        self._model = pyfmi.load_fmu(os.path.join(model_folder, model_name))
+        self._model = pyfmi.load_fmu(fmu_filename)
         if self._model is None:
             raise RuntimeError("FMU could not be loaded")
         self._model_types = {0: 'float', 1: 'int',
