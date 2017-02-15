@@ -38,16 +38,28 @@ class SimulationProblem(object):
         if not os.path.isdir(model_folder):
             raise RuntimeError("Directory does not exist" + model_folder)
 
+        need_compilation = False
+
         fmu_filename = os.path.join(model_folder, model_name + '.fmu')
-        if not os.path.isfile(fmu_filename):
+        if os.path.isfile(fmu_filename):
+            fmu_mtime = os.path.getmtime(fmu_filename)
+        else:
+            need_compilation = True
+
+        mo_filenames = []
+        for f in os.listdir(model_folder):
+            if f.endswith(".mo"):
+                mo_filename = os.path.join(model_folder, f)
+                mo_filenames.append(mo_filename)
+
+                if not compile_fmu and os.path.getmtime(mo_filename) > fmu_mtime:
+                    need_compilation = True
+
+        if need_compilation:
             # compile .mo files into .fmu
-            mo_files = []
-            for f in os.listdir(model_folder):
-                if f.endswith(".mo"):
-                    mo_files.append(os.path.join(model_folder, f))
             try:
                 compiler_options = {'extra_lib_dirs': self.modelica_library_folder}
-                compile_fmu(model_name, mo_files, version=2.0, target='cs',
+                compile_fmu(model_name, mo_filenames, version=2.0, target='cs',
                             compiler_options=compiler_options, compiler_log_level='i:compile_fmu_log.txt',
                             compile_to=fmu_filename)
             except ModelicaClassNotFoundError:
