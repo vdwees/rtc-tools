@@ -22,8 +22,8 @@
 		<ns0:event date="2013-05-20" flag="0" time="05:00:00" value="-2.0" />
 		<ns0:event date="2013-05-20" flag="0" time="06:00:00" value="-2.0" />
 		<ns0:event date="2013-05-20" flag="0" time="07:00:00" value="-2.0" />
-		<ns0:event date="2013-05-19" flag="0" time="08:00:00" value="-2.0" />
-		<ns0:event date="2013-05-19" flag="0" time="09:00:00" value="-2.0" />
+		<ns0:event date="2013-05-20" flag="0" time="08:00:00" value="-2.0" />
+		<ns0:event date="2013-05-20" flag="0" time="09:00:00" value="-2.0" />
 		<ns0:event date="2013-05-20" flag="0" time="10:00:00" value="-2.0" />
 		<ns0:event date="2013-05-20" flag="0" time="11:00:00" value="-2.0" />
 		<ns0:event date="2013-05-20" flag="0" time="12:00:00" value="-2.0" />
@@ -57,8 +57,8 @@
 		<ns0:event date="2013-05-20" flag="0" time="05:00:00" value="2.0" />
 		<ns0:event date="2013-05-20" flag="0" time="06:00:00" value="2.0" />
 		<ns0:event date="2013-05-20" flag="0" time="07:00:00" value="2.0" />
-		<ns0:event date="2013-05-19" flag="0" time="08:00:00" value="2.0" />
-		<ns0:event date="2013-05-19" flag="0" time="09:00:00" value="2.0" />
+		<ns0:event date="2013-05-20" flag="0" time="08:00:00" value="2.0" />
+		<ns0:event date="2013-05-20" flag="0" time="09:00:00" value="2.0" />
 		<ns0:event date="2013-05-20" flag="0" time="10:00:00" value="2.0" />
 		<ns0:event date="2013-05-20" flag="0" time="11:00:00" value="2.0" />
 		<ns0:event date="2013-05-20" flag="0" time="12:00:00" value="2.0" />
@@ -92,8 +92,8 @@
 		<ns0:event date="2013-05-20" flag="0" time="05:00:00" value="0.0" />
 		<ns0:event date="2013-05-20" flag="0" time="06:00:00" value="0.0" />
 		<ns0:event date="2013-05-20" flag="0" time="07:00:00" value="0.0" />
-		<ns0:event date="2013-05-19" flag="0" time="08:00:00" value="0.0" />
-		<ns0:event date="2013-05-19" flag="0" time="09:00:00" value="0.0" />
+		<ns0:event date="2013-05-20" flag="0" time="08:00:00" value="0.0" />
+		<ns0:event date="2013-05-20" flag="0" time="09:00:00" value="0.0" />
 		<ns0:event date="2013-05-20" flag="0" time="10:00:00" value="0.0" />
 		<ns0:event date="2013-05-20" flag="0" time="11:00:00" value="0.0" />
 		<ns0:event date="2013-05-20" flag="0" time="12:00:00" value="0.0" />
@@ -127,8 +127,8 @@
 		<ns0:event date="2013-05-20" flag="0" time="05:00:00" value="0.0" />
 		<ns0:event date="2013-05-20" flag="0" time="06:00:00" value="0.0" />
 		<ns0:event date="2013-05-20" flag="0" time="07:00:00" value="0.0" />
-		<ns0:event date="2013-05-19" flag="0" time="08:00:00" value="0.0" />
-		<ns0:event date="2013-05-19" flag="0" time="09:00:00" value="0.0" />
+		<ns0:event date="2013-05-20" flag="0" time="08:00:00" value="0.0" />
+		<ns0:event date="2013-05-20" flag="0" time="09:00:00" value="0.0" />
 		<ns0:event date="2013-05-20" flag="0" time="10:00:00" value="0.0" />
 		<ns0:event date="2013-05-20" flag="0" time="11:00:00" value="0.0" />
 		<ns0:event date="2013-05-20" flag="0" time="12:00:00" value="0.0" />
@@ -162,8 +162,8 @@
 		<ns0:event date="2013-05-20" flag="0" time="05:00:00" value="1.0" />
 		<ns0:event date="2013-05-20" flag="0" time="06:00:00" value="1.0" />
 		<ns0:event date="2013-05-20" flag="0" time="07:00:00" value="1.0" />
-		<ns0:event date="2013-05-19" flag="0" time="08:00:00" value="1.0" />
-		<ns0:event date="2013-05-19" flag="0" time="09:00:00" value="1.0" />
+		<ns0:event date="2013-05-20" flag="0" time="08:00:00" value="1.0" />
+		<ns0:event date="2013-05-20" flag="0" time="09:00:00" value="1.0" />
 		<ns0:event date="2013-05-20" flag="0" time="10:00:00" value="1.0" />
 		<ns0:event date="2013-05-20" flag="0" time="11:00:00" value="1.0" />
 		<ns0:event date="2013-05-20" flag="0" time="12:00:00" value="1.0" />
