@@ -20,16 +20,21 @@ class SimulationProblem(object):
     # Folder in which the referenced Modelica libraries are found
     modelica_library_folder = os.getenv('DELTARES_LIBRARY_PATH', 'mo')
 
-    def __init__(self, model_folder, model_name):
-        """
-        Constructor.
+    def __init__(self, **kwargs):
+        # Check arguments
+        assert('model_folder' in kwargs)
 
-        :param model_folder:    path to directory containing either the FMU file
-                                or the source files to generate it.
-        :param model_name:      FMU filename, including extension (.fmu); if it 
-                                does not exist model_folder is searched for .mo files 
-                                to compile the FMU on the fly.
-        """
+        # Determine the name of the model
+        if 'model_name' in kwargs:
+            model_name = kwargs['model_name']
+        else:
+            if hasattr(self, 'model_name'):
+                model_name = self.model_name
+            else:
+                model_name = self.__class__.__name__
+
+        # Load the FMU, compiling it if needed
+        model_folder = kwargs['model_folder']
         if not os.path.isdir(model_folder):
             raise RuntimeError("Directory does not exist" + model_folder)
         if not os.path.isfile(os.path.join(model_folder, model_name)):
