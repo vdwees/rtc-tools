@@ -48,7 +48,8 @@ class SimulationProblem(object):
             try:
                 compiler_options = {'extra_lib_dirs': self.modelica_library_folder}
                 compile_fmu(model_name, mo_files, version=2.0, target='cs',
-                            compiler_options=compiler_options, compiler_log_level='i:compile_fmu_log.txt')
+                            compiler_options=compiler_options, compiler_log_level='i:compile_fmu_log.txt',
+                            compile_to=fmu_filename)
             except ModelicaClassNotFoundError:
                 raise RuntimeError("Could not find files to compile FMU.")
 
