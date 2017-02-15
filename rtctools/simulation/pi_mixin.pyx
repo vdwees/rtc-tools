@@ -107,7 +107,7 @@ class PIMixin(SimulationProblem):
 
     def initialize(self, config_file=None):
         # Set up experiment
-        self.setup_experiment(0, self._timeseries_import_times[-1])
+        self.setup_experiment(0, self._timeseries_import_times[-1], self._dt)
 
         # Load parameters from parameter config
         for parameter_config in self._parameter_config:
@@ -120,7 +120,7 @@ class PIMixin(SimulationProblem):
                 self.set_var(parameter, value)
 
         # Set initial conditions
-        for variable, timeseries in self._timeseries_import:
+        for variable, timeseries in self._timeseries_import.iteritems():
             value = timeseries[self._timeseries_import._forecast_index]
             if np.isfinite(value):
                 self.set_var(variable, value)
@@ -142,13 +142,13 @@ class PIMixin(SimulationProblem):
 
         # Set new constant inputs
         theta = self.theta
-        for variable, timeseries in self._timeseries_import:
+        for variable, timeseries in self._timeseries_import.iteritems():
             value = (1 - theta) * timeseries[t_idx] + theta * timeseries[t_idx + 1]
             if np.isfinite(value):
                 self.set_var(variable, value)
 
         # Call super
-        super(PIMixin, self).update(dt)
+        super(PIMixin, self).update(self._dt)
 
         # Extract results
         for variable in self._output_variables:
@@ -170,7 +170,7 @@ class PIMixin(SimulationProblem):
         self._timeseries_export._timezone = self._timeseries_import._timezone
 
         # Write the ensemble properties for the export file.
-        self._timeseries_export._ensemble_size = self.ensemble_size
+        self._timeseries_export._ensemble_size = 1
         self._timeseries_export._contains_ensemble = self._timeseries_import.contains_ensemble
         while self._timeseries_export._ensemble_size > len(self._timeseries_export._values):
             self._timeseries_export._values.append({})

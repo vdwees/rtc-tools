@@ -12,8 +12,8 @@ import pyfmi
 
 class SimulationTestProblem(SimulationProblem):
     def __init__(self):
-        # Call constructors
-        SimulationProblem.__init__(self, data_path(), 'TestModel.fmu')
+        super(SimulationTestProblem, self).__init__(input_folder=data_path(), output_folder=data_path(
+        ), model_name='TestModel', model_folder=data_path())
 
 class TestSimulation(TestCase):
     def setUp(self):

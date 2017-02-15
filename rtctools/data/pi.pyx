@@ -943,6 +943,10 @@ class Timeseries:
         """
         return os.path.join(self._folder, self._basename + '.bin')
 
-    def __iter__(self):
-        for key in self._timeseries_import.keys():
+    def iteritems(self, ensemble_member=0):
+        """
+        Returns an iterator over all timeseries IDs and value arrays for the given
+        ensemble member.
+        """
+        for key in self._values[0].keys():
             yield key, self.get(key)
