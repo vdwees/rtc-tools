@@ -106,6 +106,9 @@ class PIMixin(SimulationProblem):
                         self._timeseries_import.times[i + 1]))
 
     def initialize(self, config_file=None):
+        # Set up experiment
+        self.setup_experiment(0, self._timeseries_import_times[-1])
+
         # Load parameters from parameter config
         for parameter_config in self._parameter_config:
             for location_id, model_id, parameter_id, value in parameter_config:

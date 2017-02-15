@@ -9,11 +9,6 @@ from pymodelica.compiler_exceptions import *
 
 logger = logging.getLogger("rtctools")
 
-# TODO:
-# - extract parameters
-# - extract constant inputs (only_fixed)
-# - 
-
 
 class SimulationProblem(object):
     """
@@ -83,7 +78,7 @@ class SimulationProblem(object):
         """
         pass
 
-    def setup_experiment(self, start, stop, dt, tol=None):
+    def setup_experiment(self, start, stop, dt=-1, tol=None):
         """ 
         Create an experiment.
 
@@ -126,6 +121,10 @@ class SimulationProblem(object):
         # the model
         logger.info("Preprocessing")
         self.pre()
+
+        # Initialize model
+        logger.info("Initializing FMU")
+        self.initialize()
 
         # Perform all timesteps
         logger.info("Running FMU")
