@@ -9,8 +9,13 @@ from pymodelica.compiler_exceptions import *
 
 logger = logging.getLogger("rtctools")
 
+# TODO:
+# - extract parameters
+# - extract constant inputs (only_fixed)
+# - 
 
-class SimulationProblem:
+
+class SimulationProblem(object):
     """
     `FMU <https://fmi-standard.org/>`_ simulation runner.
     
@@ -40,7 +45,6 @@ class SimulationProblem:
                     mo_files.append(os.path.join(model_folder, f))
             try:
                 compiler_options = {'extra_lib_dirs': self.modelica_library_folder}
-                logger.error(compiler_options)
                 compile_fmu(model_name.replace(".fmu", ""), mo_files, version=2.0, target='cs',
                             compiler_options=compiler_options, compiler_log_level='i:compile_fmu_log.txt')
             except ModelicaClassNotFoundError:
@@ -228,6 +232,9 @@ class SimulationProblem:
         :returns: A list of all variables supported by the FMU.
         """
         return self._model.get_model_variables()
+
+    def get_output_variables(self):
+        return self._model.get_model_variables(causality=1)
 
     def set_var(self, name, val):
         """

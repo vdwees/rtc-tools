@@ -942,3 +942,7 @@ class Timeseries:
         The path for the binary data .bin file.
         """
         return os.path.join(self._folder, self._basename + '.bin')
+
+    def __iter__(self):
+        for key in self._timeseries_import.keys():
+            yield key, self.get(key)
