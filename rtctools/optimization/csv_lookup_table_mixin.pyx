@@ -59,10 +59,6 @@ class CSVLookupTableMixin(OptimizationProblem):
     csv_lookup_table_debug = False
     csv_lookup_table_debug_points = 100
 
-    #: Cashe Lookup Tables
-    use_cached_lookup_tables = False
-
-
     def __init__(self, **kwargs):
         # Check arguments
         if 'input_folder' in kwargs:
@@ -137,14 +133,24 @@ class CSVLookupTableMixin(OptimizationProblem):
                 "CSVLookupTableMixin: Output is {}, inputs are {}.".format(output, inputs))
 
             tck = None
-            # If use_cached_lookup_tables is True, first try to load the cashed tck
-            if self.use_cached_lookup_tables is True:
-                logger.debug('CSVLookupTableMixin: Attempting to use cashed tck values for {}'.format(output))
-                try:
+            # If tck file is newer than the csv file, first try to load the cached values from the tck file
+            try:
+                if no_curvefit_options:
+                    valid_cache = os.path.getmtime(filename) < os.path.getmtime(filename.replace('.csv', '.tck'))
+                else:
+                    valid_cache = (os.path.getmtime(filename) < os.path.getmtime(filename.replace('.csv', '.tck'))) and \
+                                  (os.path.getmtime(ini_path) < os.path.getmtime(filename.replace('.csv', '.tck')))
+                if valid_cache:
+                    logger.debug(
+                        'CSVLookupTableMixin: Attempting to use cashed tck values for {}'.format(output))
                     tck = pickle.load(open(filename.replace('.csv', '.tck'), 'rb'))
-                except IOError:
-                    logger.info('CSVLookupTableMixin: Cashed tck values for {} not found'.format(output))
-                    tck = None
+                else:
+                    logger.info(
+                        'CSVLookupTableMixin: Recalculating tck values for {}'.format(output))
+            except OSError:
+                valid_cache = False
+                logger.debug(
+                    'CSVLookupTableMixin: Cached tck values for {} not found'.format(output))
 
             if len(csvinput.dtype.names) == 2:
                 if tck is None:
@@ -214,7 +220,7 @@ class CSVLookupTableMixin(OptimizationProblem):
                 raise Exception(
                     "CSVLookupTableMixin: {}-dimensional lookup tables not implemented yet.".format(len(csvinput.dtype.names)))
 
-            if self.use_cached_lookup_tables is True:
+            if not valid_cache:
                 pickle.dump(tck, open(filename.replace('.csv', '.tck'), 'wb'))
 
     def lookup_tables(self, ensemble_member):
