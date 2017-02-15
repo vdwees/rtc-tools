@@ -17,6 +17,9 @@ class SimulationProblem:
     Implements the `BMI <http://csdms.colorado.edu/wiki/BMI_Description>`_ Interface.
     """
 
+    # Folder in which the referenced Modelica libraries are found
+    modelica_library_folder = os.getenv('DELTARES_LIBRARY_PATH', 'mo')
+
     def __init__(self, model_folder, model_name):
         """
         Constructor.
@@ -31,16 +34,15 @@ class SimulationProblem:
             raise RuntimeError("Directory does not exist" + model_folder)
         if not os.path.isfile(os.path.join(model_folder, model_name)):
             # compile .mo files into .fmu
-            os.chdir(model_folder)
-            cwd = os.getcwd()
             mo_files = []
-            for file in os.listdir(model_folder):
-                if file.endswith(".mo"):
-                    mo_files.append(file)
+            for f in os.listdir(model_folder):
+                if f.endswith(".mo"):
+                    mo_files.append(os.path.join(model_folder, f))
             try:
+                compiler_options = {'extra_lib_dirs': self.modelica_library_folder}
+                logger.error(compiler_options)
                 compile_fmu(model_name.replace(".fmu", ""), mo_files, version=2.0, target='cs',
-                            compiler_log_level='i:compile_fmu_log.txt')
-                os.chdir(cwd)
+                            compiler_options=compiler_options, compiler_log_level='i:compile_fmu_log.txt')
             except ModelicaClassNotFoundError:
                 raise RuntimeError("Could not find files to compile FMU.")
 
