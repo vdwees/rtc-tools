@@ -133,6 +133,10 @@ class PIMixin(SimulationProblem):
         # Call super, which will also initialize the model itself
         super(PIMixin, self).initialize(config_file)
 
+        # Extract consistent t0 values
+        for variable in self._output_variables:
+            self._output[variable][self._timeseries_import._forecast_index] = self.get_var(variable)
+
     def update(self, dt):
         # Current time stamp
         t = self.get_current_time()   
