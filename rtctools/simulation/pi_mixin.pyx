@@ -128,7 +128,7 @@ class PIMixin(SimulationProblem):
         # Empty output
         self._output_variables = self.get_output_variables()
         n_times = len(self._timeseries_import_times)
-        self._output = [np.full(n_times, np.nan) for variable in self._output_variables]
+        self._output = {variable : np.full(n_times, np.nan) for variable in self._output_variables}
 
         # Call super, which will also initialize the model itself
         super(PIMixin, self).initialize(config_file)
@@ -138,12 +138,11 @@ class PIMixin(SimulationProblem):
         t = self.get_current_time()   
 
         # Get current time index
-        t_idx = bisect.bisect_left(self._timeseries_import_times, t)     
+        t_idx = bisect.bisect_left(self._timeseries_import_times, t)  
 
         # Set new constant inputs
-        theta = self.theta
         for variable, timeseries in self._timeseries_import.iteritems():
-            value = (1 - theta) * timeseries[t_idx] + theta * timeseries[t_idx + 1]
+            value = timeseries[t_idx]
             if np.isfinite(value):
                 self.set_var(variable, value)
 
@@ -152,7 +151,7 @@ class PIMixin(SimulationProblem):
 
         # Extract results
         for variable in self._output_variables:
-            self._output[variable][t_idx] = self.get_var(variable)
+            self._output[variable][t_idx + 1] = self.get_var(variable)
 
     def post(self):
         # Call parent class first for default behaviour.
@@ -180,35 +179,19 @@ class PIMixin(SimulationProblem):
 
         # For all variables that are output variables the values are
         # extracted from the results.
-        for key, values in self._output:
+        for key, values in self._output.iteritems():
+            # Check if ID mapping is present
+            try:
+                location_parameter_id = self._timeseries_export._data_config.pi_variable_ids(key)
+            except KeyError:
+                logger.debug('PIMixIn: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(key))
+                continue
+
             # Add series to output file
             self._timeseries_export.set(key, values)
 
         # Write output file to disk
         self._timeseries_export.write()
-
-    @property
-    def theta(self):
-        """
-        We assume the FMI to discretizes differential equations of the form
-
-        .. math::
-
-            \dot{x} = f(x, u)
-
-        using the :math:`\\theta`-method
-
-        .. math::
-
-            x_{i+1} = x_i + \Delta t \\left[\\theta f(x_{i+1}, u_{i+1}) + (1 - \\theta) f(x_i, u_i)\\right]
-
-        The default is :math:`\\theta = 1`, resulting in the implicit or backward Euler method.  Note that in this
-        case, the control input at the initial time step is not used.
-
-        Set :math:`\\theta = 0` if the explicit or forward Euler method is used.  Note that in this
-        case, the control input at the final time step is not used.
-        """
-        return 1.0
 
     def _datetime_to_sec(self, d):
         # Return the date/timestamps in seconds since t0.

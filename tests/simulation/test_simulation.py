@@ -88,7 +88,6 @@ class TestSimulation(TestCase):
         while curtime < stop:
             status = self.problem.update(dt)
             curtime = self.problem.get_current_time()
-            print(curtime)
         self.problem.finalize()
 
     def test_set_input(self):

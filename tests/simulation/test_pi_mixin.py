@@ -12,7 +12,7 @@ from test_case import TestCase
 import pyfmi
 
 class SimulationTestProblem(PIMixin, SimulationProblem):
-    pi_validate_timeseries = False
+    #pi_validate_timeseries = False
     def __init__(self):
         super(SimulationTestProblem, self).__init__(input_folder=data_path(), output_folder=data_path(
         ), model_name='TestModel', model_folder=data_path())

@@ -24,6 +24,12 @@
 			<parameterId>I</parameterId>
 		</PITimeSeries>
 	</timeSeries>
+	<timeSeries id="constant_output">
+		<PITimeSeries>
+			<locationId>Outputs</locationId>
+			<parameterId>O</parameterId>
+		</PITimeSeries>
+	</timeSeries>
 	<timeSeries id="k">
 		<PITimeSeries>
 			<locationId>Parameters</locationId>

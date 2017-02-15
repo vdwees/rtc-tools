@@ -238,7 +238,7 @@ class SimulationProblem(object):
         return self._model.get_model_variables()
 
     def get_output_variables(self):
-        return self._model.get_model_variables(causality=1)
+        return self._model.get_model_variables(causality=3)
 
     def set_var(self, name, val):
         """
