@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rtcDataConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:rtc="http://www.wldelft.nl/fews" xmlns="http://www.wldelft.nl/fews" xsi:schemaLocation="http://www.wldelft.nl/fews ../../../xsd/rtcDataConfig.xsd">
+	<timeSeries id="u">
+		<PITimeSeries>
+			<locationId>Controls</locationId>
+			<parameterId>U</parameterId>
+		</PITimeSeries>
+	</timeSeries>
+	<timeSeries id="x">
+		<PITimeSeries>
+			<locationId>States</locationId>
+			<parameterId>X</parameterId>
+		</PITimeSeries>
+	</timeSeries>
+	<timeSeries id="w">
+		<PITimeSeries>
+			<locationId>States</locationId>
+			<parameterId>W</parameterId>
+		</PITimeSeries>
+	</timeSeries>
+	<timeSeries id="constant_input">
+		<PITimeSeries>
+			<locationId>Inputs</locationId>
+			<parameterId>I</parameterId>
+		</PITimeSeries>
+	</timeSeries>
+	<timeSeries id="constant_output">
+		<PITimeSeries>
+			<locationId>Outputs</locationId>
+			<parameterId>O</parameterId>
+		</PITimeSeries>
+	</timeSeries>
+	<timeSeries id="k">
+		<PITimeSeries>
+			<locationId>Parameters</locationId>
+			<parameterId>K</parameterId>
+		</PITimeSeries>
+	</timeSeries>
+</rtcDataConfig>

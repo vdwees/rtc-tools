@@ -10,7 +10,7 @@ from pymodelica.compiler_exceptions import *
 logger = logging.getLogger("rtctools")
 
 
-class SimulationProblem:
+class SimulationProblem(object):
     """
     `FMU <https://fmi-standard.org/>`_ simulation runner.
     
@@ -20,35 +20,52 @@ class SimulationProblem:
     # Folder in which the referenced Modelica libraries are found
     modelica_library_folder = os.getenv('DELTARES_LIBRARY_PATH', 'mo')
 
-    def __init__(self, model_folder, model_name):
-        """
-        Constructor.
+    def __init__(self, **kwargs):
+        # Check arguments
+        assert('model_folder' in kwargs)
 
-        :param model_folder:    path to directory containing either the FMU file
-                                or the source files to generate it.
-        :param model_name:      FMU filename, including extension (.fmu); if it 
-                                does not exist model_folder is searched for .mo files 
-                                to compile the FMU on the fly.
-        """
+        # Determine the name of the model
+        if 'model_name' in kwargs:
+            model_name = kwargs['model_name']
+        else:
+            if hasattr(self, 'model_name'):
+                model_name = self.model_name
+            else:
+                model_name = self.__class__.__name__
+
+        # Load the FMU, compiling it if needed
+        model_folder = kwargs['model_folder']
         if not os.path.isdir(model_folder):
             raise RuntimeError("Directory does not exist" + model_folder)
-        if not os.path.isfile(os.path.join(model_folder, model_name)):
+
+        need_compilation = False
+
+        fmu_filename = os.path.join(model_folder, model_name + '.fmu')
+        if os.path.isfile(fmu_filename):
+            fmu_mtime = os.path.getmtime(fmu_filename)
+        else:
+            need_compilation = True
+
+        mo_filenames = []
+        for f in os.listdir(model_folder):
+            if f.endswith(".mo"):
+                mo_filename = os.path.join(model_folder, f)
+                mo_filenames.append(mo_filename)
+
+                if not compile_fmu and os.path.getmtime(mo_filename) > fmu_mtime:
+                    need_compilation = True
+
+        if need_compilation:
             # compile .mo files into .fmu
-            mo_files = []
-            for f in os.listdir(model_folder):
-                if f.endswith(".mo"):
-                    mo_files.append(os.path.join(model_folder, f))
             try:
                 compiler_options = {'extra_lib_dirs': self.modelica_library_folder}
-                logger.error(compiler_options)
-                compile_fmu(model_name.replace(".fmu", ""), mo_files, version=2.0, target='cs',
-                            compiler_options=compiler_options, compiler_log_level='i:compile_fmu_log.txt')
+                compile_fmu(model_name, mo_filenames, version=2.0, target='cs',
+                            compiler_options=compiler_options, compiler_log_level='i:compile_fmu_log.txt',
+                            compile_to=fmu_filename)
             except ModelicaClassNotFoundError:
                 raise RuntimeError("Could not find files to compile FMU.")
 
-        self._model_folder = model_folder
-        self._model_name = model_name
-        self._model = pyfmi.load_fmu(os.path.join(model_folder, model_name))
+        self._model = pyfmi.load_fmu(fmu_filename)
         if self._model is None:
             raise RuntimeError("FMU could not be loaded")
         self._model_types = {0: 'float', 1: 'int',
@@ -79,7 +96,7 @@ class SimulationProblem:
         """
         pass
 
-    def setup_experiment(self, start, stop, dt, tol=None):
+    def setup_experiment(self, start, stop, dt=-1, tol=None):
         """ 
         Create an experiment.
 
@@ -122,6 +139,10 @@ class SimulationProblem:
         # the model
         logger.info("Preprocessing")
         self.pre()
+
+        # Initialize model
+        logger.info("Initializing FMU")
+        self.initialize()
 
         # Perform all timesteps
         logger.info("Running FMU")
@@ -228,6 +249,9 @@ class SimulationProblem:
         :returns: A list of all variables supported by the FMU.
         """
         return self._model.get_model_variables()
+
+    def get_output_variables(self):
+        return self._model.get_model_variables(causality=3)
 
     def set_var(self, name, val):
         """
