@@ -1,9 +1,6 @@
 # cython: embedsignature=True
 
-from rtctools.optimization.optimization_problem import OptimizationProblem
 from rtctools.optimization.goal_programming_mixin import GoalProgrammingMixin, Goal
-from rtctools.optimization.timeseries import Timeseries
-import itertools
 import logging
 
 logger = logging.getLogger("rtctools")
@@ -41,7 +38,7 @@ class _SmoothingGoal(Goal):
     priority = -1
 
 
-class InitializationMixin(GoalProgrammingMixin, OptimizationProblem):
+class InitializationMixin(GoalProgrammingMixin):
     def initial_state_measurements(self):
         """
         List of pairs (state, measurement_id) or triples (state, measurement_id, max_deviation).
