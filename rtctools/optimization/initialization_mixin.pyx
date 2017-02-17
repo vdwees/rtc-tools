@@ -15,7 +15,7 @@ class _MeasurementGoal(Goal):
         self.function_nominal = max_deviation
 
     def function(self, optimization_problem, ensemble_member):
-        return optimization_problem.state(self._state, optimization_problem.initial_time, ensemble_member) - \
+        return optimization_problem.state_at(self._state, optimization_problem.initial_time, ensemble_member) - \
             optimization_problem.timeseries_at(self._measurement_id, optimization_problem.initial_time, ensemble_member)
 
     order = 2
@@ -31,8 +31,8 @@ class _SmoothingGoal(Goal):
         self.function_nominal = max_deviation
 
     def function(self, optimization_problem, ensemble_member):
-        return optimization_problem.state(self._state1, optimization_problem.initial_time, ensemble_member) - \
-            optimization_problem.state(self._state2, optimization_problem.initial_time, ensemble_member)
+        return optimization_problem.state_at(self._state1, optimization_problem.initial_time, ensemble_member) - \
+            optimization_problem.state_at(self._state2, optimization_problem.initial_time, ensemble_member)
 
     order = 2
     priority = -1
@@ -53,8 +53,8 @@ class InitializationMixin(GoalProgrammingMixin):
         """
         return []
 
-    def goals(self, ensemble_member):
-        g = super(InitializationMixin, self).goals(ensemble_member)
+    def goals(self):
+        g = super(InitializationMixin, self).goals()
 
         for measurement in self.initial_state_measurements():
             g.append(_MeasurementGoal(*measurement))
