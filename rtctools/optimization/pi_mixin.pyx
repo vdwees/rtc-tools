@@ -357,7 +357,7 @@ class PIMixin(OptimizationProblem):
 
         def stretch_values(values, t_pos):
             # Construct a values range with preceding and possibly following nans
-            new_values = [np.nan] * len(self._timeseries_import_times)
+            new_values = np.full_like(self._timeseries_import_times, np.nan)
             new_values[t_pos:] = values
             return new_values
 
