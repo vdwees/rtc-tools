@@ -299,13 +299,6 @@ class SimulationProblem(object):
         # Default options
         compiler_options = {}
 
-        # Don't automatically add initial equations.  The user generally provides initial conditions
-        # through CSV or PI input files.
-        compiler_options['automatic_add_initial_equations'] = False
-
-        # We do not scale the model ourselves.
-        compiler_options['enable_variable_scaling'] = True
-
         # No automatic division with variables please.  Our variables may
         # sometimes equal to zero.
         compiler_options['divide_by_vars_in_tearing'] = False
