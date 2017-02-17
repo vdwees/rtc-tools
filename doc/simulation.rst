@@ -1,8 +1,10 @@
 Simulation
 ==========
 
-.. autoclass:: rtctools.simulation.simulation_problem.SimulationProblem
-    :members:
-    :show-inheritance:
+Contents:
 
-.. autofunction:: rtctools.util.run_simulation_problem
+.. toctree::
+   :maxdepth: 2
+
+   optimization/basics
+   optimization/fews_io
