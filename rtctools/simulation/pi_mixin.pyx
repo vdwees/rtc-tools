@@ -123,13 +123,6 @@ class PIMixin(SimulationProblem):
                 if parameter in self._variables:
                     self.set_var(parameter, value)
 
-        # Set initial conditions
-        for variable, timeseries in self._timeseries_import.iteritems():
-            if variable in self._variables:
-                value = timeseries[self._timeseries_import._forecast_index]
-                if np.isfinite(value):
-                    self.set_var(variable, value)
-
         # Empty output
         self._output_variables = self.get_output_variables()
         n_times = len(self._timeseries_import_times)
