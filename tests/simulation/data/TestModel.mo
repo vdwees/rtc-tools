@@ -7,6 +7,7 @@ model TestModel
 	parameter Real k = 1.0;
 
 	input Real u;
+	output Real u_out;
 
 	output Real y;
 
@@ -36,5 +37,7 @@ equation
 	end if;
 
 	constant_output = constant_input;
+
+	u_out = u + 1;
 
 end TestModel;

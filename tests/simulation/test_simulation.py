@@ -35,7 +35,7 @@ class TestSimulation(TestCase):
             # method returns all variables, including internal FMUvariables, starting with '_'
             if not re.match('_', varname):
                 variables.append(varname)
-        self.assertEqual(variables, ['alias', 'constant_input', 'constant_output', 'k', 'switched', 'u', 'w', 'der(w)', 'x', 'der(x)', 'x_delayed', 'x_start', 'y', 'z'] )
+        self.assertEqual(variables, ['alias', 'constant_input', 'constant_output', 'k', 'switched', 'u', 'u_out', 'w', 'der(w)', 'x', 'der(x)', 'x_delayed', 'x_start', 'y', 'z'] )
         nvar = self.problem.get_var_count()
         self.assertEqual(len(all_variables), nvar)
 
@@ -100,7 +100,27 @@ class TestSimulation(TestCase):
         self.problem.initialize()
         i = 0
         while i < int(stop/dt):
+            self.problem.set_var('u', 0.0)
             self.problem.update(dt)
+            val = self.problem.get_var('switched')
+            self.assertEqual(val, expected_values[i])
+            i += 1
+        self.problem.finalize()
+
+    def test_set_input2(self):
+        # run FMU model
+        expected_values = [2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        stop = 1.0
+        dt = 0.1
+        self.problem.setup_experiment(0.0, stop, dt)
+        self.problem.set_var('x_start', 0.25)
+        self.problem.initialize()
+        i = 0
+        while i < int(stop/dt):
+            self.problem.set_var('u', i)
+            self.problem.update(dt)
+            val = self.problem.get_var('u_out')
+            self.assertEqual(val, i + 1)
             val = self.problem.get_var('switched')
             self.assertEqual(val, expected_values[i])
             i += 1
