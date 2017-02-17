@@ -35,7 +35,6 @@ class _SmoothingGoal(Goal):
     priority = -1
 
 
-# TODO doc
 class InitialStateEstimationMixin(GoalProgrammingMixin):
     """
     Adds initial state estimation to your optimization problem *using goal programming*.
@@ -44,6 +43,14 @@ class InitialStateEstimationMixin(GoalProgrammingMixin):
     their respective model states is minimized in the least squares sense (1DVAR, priority -2).  
     Secondly, the distance between pairs of states is minimized, again in the least squares sense, so that
     "smooth" initial guesses are provided for states without measurements (priority -1).
+
+    .. note::
+
+        There are types of problems where, in addition to minimizing differences between states and
+        measurements, it is advisable to perform a steady-state initialization using additional
+        initial-time model equations.  For hydraulic models, for instance, it is often helpful
+        to require that the time-derivative of the flow variables vanishes at the initial time.
+
     """
 
     def initial_state_measurements(self):
