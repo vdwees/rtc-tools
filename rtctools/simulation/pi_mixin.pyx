@@ -106,13 +106,11 @@ class PIMixin(SimulationProblem):
                         self._timeseries_import.times[i + 1]))
 
     def initialize(self, config_file=None):
-        # Load variable names
-        self._variables = set(self.get_variables())
-
         # Set up experiment
         self.setup_experiment(0, self._timeseries_import_times[-1], self._dt)
 
         # Load parameters from parameter config
+        self._parameter_variables = set(self.get_parameter_variables())
         for parameter_config in self._parameter_config:
             for location_id, model_id, parameter_id, value in parameter_config:
                 try:
@@ -120,11 +118,21 @@ class PIMixin(SimulationProblem):
                 except KeyError:
                     parameter = parameter_id
 
-                if parameter in self._variables:
+                if parameter in self._parameter_variables:
                     self.set_var(parameter, value)
 
+        # Load input variable names
+        self._input_variables = set(self.get_input_variables().keys())
+
+        # Set initial input values
+        for variable, timeseries in self._timeseries_import.iteritems():
+            if variable in self._input_variables:
+                value = timeseries[self._timeseries_import._forecast_index]
+                if np.isfinite(value):
+                    self.set_var(variable, value)
+
         # Empty output
-        self._output_variables = self.get_output_variables()
+        self._output_variables = set(self.get_output_variables().keys())
         n_times = len(self._timeseries_import_times)
         self._output = {variable : np.full(n_times, np.nan) for variable in self._output_variables}
 
@@ -142,9 +150,9 @@ class PIMixin(SimulationProblem):
         # Get current time index
         t_idx = bisect.bisect_left(self._timeseries_import_times, t)  
 
-        # Set new constant inputs
+        # Set input values
         for variable, timeseries in self._timeseries_import.iteritems():
-            if variable in self._variables:
+            if variable in self._input_variables:
                 value = timeseries[t_idx]
                 if np.isfinite(value):
                     self.set_var(variable, value)

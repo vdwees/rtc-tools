@@ -253,6 +253,12 @@ class SimulationProblem(object):
         """
         return self._model.get_model_variables()
 
+    def get_parameter_variables(self):
+        return self._model.get_model_variables(causality=1)
+
+    def get_input_variables(self):
+        return self._model.get_model_variables(causality=2)
+
     def get_output_variables(self):
         return self._model.get_model_variables(causality=3)
 

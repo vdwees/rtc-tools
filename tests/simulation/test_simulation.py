@@ -39,6 +39,12 @@ class TestSimulation(TestCase):
         nvar = self.problem.get_var_count()
         self.assertEqual(len(all_variables), nvar)
 
+        self.assertEqual(self.problem.get_parameter_variables().keys(), ['x_start'])
+
+        self.assertEqual(self.problem.get_input_variables().keys(), ['constant_input', 'u', 'x_delayed'])
+
+        self.assertEqual(self.problem.get_output_variables().keys(), ['constant_output', 'switched', 'u_out', 'y', 'z'])
+
     def test_get_set_var(self):
         val = self.problem.get_var('switched')
         self.assertEqual(val, 0.0)
