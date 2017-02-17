@@ -15,6 +15,8 @@ import os
 import sys
 import rtctools.data.csv as csv
 
+import cPickle as pickle
+
 logger = logging.getLogger("rtctools")
 
 
@@ -130,15 +132,36 @@ class CSVLookupTableMixin(OptimizationProblem):
             logger.debug(
                 "CSVLookupTableMixin: Output is {}, inputs are {}.".format(output, inputs))
 
-            if len(csvinput.dtype.names) == 2:
-                k = 3  # default value
-                # 1D spline fitting needs k+1 data points
-                if len(csvinput[output]) >= k + 1:
-                    tck = BSpline1D.fit(csvinput[inputs[0]], csvinput[
-                                        output], k=k, monotonicity=mono, curvature=curv)
+            tck = None
+            # If tck file is newer than the csv file, first try to load the cached values from the tck file
+            try:
+                if no_curvefit_options:
+                    valid_cache = os.path.getmtime(filename) < os.path.getmtime(filename.replace('.csv', '.tck'))
                 else:
-                    raise Exception(
-                        "CSVLookupTableMixin: Too few data points in {} to do spline fitting. Need at least {} points.".format(filename, k + 1))
+                    valid_cache = (os.path.getmtime(filename) < os.path.getmtime(filename.replace('.csv', '.tck'))) and \
+                                  (os.path.getmtime(ini_path) < os.path.getmtime(filename.replace('.csv', '.tck')))
+                if valid_cache:
+                    logger.debug(
+                        'CSVLookupTableMixin: Attempting to use cashed tck values for {}'.format(output))
+                    tck = pickle.load(open(filename.replace('.csv', '.tck'), 'rb'))
+                else:
+                    logger.info(
+                        'CSVLookupTableMixin: Recalculating tck values for {}'.format(output))
+            except OSError:
+                valid_cache = False
+                logger.debug(
+                    'CSVLookupTableMixin: Cached tck values for {} not found'.format(output))
+
+            if len(csvinput.dtype.names) == 2:
+                if tck is None:
+                    k = 3  # default value
+                    # 1D spline fitting needs k+1 data points
+                    if len(csvinput[output]) >= k + 1:
+                        tck = BSpline1D.fit(csvinput[inputs[0]], csvinput[
+                                            output], k=k, monotonicity=mono, curvature=curv)
+                    else:
+                        raise Exception(
+                            "CSVLookupTableMixin: Too few data points in {} to do spline fitting. Need at least {} points.".format(filename, k + 1))
 
                 if self.csv_lookup_table_debug:
                     import pylab
@@ -159,18 +182,19 @@ class CSVLookupTableMixin(OptimizationProblem):
                 self._lookup_tables[output] = LookupTable(symbols, function)
 
             elif len(csvinput.dtype.names) == 3:
-                kx = 3  # default value
-                ky = 3  # default value
+                if tck is None:
+                    kx = 3  # default value
+                    ky = 3  # default value
 
-                # 2D spline fitting needs (kx+1)*(ky+1) data points
-                if len(csvinput[output]) >= (kx + 1) * (ky + 1):
-                    # TODO: add curvature paramenters from curvefit_options.ini
-                    # once 2d fit is implemented
-                    tck = bisplrep(csvinput[inputs[0]], csvinput[
-                                   inputs[1]], csvinput[output], kx=kx, ky=ky)
-                else:
-                    raise Exception("CSVLookupTableMixin: Too few data points in {} to do spline fitting. Need at least {} points.".format(
-                        filename, (kx + 1) * (ky + 1)))
+                    # 2D spline fitting needs (kx+1)*(ky+1) data points
+                    if len(csvinput[output]) >= (kx + 1) * (ky + 1):
+                        # TODO: add curvature paramenters from curvefit_options.ini
+                        # once 2d fit is implemented
+                        tck = bisplrep(csvinput[inputs[0]], csvinput[
+                                       inputs[1]], csvinput[output], kx=kx, ky=ky)
+                    else:
+                        raise Exception("CSVLookupTableMixin: Too few data points in {} to do spline fitting. Need at least {} points.".format(
+                            filename, (kx + 1) * (ky + 1)))
 
                 if self.csv_lookup_table_debug:
                     import pylab
@@ -195,6 +219,9 @@ class CSVLookupTableMixin(OptimizationProblem):
             else:
                 raise Exception(
                     "CSVLookupTableMixin: {}-dimensional lookup tables not implemented yet.".format(len(csvinput.dtype.names)))
+
+            if not valid_cache:
+                pickle.dump(tck, open(filename.replace('.csv', '.tck'), 'wb'))
 
     def lookup_tables(self, ensemble_member):
         # Call parent class first for default values.
