@@ -1,5 +1,6 @@
 model TestModel
-	Real x(start=0.25);
+	parameter Real x_start;
+	Real x(start=x_start);
 	Real w(start=0.0);
 	Real alias;
 

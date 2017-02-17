@@ -24,7 +24,7 @@ class TestSimulation(TestCase):
 
     def test_options(self):
         options = self.problem.get_options()
-        self.assertIsInstance(options,FMICSAlgOptions)
+        self.assertIsInstance(options, FMICSAlgOptions)
         
     def test_get_variables(self):
         all_variables = self.problem.get_variables()
@@ -33,16 +33,16 @@ class TestSimulation(TestCase):
         for var in all_variables.items():
             varname = var[0]
             # method returns all variables, including internal FMUvariables, starting with '_'
-            if not re.match('_',varname):
+            if not re.match('_', varname):
                 variables.append(varname)
-        self.assertEqual(variables, ['alias', 'constant_input', 'constant_output', 'k', 'switched', 'u', 'w', 'der(w)', 'x', 'der(x)', 'x_delayed', 'y', 'z'] )
+        self.assertEqual(variables, ['alias', 'constant_input', 'constant_output', 'k', 'switched', 'u', 'w', 'der(w)', 'x', 'der(x)', 'x_delayed', 'x_start', 'y', 'z'] )
         nvar = self.problem.get_var_count()
         self.assertEqual(len(all_variables), nvar)
 
     def test_get_set_var(self):
         val = self.problem.get_var('switched')
         self.assertEqual(val, 0.0)
-        self.problem.set_var('switched',10.0)
+        self.problem.set_var('switched', 10.0)
         val_reset = self.problem.get_var('switched')
         self.assertNotEqual(val_reset, val)
 
@@ -92,15 +92,15 @@ class TestSimulation(TestCase):
 
     def test_set_input(self):
         # run FMU model
-        self.problem.set_var('x',0.25)
         expected_values = [2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0]
         stop = 1.0
         dt = 0.1
-        self.problem.setup_experiment(0.0,stop,dt)
+        self.problem.setup_experiment(0.0, stop, dt)
+        self.problem.set_var('x_start', 0.25)
         self.problem.initialize()
         i = 0
         while i < int(stop/dt):
-            status = self.problem.update(dt)
+            self.problem.update(dt)
             val = self.problem.get_var('switched')
             self.assertEqual(val, expected_values[i])
             i += 1
