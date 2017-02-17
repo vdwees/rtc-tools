@@ -57,10 +57,11 @@ class SimulationProblem(object):
 
         if need_compilation:
             # compile .mo files into .fmu
+            logger.info("Compiling FMU")
+
             try:
-                compiler_options = {'extra_lib_dirs': self.modelica_library_folder}
                 compile_fmu(model_name, mo_filenames, version=2.0, target='cs',
-                            compiler_options=compiler_options, compiler_log_level='i:compile_fmu_log.txt',
+                            compiler_options=self.compiler_options(), compiler_log_level='i:compile_fmu_log.txt',
                             compile_to=fmu_filename)
             except ModelicaClassNotFoundError:
                 raise RuntimeError("Could not find files to compile FMU.")
@@ -128,6 +129,8 @@ class SimulationProblem(object):
         """
         if dt < 0:
             dt = self._dt
+
+        logger.debug("Taking a step at {} with size {}".format(self.get_current_time(), dt))
         return self._model.do_step(self._model.time, dt, True)
 
     def simulate(self):
@@ -285,3 +288,30 @@ class SimulationProblem(object):
         Not implemented.
         """
         raise NotImplementedError
+
+    def compiler_options(self):
+        """
+        Subclasses can configure the `JModelica.org <http://www.jmodelica.org/>`_ compiler options here.
+
+        :returns: A dictionary of JModelica.org compiler options.  See the JModelica.org documentation for details.
+        """
+
+        # Default options
+        compiler_options = {}
+
+        # Don't automatically add initial equations.  The user generally provides initial conditions
+        # through CSV or PI input files.
+        compiler_options['automatic_add_initial_equations'] = False
+
+        # We do not scale the model ourselves.
+        compiler_options['enable_variable_scaling'] = True
+
+        # No automatic division with variables please.  Our variables may
+        # sometimes equal to zero.
+        compiler_options['divide_by_vars_in_tearing'] = False
+
+        # Include the 'mo' folder as library dir by default.
+        compiler_options['extra_lib_dirs'] = self.modelica_library_folder
+
+        # Done
+        return compiler_options

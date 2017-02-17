@@ -106,6 +106,9 @@ class PIMixin(SimulationProblem):
                         self._timeseries_import.times[i + 1]))
 
     def initialize(self, config_file=None):
+        # Load variable names
+        self._variables = set(self.get_variables())
+
         # Set up experiment
         self.setup_experiment(0, self._timeseries_import_times[-1], self._dt)
 
@@ -117,13 +120,15 @@ class PIMixin(SimulationProblem):
                 except KeyError:
                     parameter = parameter_id
 
-                self.set_var(parameter, value)
+                if parameter in self._variables:
+                    self.set_var(parameter, value)
 
         # Set initial conditions
         for variable, timeseries in self._timeseries_import.iteritems():
-            value = timeseries[self._timeseries_import._forecast_index]
-            if np.isfinite(value):
-                self.set_var(variable, value)
+            if variable in self._variables:
+                value = timeseries[self._timeseries_import._forecast_index]
+                if np.isfinite(value):
+                    self.set_var(variable, value)
 
         # Empty output
         self._output_variables = self.get_output_variables()
@@ -146,9 +151,10 @@ class PIMixin(SimulationProblem):
 
         # Set new constant inputs
         for variable, timeseries in self._timeseries_import.iteritems():
-            value = timeseries[t_idx]
-            if np.isfinite(value):
-                self.set_var(variable, value)
+            if variable in self._variables:
+                value = timeseries[t_idx]
+                if np.isfinite(value):
+                    self.set_var(variable, value)
 
         # Call super
         super(PIMixin, self).update(self._dt)
