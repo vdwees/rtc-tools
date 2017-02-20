@@ -52,7 +52,7 @@ class SimulationProblem(object):
                 mo_filename = os.path.join(model_folder, f)
                 mo_filenames.append(mo_filename)
 
-                if not compile_fmu and os.path.getmtime(mo_filename) > fmu_mtime:
+                if not need_compilation and os.path.getmtime(mo_filename) > fmu_mtime:
                     need_compilation = True
 
         if need_compilation:
