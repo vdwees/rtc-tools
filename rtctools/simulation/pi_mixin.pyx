@@ -111,6 +111,9 @@ class PIMixin(SimulationProblem):
 
         # Load parameters from parameter config
         self._parameter_variables = set(self.get_parameter_variables())
+
+        logger.debug("Model parameters are {}".format(self._parameter_variables))
+
         for parameter_config in self._parameter_config:
             for location_id, model_id, parameter_id, value in parameter_config:
                 try:
@@ -119,10 +122,14 @@ class PIMixin(SimulationProblem):
                     parameter = parameter_id
 
                 if parameter in self._parameter_variables:
+                    logger.debug("Setting parameter {} = {}".format(parameter, value))
+
                     self.set_var(parameter, value)
 
         # Load input variable names
         self._input_variables = set(self.get_input_variables().keys())
+
+        logger.debug("Model inputs are {}".format(self._input_variables))
 
         # Set initial input values
         for variable, timeseries in self._timeseries_import.iteritems():
