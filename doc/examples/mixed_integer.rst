@@ -26,23 +26,22 @@ level at minimum costs. The expected result is that the model computes a control
 pattern that makes use of gradient flow whenever possible and activates the pump
 only when necessary.
 
-The model can be viewed and editied using the OpenModelica Connection Editor
+The model can be viewed and edited using the OpenModelica Connection Editor
 program. First load the Deltares library into OpenModelica Connection Editor,
 and then load the example model, located at
 ``RTCTools2\examples\mixed_integer\model\Example.mo``. The model ``Example.mo``
 represents a simple water system with the following elements:
 
-* a canal segment, modelled as storage element
+* a canal segment, modeled as storage element
   ``Deltares.ChannelFlow.Hydraulic.Storage.Linear``,
 * a discharge boundary condition
   ``Deltares.ChannelFlow.Hydraulic.BoundaryConditions.Discharge``,
 * a water level boundary condition
   ``Deltares.ChannelFlow.Hydraulic.BoundaryConditions.Level``,
-* two hydraulic structures, both modeled as
-  ``Deltares.ChannelFlow.Hydraulic.Structures.Pump``:
-
-  * a pump,
-  * an orifice.
+* a pump
+  ``Deltares.ChannelFlow.Hydraulic.Structures.Pump``
+* an orifice
+  ``Deltares.ChannelFlow.Hydraulic.Structures.BooleanSubmergedOrifice``
 
 .. image:: ../images/orifice_vs_pump_openmodelica.png
 
@@ -124,12 +123,15 @@ volume pumped:
   :pyobject: Example.objective
   :lineno-match:
 
-Constraints can be declared by declairing the ``path_constraints`` method. Path
-constraints are constraints that are applied every timestep. To set a constraint
-at an individual timestep, define it inside the ``constraints`` method.
+Constraints can be declared by declaring the ``path_constraints()`` method.
+Path constraints are constraints that are applied every timestep. To set a
+constraint at an individual timestep, define it inside the ``constraints``
+method.
 
-Other parent classes also declare this method, so we call the ``super()`` method
-so that we don't overwrite their behaviour.
+The orifice ``BooleanSubmergedOrifice`` requires special constraints to be set
+in order to work. They are implemented below in the ``path_constraints()``
+method. their parent classes also declare this method, so we call the
+``super()`` method so that we don't overwrite their behaviour.
 
 .. literalinclude:: ../../examples/mixed_integer/src/example.py
   :language: python

@@ -53,7 +53,7 @@ The Model
 .. note::
 
     This example uses the same hydraulic model as the basic example. For a
-    detalied explaination of the hydraulic model, see :doc:`basic`.
+    detailed explanation of the hydraulic model, see :doc:`basic`.
 
 
 In OpenModelica Connection Editor, the model looks like this:
@@ -269,7 +269,7 @@ between the two possible futures. This will cause the water level to diverge
 from the ideal levels as time progresses. While this appears to be suboptimal,
 it is preferable to simply gambling on one of the forecasts coming true and
 ignoring the other. Once the branching time is reached, RTC-Tools is allowed
-to optimize for each individual branch separately. Immidiately, RTC-Tools
+to optimize for each individual branch separately. Immediately, RTC-Tools
 applies the corrective control needed to get the water levels into the
 acceptable range. If the operator simply picks a forecast to use and guesses
 wrong, the corrective control will have to be much more drastic and

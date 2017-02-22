@@ -3,7 +3,7 @@ model Example
   Deltares.ChannelFlow.Hydraulic.BoundaryConditions.Discharge discharge annotation(Placement(visible = true, transformation(origin = {60, -0}, extent = {{10, -10}, {-10, 10}}, rotation = 270)));
   Deltares.ChannelFlow.Hydraulic.BoundaryConditions.Level level annotation(Placement(visible = true, transformation(origin = {-52.7, 0}, extent = {{-10, -10}, {10, 10}}, rotation = -270)));
   Deltares.ChannelFlow.Hydraulic.Structures.Pump pump annotation(Placement(visible = true, transformation(origin = {0, -20}, extent = {{10, -10}, {-10, 10}}, rotation = 0)));
-  Deltares.ChannelFlow.Hydraulic.Structures.Pump orifice annotation(Placement(visible = true, transformation(origin = {0, 20}, extent = {{10, -10}, {-10, 10}}, rotation = 0)));
+  Deltares.ChannelFlow.Hydraulic.Structures.BooleanSubmergedOrifice orifice(width = 3.0, height = 0.8) annotation(Placement(visible = true, transformation(origin = {0, 20}, extent = {{10, -10}, {-10, 10}}, rotation = 0)));
   input Modelica.SIunits.VolumeFlowRate Q_in(fixed=true);
   input Modelica.SIunits.Position H_sea(fixed=true);
   input Modelica.SIunits.VolumeFlowRate Q_pump(fixed=false, min=0.0, max=7.0);

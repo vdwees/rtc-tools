@@ -3,7 +3,7 @@ Goal Programming: Defining Multiple Objectives
 
 .. note::
 
-    This example focuses on how to implement multiobjective optimization in
+    This example focuses on how to implement multi-objective optimization in
     RTC-Tools using Goal Programming. It assumes basic exposure to
     RTC-Tools. If you are a first-time user of RTC-Tools, see
     :doc:`basic`.
@@ -24,7 +24,7 @@ roughly divided into two types:
   allowing any change at all).
 
 In this example, we will be specifying two goals, on for each type. The higher
-priority goal will be to maintian the water level of the storage element between
+priority goal will be to maintain the water level of the storage element between
 two levels. The lower priority goal will be to minimize the total volume pumped.
 
 The Model
@@ -33,7 +33,7 @@ The Model
 .. note::
 
     This example uses the same hydraulic model as the MILP example. For a
-    detalied explaination of the hydraulic model, including how to to formulate
+    detailed explanation of the hydraulic model, including how to to formulate
     mixed integers in your model, see :doc:`mixed_integer`.
 
 For this example, the model represents a typical setup for the dewatering of
@@ -115,12 +115,12 @@ of the variable over all the timesteps. This goal does not use a helper class:
   :lineno-match:
 
 We add a third goal minimizing the changes in``Q_pump``, and give it the
-least priority. This goal smoothes out the operation of the pump so that it
+least priority. This goal smooths out the operation of the pump so that it
 changes state as few times as possible. To get an idea of what the pump would
 have done without this goal, see Mixed Integer: :ref:`mixed-integer-results`.
 The order of this goal must be 2, so that it penalizes both positive and
 negative derivatives. Order of 2 is the default, but we include it here
-explicity for the sake of clarity.
+explicitly for the sake of clarity.
 
 .. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
@@ -139,13 +139,15 @@ classes.
   :lineno-match:
   :end-before: """
 
-Constraints can be declared by declairing the ``path_constraints()`` method.
+Constraints can be declared by declaring the ``path_constraints()`` method.
 Path constraints are constraints that are applied every timestep. To set a
 constraint at an individual timestep, define it inside the ``constraints()``
 method.
 
-Other parent classes also declare this method, so we call the ``super()`` method
-so that we don't overwrite their behaviour.
+The "orifice" requires special constraints to be set in order to work. They are
+implemented below in the ``path_constraints()`` method. Other parent classes
+also declare this method, so we call the ``super()`` method so that we don't
+overwrite their behaviour.
 
 .. literalinclude:: ../../examples/goal_programming/src/example.py
   :language: python
@@ -195,7 +197,7 @@ store our list of intermediate results:
   :pyobject: Example.pre
   :lineno-match:
 
-Next, we define the ``priority_completed()`` method to inspect and summerize the
+Next, we define the ``priority_completed()`` method to inspect and summarize the
 results. These are appended to our intermediate results variable after each
 priority is completed.
 
@@ -269,7 +271,7 @@ minimize the number of states in violation of the water level goal.
 
 After optimizing for the priority 2 goal, the solver was able to find a solution
 that reduced the integral of ``Q_pump`` without increasing the number of
-timesteps where the water level exceded the limit. However, this solution
+timesteps where the water level exceeded the limit. However, this solution
 induced additional variation into the operation of ``Q_pump``
 
 After optimizing the priority 3 goal, the integral of ``Q_pump`` is the same and

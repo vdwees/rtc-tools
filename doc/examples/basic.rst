@@ -11,7 +11,7 @@ The purpose of this example is to understand the technical setup of
 an RTC-Tools model, how to run the model, and how to interpret the results.
 
 The scenario is the following: A reservoir operator is trying to fill a
-reservoir. They are given a six-day forcast of inflows given in 12-hour
+reservoir. They are given a six-day forecast of inflows given in 12-hour
 increments. The operator wants to save as much of the inflows as possible, but
 does not want to end up with too much water at the end of the six days. They
 have chosen to use RTC-Tools to calculate how much water to release and when
@@ -34,10 +34,10 @@ The Model
 ---------
 
 The first step is to develop a physical model of the system. The model can be
-viewed and editied using the OpenModelica Connection Editor (OMEdit) program.
+viewed and edited using the OpenModelica Connection Editor (OMEdit) program.
 For how to download and start up OMEdit, see :ref:`getting-started-omedit`.
 
-Make sure to load the Deltares libray before loading the example:
+Make sure to load the Deltares library before loading the example:
 
 #. Load the Deltares library into OMEdit
 
@@ -58,7 +58,7 @@ this:
 The model ``Example.mo`` represents a simple system with the following
 elements:
 
-* a reservoir, modelled as storage element
+* a reservoir, modeled as storage element
   ``Deltares.ChannelFlow.SimpleRouting.Storage.Storage``,
 * an inflow boundary condition
   ``Deltares.ChannelFlow.SimpleRouting.BoundaryConditions.Inflow``,
@@ -66,7 +66,7 @@ elements:
   ``Deltares.ChannelFlow.SimpleRouting.BoundaryConditions.Terminal``,
 * connectors (black lines) connecting the elements.
 
-You can use the mouse-over feature help to identify the pre-defined models from
+You can use the mouse-over feature help to identify the predefined models from
 the Deltares library. You can also drag the elements around- the connectors will
 move with the elements. Adding new elements is easy- just drag them in from the
 Deltares Library on the sidebar. Connecting the elements is just as easy- click
@@ -84,7 +84,7 @@ the ``model Example`` statement. The ``equation`` part connects these three
 elements with the help of connections. Note that ``storage`` extends the partial
 model ``QSISO`` which contains the connectors ``QIn`` and ``QOut``.
 With ``QSISO``, ``storage`` can be connected on two sides. The ``storage``
-element also has a variable ``Q_release``, which is the descision variable the
+element also has a variable ``Q_release``, which is the decision variable the
 operator controls.
 
 OpenModelica Connection Editor will automatically generate the element and
@@ -93,7 +93,7 @@ editing the text file directly. Relationships between the inputs and outputs and
 the library elements must also be defined in the ``equation`` section.
 
 In addition to elements, the input variables ``Q_in`` and ``Q_release`` are also
-defined. ``Q_in`` is determined by the forecast and the operator cannot contol
+defined. ``Q_in`` is determined by the forecast and the operator cannot control
 it, so we set ``Q_in(fixed = true)``. The actual values of ``Q_in`` are stored
 in ``timeseries_input.csv``. In the ``equation`` section, equations are defined
 to relate the inputs to the appropriate water system elements.
@@ -136,7 +136,7 @@ Optimization Problem
 
 The next step is to define the optimization problem class. We construct the
 class by declaring the class and inheriting the desired parent classes. The
-parent classes each perform different tasks realted to importing and exporting
+parent classes each perform different tasks related to importing and exporting
 data and solving the optimization problem. Each imported class makes a set of
 methods available to the our optimization class.
 
@@ -154,9 +154,9 @@ the value that needs to be minimized.
   :pyobject: Example.objective
   :lineno-match:
 
-Constraints can be declared by declairing the ``path_constraints`` method. Path
+Constraints can be declared by declaring the ``path_constraints()`` method. Path
 constraints are constraints that are applied every timestep. To set a constraint
-at an individual timestep, we could define it inside the ``constraints`` method.
+at an individual timestep, we could define it inside the ``constraints()`` method.
 
 Other parent classes also declare this method, so we call the ``super()`` method
 so that we don't overwrite their behaviour.
@@ -208,5 +208,5 @@ This plot shows that the operator is able to keep the water level within the
 bounds over the entire time horizon and end with a full reservoir.
 
 Feel free to experiment with this example. See what happens if you change the
-max of ``Q_release`` (in the modelica file) or if you make the objective
+max of ``Q_release`` (in the Modelica file) or if you make the objective
 function negative (in the python script).
