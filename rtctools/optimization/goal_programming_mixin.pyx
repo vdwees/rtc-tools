@@ -635,15 +635,13 @@ class GoalProgrammingMixin(OptimizationProblem):
             constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal: goal.function(
                 problem, ensemble_member) / goal.function_nominal, Timeseries(times, m), Timeseries(times, M))
 
-            # Epsilon is fixed.  Override previous {min,max} constraints for
-            # this state.
+            # Epsilon is fixed. Propagate/override previous {min,max}
+            # constraints for this state.
             if not fix_value:
                 for existing_constraint in constraints:
                     if goal is not existing_constraint.goal:
-                        if existing_constraint.goal.has_target_min:
-                            constraint.min = Timeseries(times, np.maximum(constraint.min.values, existing_constraint.min.values))
-                        if existing_constraint.goal.has_target_max:
-                            constraint.max = Timeseries(times, np.minimum(constraint.max.values, existing_constraint.max.values))
+                        constraint.min = Timeseries(times, np.maximum(constraint.min.values, existing_constraint.min.values))
+                        constraint.max = Timeseries(times, np.minimum(constraint.max.values, existing_constraint.max.values))
             self._subproblem_path_constraints[ensemble_member][
                 goal.get_function_key(self, ensemble_member)] = [constraint]
 
