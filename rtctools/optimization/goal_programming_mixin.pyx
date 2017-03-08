@@ -674,25 +674,18 @@ class GoalProgrammingMixin(OptimizationProblem):
                         raise Exception("target_max time series contains NaN for goal {}".format(goal))
 
 
-        # Priority + function_key to goal for duplicate checking. Note that we
-        # do not have to check for collisions between goals and path goals,
-        # and therefore loop over them separately.
+        # Priority + function_key to goal for duplicate checking. 
         for ensemble_member in range(self.ensemble_size):
-            priority_fk_goals = {}
-            for goal in goals:
-                pf = (goal.priority, goal.get_function_key(self, ensemble_member))
-                if pf in priority_fk_goals:
-                    raise Exception("Cannot have multiple goals with the same function keys at the same priority. "
-                                    "Goal {} conflicts with goal {} for ensemble member {}.".format(goal, priority_fk_goals[pf], ensemble_member))
-                priority_fk_goals[pf] = goal
-
-            priority_fk_goals = {}
-            for goal in path_goals:
-                pf = (goal.priority, goal.get_function_key(self, ensemble_member))
-                if pf in priority_fk_goals:
-                    raise Exception("Cannot have multiple path goals with the same function keys at the same priority. "
-                                    "Goal {} conflicts with goal {} for ensemble member {}.".format(goal, priority_fk_goals[pf], ensemble_member))
-                priority_fk_goals[pf] = goal
+            # Note that we do not have to check for collisions between goals
+            # and path goals, and therefore loop over them separately.
+            for l in [goals, path_goals]:
+                priority_fk_goals = {}
+                for goal in l:
+                    pf = (goal.priority, goal.get_function_key(self, ensemble_member))
+                    if pf in priority_fk_goals:
+                        raise Exception("Cannot have multiple goals with the same function keys at the same priority. "
+                                        "Goal {} conflicts with goal {} for ensemble member {}.".format(goal, priority_fk_goals[pf], ensemble_member))
+                    priority_fk_goals[pf] = goal
 
         priorities = set([goal.priority for goal in itertools.chain(goals, path_goals)])
         for priority in sorted(priorities):
