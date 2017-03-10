@@ -151,11 +151,17 @@ class PIMixin(SimulationProblem):
             self._output[variable][self._timeseries_import._forecast_index] = self.get_var(variable)
 
     def update(self, dt):
+        # Time step
+        if dt < 0:
+            dt = self._dt
+
         # Current time stamp
         t = self.get_current_time()   
 
         # Get current time index
-        t_idx = bisect.bisect_left(self._timeseries_import_times, t)  
+        t_idx = bisect.bisect_left(self._timeseries_import_times, t + dt)
+
+        logger.warning("{} {} {}".format(t, t_idx, len(self._timeseries_import_times)))  
 
         # Set input values
         for variable, timeseries in self._timeseries_import.iteritems():
@@ -165,11 +171,11 @@ class PIMixin(SimulationProblem):
                     self.set_var(variable, value)
 
         # Call super
-        super(PIMixin, self).update(self._dt)
+        super(PIMixin, self).update(dt)
 
         # Extract results
         for variable in self._output_variables:
-            self._output[variable][t_idx + 1] = self.get_var(variable)
+            self._output[variable][t_idx] = self.get_var(variable)
 
     def post(self):
         # Call parent class first for default behaviour.
