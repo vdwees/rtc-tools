@@ -553,7 +553,7 @@ class GoalProgrammingMixin(OptimizationProblem):
             if constraint.goal == goal:
                 continue
             constraint_m, constraint_M = _min_max_arrays(constraint.goal)
-            if np.all(goal_m == goal_M):
+            if np.all(constraint_m == constraint_M):
                 # This variable has already been fixed.  Don't add new
                 # constraints for it.
                 return
