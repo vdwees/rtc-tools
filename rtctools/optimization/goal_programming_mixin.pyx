@@ -552,11 +552,11 @@ class GoalProgrammingMixin(OptimizationProblem):
         for constraint in constraints:
             if constraint.goal == goal:
                 continue
-            constraint_m, constraint_M = _min_max_arrays(constraint.goal)
-            if np.all(constraint_m == constraint_M):
+            if np.all(constraint.min == constraint.max):
                 # This variable has already been fixed.  Don't add new
                 # constraints for it.
                 return
+            constraint_m, constraint_M = _min_max_arrays(constraint.goal)
             elif constraint.goal.has_target_min:
                 if np.any(goal_m < constraint_m):
                     raise Exception(
