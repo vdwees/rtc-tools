@@ -273,11 +273,11 @@ class GoalProgrammingMixin(OptimizationProblem):
 
     class _GoalConstraint:
 
-        def __init__(self, goal, function, min, max):
+        def __init__(self, goal, function, m, M):
             self.goal = goal
             self.function = function
-            self.min = min
-            self.max = max
+            self.min = m
+            self.max = M
 
     def __init__(self, **kwargs):
         # Call parent class first for default behaviour.
@@ -830,7 +830,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                         # Compute path expression
                         expr = self.map_path_expression(goal.function(self, ensemble_member), ensemble_member)
                         f = MXFunction('f', [self.solver_input], [expr])
-                        epsilon = f([self.solver_output])[0]
+                        epsilon = np.array(f([self.solver_output])[0]).ravel()
 
                     # Add inequality constraint
                     self._add_path_goal_constraint(
