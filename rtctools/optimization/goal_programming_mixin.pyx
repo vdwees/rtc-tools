@@ -142,7 +142,7 @@ class Goal(object):
         ``True`` if the user goal has min bounds.
         """
         if isinstance(self.target_min, Timeseries):
-            return np.any(np.isfinite(self.target_min.values))
+            return True
         else:
             return np.isfinite(self.target_min)
 
@@ -152,7 +152,7 @@ class Goal(object):
         ``True`` if the user goal has max bounds.
         """
         if isinstance(self.target_max, Timeseries):
-            return np.any(np.isfinite(self.target_max.values))
+            return True
         else:
             return np.isfinite(self.target_max)
 
@@ -558,11 +558,15 @@ class GoalProgrammingMixin(OptimizationProblem):
                 # constraints for it.
                 return
             elif constraint.goal.has_target_min:
-                if np.any(goal_m < constraint_m):
+                indices = np.where(np.logical_and(
+                    np.isfinite(goal_m), np.isfinite(constraint_m)))
+                if np.any(goal_m[indices] < constraint_m[indices]):
                     raise Exception(
                         "Minimum value of goal less than minimum of a higher priority goal")
             elif constraint.goal.has_target_max:
-                if np.any(goal_M > constraint_M):
+                indices = np.where(np.logical_and(
+                    np.isfinite(goal_M), np.isfinite(constraint_M)))
+                if np.any(goal_M[indices] > constraint_M[indices]):
                     raise Exception(
                         "Maximum value of goal greater than maximum of a higher priority goal")
 
@@ -753,14 +757,28 @@ class GoalProgrammingMixin(OptimizationProblem):
 
                 if goal.has_target_min:
                     min_series = MX.sym('path_min_{}_{}'.format(i, j))
+
+                    if isinstance(goal.target_min, Timeseries):
+                        target_min = Timeseries(goal.target_min.times, goal.target_min.values)
+                        target_min.values[np.logical_or(np.isnan(target_min.values), np.isneginf(target_min.values))] = -sys.float_info.max_10_exp
+                    else:
+                        target_min = goal.target_min
+
                     self._subproblem_path_timeseries.append(
-                        (min_series, goal.target_min))
+                        (min_series, target_min))
                 else:
                     min_series = None
                 if goal.has_target_max:
                     max_series = MX.sym('path_max_{}_{}'.format(i, j))
+
+                    if isinstance(goal.target_max, Timeseries):
+                        target_max = Timeseries(goal.target_max.times, goal.target_max.values)
+                        target_max.values[np.logical_or(np.isnan(target_max.values), np.isposinf(target_max.values))] = sys.float_info.max_10_exp
+                    else:
+                        target_max = goal.target_max
+
                     self._subproblem_path_timeseries.append(
-                        (max_series, goal.target_max))
+                        (max_series, target_max))
                 else:
                     max_series = None
 
