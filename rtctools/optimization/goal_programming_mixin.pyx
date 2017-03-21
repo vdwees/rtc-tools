@@ -397,7 +397,7 @@ class GoalProgrammingMixin(OptimizationProblem):
         +===========================+===========+===============+
         | ``constraint_relaxation`` | ``float`` | ``0.0``       |
         +---------------------------+-----------+---------------+
-        | ``violation_tolerance``   | ``float`` | ``1.0``       |
+        | ``violation_tolerance``   | ``float`` | ``inf``       |
         +---------------------------+-----------+---------------+
         | ``mu_reinit``             | ``bool``  | ``True``      |
         +---------------------------+-----------+---------------+
@@ -418,7 +418,7 @@ class GoalProgrammingMixin(OptimizationProblem):
 
         options['mu_reinit'] = True
         options['constraint_relaxation'] = 0.0  # Disable by default
-        options['violation_tolerance'] = 1.0  # Disable by default
+        options['violation_tolerance'] = np.inf # Disable by default
 
         return options
 
