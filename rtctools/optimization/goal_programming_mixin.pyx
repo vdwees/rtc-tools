@@ -273,11 +273,12 @@ class GoalProgrammingMixin(OptimizationProblem):
 
     class _GoalConstraint:
 
-        def __init__(self, goal, function, m, M):
+        def __init__(self, goal, function, m, M, optimized):
             self.goal = goal
             self.function = function
             self.min = m
             self.max = M
+            self.optimized = optimized
 
     def __init__(self, **kwargs):
         # Call parent class first for default behaviour.
@@ -469,11 +470,11 @@ class GoalProgrammingMixin(OptimizationProblem):
                 # variables epsilon bounded between 0 and 1.
                 if goal.has_target_min:
                     constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(problem, ensemble_member) - problem.extra_variable(
-                        epsilon.getName(), ensemble_member=ensemble_member) * (goal.function_range[0] - goal.target_min) - goal.target_min) / goal.function_nominal, 0.0, np.inf)
+                        epsilon.getName(), ensemble_member=ensemble_member) * (goal.function_range[0] - goal.target_min) - goal.target_min) / goal.function_nominal, 0.0, np.inf, False)
                     constraints.append(constraint)
                 if goal.has_target_max:
                     constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(problem, ensemble_member) - problem.extra_variable(
-                        epsilon.getName(), ensemble_member=ensemble_member) * (goal.function_range[1] - goal.target_max) - goal.target_max) / goal.function_nominal, -np.inf, 0.0)
+                        epsilon.getName(), ensemble_member=ensemble_member) * (goal.function_range[1] - goal.target_max) - goal.target_max) / goal.function_nominal, -np.inf, 0.0, False)
                     constraints.append(constraint)
 
             # TODO forgetting max like this.
@@ -486,7 +487,7 @@ class GoalProgrammingMixin(OptimizationProblem):
             fix_value = False
 
             constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal: goal.function(
-                problem, ensemble_member) / goal.function_nominal, -np.inf, np.inf)
+                problem, ensemble_member) / goal.function_nominal, -np.inf, np.inf, True)
             if goal.has_target_bounds:
                 # We use a violation variable formulation, with the violation
                 # variables epsilon bounded between 0 and 1.
@@ -518,11 +519,9 @@ class GoalProgrammingMixin(OptimizationProblem):
             # this state.
             if not fix_value:
                 for existing_constraint in constraints:
-                    if goal is not existing_constraint.goal:
-                        if existing_constraint.goal.has_target_min:
-                            constraint.min = max(constraint.min, existing_constraint.min)
-                        if existing_constraint.goal.has_target_max:
-                            constraint.max = min(constraint.max, existing_constraint.max)
+                    if goal is not existing_constraint.goal and existing_constraint.optimized:
+                        constraint.min = max(constraint.min, existing_constraint.min)
+                        constraint.max = min(constraint.max, existing_constraint.max)
             self._subproblem_constraints[ensemble_member][
                 goal.get_function_key(self, ensemble_member)] = [constraint]
 
@@ -583,11 +582,11 @@ class GoalProgrammingMixin(OptimizationProblem):
                 # variables epsilon bounded between 0 and 1.
                 if goal.has_target_min:
                     constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: if_else(problem.variable(min_series.getName()) > -sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
-                        epsilon.getName()) * (goal.function_range[0] - problem.variable(min_series.getName())) - problem.variable(min_series.getName())) / goal.function_nominal, 0.0), 0.0, np.inf)
+                        epsilon.getName()) * (goal.function_range[0] - problem.variable(min_series.getName())) - problem.variable(min_series.getName())) / goal.function_nominal, 0.0), 0.0, np.inf, False)
                     constraints.append(constraint)
                 if goal.has_target_max:
                     constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: if_else(problem.variable(max_series.getName()) < sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
-                        epsilon.getName()) * (goal.function_range[1] - problem.variable(max_series.getName())) - problem.variable(max_series.getName())) / goal.function_nominal, 0.0), -np.inf, 0.0)
+                        epsilon.getName()) * (goal.function_range[1] - problem.variable(max_series.getName())) - problem.variable(max_series.getName())) / goal.function_nominal, 0.0), -np.inf, 0.0, False)
                     constraints.append(constraint)
 
             # TODO forgetting max like this.
@@ -638,13 +637,13 @@ class GoalProgrammingMixin(OptimizationProblem):
                 M = epsilon / goal.function_nominal
 
             constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal: goal.function(
-                problem, ensemble_member) / goal.function_nominal, Timeseries(times, m), Timeseries(times, M))
+                problem, ensemble_member) / goal.function_nominal, Timeseries(times, m), Timeseries(times, M), True)
 
             # Epsilon is fixed. Propagate/override previous {min,max}
             # constraints for this state.
             if not fix_value:
                 for existing_constraint in constraints:
-                    if goal is not existing_constraint.goal:
+                    if goal is not existing_constraint.goal and existing_constraint.optimized:
                         constraint.min = Timeseries(times, np.maximum(constraint.min.values, existing_constraint.min.values))
                         constraint.max = Timeseries(times, np.minimum(constraint.max.values, existing_constraint.max.values))
             self._subproblem_path_constraints[ensemble_member][
@@ -667,19 +666,6 @@ class GoalProgrammingMixin(OptimizationProblem):
 
             if goal.function_nominal <= 0:
                 raise Exception("Nonpositive nominal value specified for goal {}".format(goal))
-
-        # Priority + function_key to goal for duplicate checking. 
-        for ensemble_member in range(self.ensemble_size):
-            # Note that we do not have to check for collisions between goals
-            # and path goals, and therefore loop over them separately.
-            for l in [goals, path_goals]:
-                priority_fk_goals = {}
-                for goal in l:
-                    pf = (goal.priority, goal.get_function_key(self, ensemble_member))
-                    if pf in priority_fk_goals:
-                        raise Exception("Cannot have multiple goals with the same function keys at the same priority. "
-                                        "Goal {} conflicts with goal {} for ensemble member {}.".format(goal, priority_fk_goals[pf], ensemble_member))
-                    priority_fk_goals[pf] = goal
 
         priorities = set([goal.priority for goal in itertools.chain(goals, path_goals)])
         for priority in sorted(priorities):
