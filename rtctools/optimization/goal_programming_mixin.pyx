@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, MXFunction, sumRows, sumCols, vertcat, transpose, substitute, constpow
+from casadi import MX, MXFunction, sumRows, sumCols, vertcat, transpose, substitute, constpow, if_else
 from abc import ABCMeta, abstractmethod
 import numpy as np
 cimport numpy as np
@@ -558,22 +558,22 @@ class GoalProgrammingMixin(OptimizationProblem):
                 # constraints for it.
                 return
             elif constraint.goal.has_target_min:
-                indices = np.where(np.logical_and(
-                    np.isfinite(goal_m), np.isfinite(constraint_m)))
+                indices = np.where(np.logical_not(np.logical_or(
+                    np.isnan(goal_m), np.isnan(constraint_m))))
                 if np.any(goal_m[indices] < constraint_m[indices]):
                     raise Exception(
                         "Minimum value of goal less than minimum of a higher priority goal")
             elif constraint.goal.has_target_max:
-                indices = np.where(np.logical_and(
-                    np.isfinite(goal_M), np.isfinite(constraint_M)))
+                indices = np.where(np.logical_not(np.logical_or(
+                    np.isnan(goal_M), np.isnan(constraint_M))))
                 if np.any(goal_M[indices] > constraint_M[indices]):
                     raise Exception(
                         "Maximum value of goal greater than maximum of a higher priority goal")
 
         # Check goal consistency
         if goal.has_target_min and goal.has_target_max:
-            indices = np.where(np.logical_and(
-                np.isfinite(goal_m), np.isfinite(goal_M)))
+            indices = np.where(np.logical_not(np.logical_or(
+                np.isnan(goal_m), np.isnan(goal_M))))
             if np.any(goal_m[indices] > goal_M[indices]):
                 raise Exception("Target minimum exceeds target maximum for goal {}".format(goal))
 
@@ -582,12 +582,12 @@ class GoalProgrammingMixin(OptimizationProblem):
                 # We use a violation variable formulation, with the violation
                 # variables epsilon bounded between 0 and 1.
                 if goal.has_target_min:
-                    constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(problem, ensemble_member) - problem.variable(
-                        epsilon.getName()) * (goal.function_range[0] - problem.variable(min_series.getName())) - problem.variable(min_series.getName())) / goal.function_nominal, 0.0, np.inf)
+                    constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: if_else(problem.variable(min_series.getName()) > -sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
+                        epsilon.getName()) * (goal.function_range[0] - problem.variable(min_series.getName())) - problem.variable(min_series.getName())) / goal.function_nominal, 0.0), 0.0, np.inf)
                     constraints.append(constraint)
                 if goal.has_target_max:
-                    constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(problem, ensemble_member) - problem.variable(
-                        epsilon.getName()) * (goal.function_range[1] - problem.variable(max_series.getName())) - problem.variable(max_series.getName())) / goal.function_nominal, -np.inf, 0.0)
+                    constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: if_else(problem.variable(max_series.getName()) < sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
+                        epsilon.getName()) * (goal.function_range[1] - problem.variable(max_series.getName())) - problem.variable(max_series.getName())) / goal.function_nominal, 0.0), -np.inf, 0.0)
                     constraints.append(constraint)
 
             # TODO forgetting max like this.
@@ -607,28 +607,29 @@ class GoalProgrammingMixin(OptimizationProblem):
 
                 # Compute each min, max value separately for every time step
                 for i, t in enumerate(times):
-                    if epsilon[i] <= options['violation_tolerance']:
-                        if np.isfinite(goal_m[i]):
-                            m[i] = (epsilon[i] * (goal.function_range[0] -
-                                                  goal_m[i]) + goal_m[i]) / goal.function_nominal
-                        if np.isfinite(goal_M[i]):
-                            M[i] = (epsilon[i] * (goal.function_range[1] -
-                                                  goal_M[i]) + goal_M[i]) / goal.function_nominal
-                    else:
-                        # Equality constraint to optimized value
-                        # TODO this does not perform well.
-                        variables = self.dae_variables['states'] + self.dae_variables[
-                            'algebraics'] + self.dae_variables['control_inputs'] + self.dae_variables['constant_inputs']
-                        values = [self.state_at(
-                            variable, t, ensemble_member=ensemble_member) for variable in variables]
-                        [function] = substitute(
-                            [goal.function(self, ensemble_member)], variables, values)
-                        function = MXFunction(
-                            'function', [self.solver_input], [function])
-                        [value] = function.call([self.solver_output])
+                    if np.isfinite(goal_m[i]) or np.isfinite(goal_M[i]):
+                        if epsilon[i] <= options['violation_tolerance']:
+                            if np.isfinite(goal_m[i]):
+                                m[i] = (epsilon[i] * (goal.function_range[0] -
+                                                      goal_m[i]) + goal_m[i]) / goal.function_nominal
+                            if np.isfinite(goal_M[i]):
+                                M[i] = (epsilon[i] * (goal.function_range[1] -
+                                                      goal_M[i]) + goal_M[i]) / goal.function_nominal
+                        else:
+                            # Equality constraint to optimized value
+                            # TODO this does not perform well.
+                            variables = self.dae_variables['states'] + self.dae_variables[
+                                'algebraics'] + self.dae_variables['control_inputs'] + self.dae_variables['constant_inputs']
+                            values = [self.state_at(
+                                variable, t, ensemble_member=ensemble_member) for variable in variables]
+                            [function] = substitute(
+                                [goal.function(self, ensemble_member)], variables, values)
+                            function = MXFunction(
+                                'function', [self.solver_input], [function])
+                            [value] = function.call([self.solver_output])
 
-                        m[i] = value / goal.function_nominal
-                        M[i] = value / goal.function_nominal
+                            m[i] = value / goal.function_nominal
+                            M[i] = value / goal.function_nominal
             else:
                 # Epsilon encodes the position within the function range.
                 fix_value = True
@@ -666,17 +667,6 @@ class GoalProgrammingMixin(OptimizationProblem):
 
             if goal.function_nominal <= 0:
                 raise Exception("Nonpositive nominal value specified for goal {}".format(goal))
-
-            if goal.target_min:
-                if isinstance(goal.target_min, Timeseries):
-                    if np.any(np.isfinite(goal.target_min.values)) and np.any(np.isnan(goal.target_min.values)):
-                        raise Exception("target_min time series contains NaN for goal {}".format(goal))
-
-            if goal.target_max:
-                if isinstance(goal.target_max, Timeseries):
-                    if np.any(np.isfinite(goal.target_max.values)) and np.any(np.isnan(goal.target_max.values)):
-                        raise Exception("target_max time series contains NaN for goal {}".format(goal))
-
 
         # Priority + function_key to goal for duplicate checking. 
         for ensemble_member in range(self.ensemble_size):
@@ -760,7 +750,7 @@ class GoalProgrammingMixin(OptimizationProblem):
 
                     if isinstance(goal.target_min, Timeseries):
                         target_min = Timeseries(goal.target_min.times, goal.target_min.values)
-                        target_min.values[np.logical_or(np.isnan(target_min.values), np.isneginf(target_min.values))] = -sys.float_info.max_10_exp
+                        target_min.values[np.logical_or(np.isnan(target_min.values), np.isneginf(target_min.values))] = -sys.float_info.max
                     else:
                         target_min = goal.target_min
 
@@ -773,7 +763,7 @@ class GoalProgrammingMixin(OptimizationProblem):
 
                     if isinstance(goal.target_max, Timeseries):
                         target_max = Timeseries(goal.target_max.times, goal.target_max.values)
-                        target_max.values[np.logical_or(np.isnan(target_max.values), np.isposinf(target_max.values))] = sys.float_info.max_10_exp
+                        target_max.values[np.logical_or(np.isnan(target_max.values), np.isposinf(target_max.values))] = sys.float_info.max
                     else:
                         target_max = goal.target_max
 
