@@ -93,18 +93,23 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
             s.strip_dirs().sort_stats("time").print_stats()
         else:
             prob.optimize()
-    except TypeError:
-        exc_info = sys.exc_info()
-        value = exc_info[1]
-        try:
-            failed_class = re.search(
-                "Can't instantiate (.*) with abstract methods", str(value)).group(1)
-            abstract_method = re.search(
-                ' with abstract methods (.*)', str(value)).group(1)
-            logger.error("The {} is missing a mixin. Please add a mixin that instantiates abstract method {}, so that the optimizer can run.".format(
-                failed_class, abstract_method))
-        except:
-            raise exc_info[0], exc_info[1], exc_info[2]
+    except Exception as e:
+        logger.error(str(e))
+        if isinstance(e, TypeError):
+            exc_info = sys.exc_info()
+            value = exc_info[1]
+            try:
+                failed_class = re.search(
+                    "Can't instantiate (.*) with abstract methods", str(value)).group(1)
+                abstract_method = re.search(
+                    ' with abstract methods (.*)', str(value)).group(1)
+                logger.error("The {} is missing a mixin. Please add a mixin that instantiates abstract method {}, so that the optimizer can run.".format(
+                    failed_class, abstract_method))
+            except:
+                pass
+        for handler in logger.handlers:
+            handler.flush()
+        raise
 
 
 def run_simulation_problem(simulation_problem_class, base_folder=None, log_level=logging.INFO):
