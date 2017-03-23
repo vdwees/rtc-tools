@@ -51,10 +51,17 @@ class DataConfig:
             for timeseries in timeseriess1:
                 pi_timeseries = timeseries.find('fews:PITimeSeries', ns)
                 if pi_timeseries is not None:
-                    self._location_parameter_ids[timeseries.get('id')] = \
-                        self._pi_location_parameter_id(pi_timeseries, 'fews')
-                    self._variable_map[self._pi_timeseries_id(
-                        pi_timeseries, 'fews')] = timeseries.get('id')
+                    internal_id = timeseries.get('id')
+
+                    try:
+                        self._location_parameter_ids[internal_id]
+                        logger.error("Found more than one external timeseries mapped to internal id {} in {}.".format(internal_id, path))
+                        raise Exception
+                    except KeyError:
+                        self._location_parameter_ids[internal_id] = \
+                            self._pi_location_parameter_id(pi_timeseries, 'fews')
+                        self._variable_map[self._pi_timeseries_id(
+                            pi_timeseries, 'fews')] = internal_id
 
             for k in ['import', 'export']:
                 res = root.find(
@@ -68,10 +75,17 @@ class DataConfig:
                 for parameter in parameters:
                     pi_parameter = parameter.find('fews:PIParameter', ns)
                     if pi_parameter is not None:
-                        self._model_parameter_ids[parameter.get('id')] = \
-                            self._pi_model_parameter_id(pi_parameter, 'fews')
-                        self._parameter_map[self._pi_parameter_id(
-                             pi_parameter, 'fews')] = parameter.get('id')
+                        internal_id = parameter.get('id')
+
+                        try:
+                            self._model_parameter_ids[internal_id]
+                            logger.error("Found more than one external parameter mapped to internal id {} in {}.".format(internal_id, path))
+                            raise Exception
+                        except KeyError:
+                            self._model_parameter_ids[parameter.get('id')] = \
+                                self._pi_model_parameter_id(pi_parameter, 'fews')
+                            self._parameter_map[self._pi_parameter_id(
+                                 pi_parameter, 'fews')] = parameter.get('id')
 
         except IOError:
             logger.error(
