@@ -172,16 +172,21 @@ class OptimizationProblem(object):
         self._solver_stats = solver.getStats()
 
         # Get the return status
-        if self._solver_stats['return_status'] not in ['Solve_Succeeded', 'Solved_To_Acceptable_Level', 'SUCCESS']:
-            logger.info("Solver failed with status {}".format(
-                self._solver_stats['return_status']))
-
-            success = False
-        else:
+        if self._solver_stats['return_status'] in ['Solve_Succeeded', 'Solved_To_Acceptable_Level', 'SUCCESS']:
             logger.info("Solver succeeded with status {}".format(
                 self._solver_stats['return_status']))
 
             success = True
+        elif self._solver_stats['return_status'] in ['Not_Enough_Degrees_Of_Freedom']:
+            logger.warning("Solver failed with status {}".format(
+                self._solver_stats['return_status']))
+
+            success = False
+        else:
+            logger.error("Solver failed with status {}".format(
+                self._solver_stats['return_status']))
+
+            success = False
 
         # Do any postprocessing
         if postprocessing:
