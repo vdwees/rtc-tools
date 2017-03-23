@@ -1489,10 +1489,20 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Compute combined points
         if t0 < times[0]:
             history = self.history(ensemble_member)
-            try:
-                htimes = history[variable].times[:-1]
-            except KeyError:
-                htimes = []
+            found = False
+            for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states):
+                aliases = self.variable_aliases(free_variable)
+                if variable in [alias.name for alias in aliases]:
+                    for alias in self.variable_aliases(free_variable):
+                        if alias.name in history:
+                            htimes = history[variable].times[:-1]
+                            found = True
+                            break
+                if found:
+                    break
+            if not found:
+                raise Exception("No history found for variable {}, but a historical value was requested".format(variable))
+
             history_and_times = np.hstack((htimes, times))
         else:
             history_and_times = times
@@ -1525,10 +1535,20 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Compute combined points
         if t0 < times[0]:
             history = self.history(ensemble_member)
-            try:
-                htimes = history[variable].times[:-1]
-            except KeyError:
-                htimes = []
+            found = False
+            for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states):
+                aliases = self.variable_aliases(free_variable)
+                if variable in [alias.name for alias in aliases]:
+                    for alias in self.variable_aliases(free_variable):
+                        if alias.name in history:
+                            htimes = history[variable].times[:-1]
+                            found = True
+                            break
+                if found:
+                    break
+            if not found:
+                raise Exception("No history found for variable {}, but a historical value was requested".format(variable))
+
             history_and_times = np.hstack((htimes, times))
         else:
             history_and_times = times
