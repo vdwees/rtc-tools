@@ -365,6 +365,11 @@ class PIMixin(OptimizationProblem):
             self._output_timeseries.add(variable)
 
         if isinstance(timeseries, Timeseries):
+            try:
+                assert(len(timeseries.values) == len(timeseries.times))
+            except AssertionError:
+                raise Exception("PI: Trying to set timeseries with times and values that are of different length (lengths of {} and {}, respectively).".format(len(timeseries.times), len(timeseries.values)))
+
             if not np.array_equal(self._timeseries_import_times, timeseries.times):
                 if check_consistency:
                     if not set(self._timeseries_import_times).issuperset(timeseries.times):
