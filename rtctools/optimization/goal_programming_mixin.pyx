@@ -549,7 +549,7 @@ class GoalProgrammingMixin(OptimizationProblem):
         constraints = self._subproblem_path_constraints[
             ensemble_member].get(goal.get_function_key(self, ensemble_member), [])
         for constraint in constraints:
-            if constraint.goal == goal:
+            if constraint.goal == goal or not constraint.optimized:
                 continue
             constraint_m, constraint_M = _min_max_arrays(constraint.goal)
             if np.all(constraint.min == constraint.max):
