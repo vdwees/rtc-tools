@@ -561,13 +561,13 @@ class GoalProgrammingMixin(OptimizationProblem):
                     np.isnan(goal_m), np.isnan(constraint_m))))
                 if np.any(goal_m[indices] < constraint_m[indices]):
                     raise Exception(
-                        "Minimum value of goal less than minimum of a higher priority goal")
+                        "Minimum value of goal {} less than minimum of higher priority goal {}".format(goal, constraint.goal))
             elif constraint.goal.has_target_max:
                 indices = np.where(np.logical_not(np.logical_or(
                     np.isnan(goal_M), np.isnan(constraint_M))))
                 if np.any(goal_M[indices] > constraint_M[indices]):
                     raise Exception(
-                        "Maximum value of goal greater than maximum of a higher priority goal")
+                        "Maximum value of goal {} greater than maximum of higher priority goal {}".format(goal, constraint.goal))
 
         # Check goal consistency
         if goal.has_target_min and goal.has_target_max:
