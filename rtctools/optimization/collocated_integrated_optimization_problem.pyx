@@ -753,7 +753,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                 variable) * self.state_vector(variable, ensemble_member=ensemble_member)
                         if alias.name == out_variable_name:
                             out_times = self.times(variable)
-                            out_values = self.variable_nominal(
+                            out_values = alias.sign * self.variable_nominal(
                                 variable) * self.state_vector(variable, ensemble_member=ensemble_member)
                             history_found = False
                             for history_alias in self.variable_aliases(variable):
