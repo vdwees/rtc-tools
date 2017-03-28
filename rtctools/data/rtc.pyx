@@ -53,7 +53,7 @@ class DataConfig:
                 if pi_timeseries is not None:
                     internal_id = timeseries.get('id')
 
-                    if internal_id in self._location_parameter_ids.keys():
+                    if internal_id in self._location_parameter_ids:
                         logger.error("Found more than one external timeseries mapped to internal id {} in {}.".format(internal_id, path))
                         raise Exception
                     else:
@@ -76,7 +76,7 @@ class DataConfig:
                     if pi_parameter is not None:
                         internal_id = parameter.get('id')
 
-                        if internal_id in self._model_parameter_ids.keys():
+                        if internal_id in self._model_parameter_ids:
                             logger.error("Found more than one external parameter mapped to internal id {} in {}.".format(internal_id, path))
                             raise Exception
                         else:
