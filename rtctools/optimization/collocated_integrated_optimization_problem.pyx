@@ -1345,7 +1345,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             found = False
             if not found:
                 offset = control_size + ensemble_member * ensemble_member_size
-                for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states):
+                for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
                     for alias in self.variable_aliases(free_variable):
                         if alias.name == variable:
                             times = self.times(free_variable)
