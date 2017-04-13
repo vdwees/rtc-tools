@@ -159,6 +159,42 @@ class CSVMixin(OptimizationProblem):
                         raise Exception('CSVMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set equidistant=False if this is intended.'.format(
                             self._timeseries_times[i + 1]))
 
+        # Load bounds from timeseries
+        self._csv_bounds = {}
+        for variable in self.dae_variables['free_variables']:
+            m, M = None, None
+            for alias in self.variable_aliases(variable.getName()):
+                try:
+                    timeseries_id = self.min_timeseries_id(alias.name)
+                    m = alias.sign * self._timeseries[0][timeseries_id]
+                    logger.debug("CSVMixin: Read lower bound for variable {} from {}".format(
+                        variable.getName(), timeseries_id))
+                except (KeyError, ValueError):
+                    pass
+
+                try:
+                    timeseries_id = self.max_timeseries_id(alias.name)
+                    M = alias.sign * self._timeseries[0][timeseries_id]
+                    logger.debug("CSVMixin: Read upper bound for variable {} from {}".format(
+                        variable.getName(), timeseries_id))
+                except (KeyError, ValueError):
+                    pass
+
+                if m != None and M != None:
+                    break
+
+            # Replace NaN with +/- inf, and create Timeseries objects
+            if m != None:
+                m[np.isnan(m)] = np.finfo(m.dtype).min
+                m = Timeseries(self._timeseries_times_sec, m)
+            if M != None:
+                M[np.isnan(M)] = np.finfo(M.dtype).max
+                M = Timeseries(self._timeseries_times_sec, M)
+
+            # Store
+            if m != None or M != None:
+                self._csv_bounds[variable.getName()] = (m, M)
+
     def times(self, variable=None):
         return self._timeseries_times_sec
 
@@ -218,41 +254,7 @@ class CSVMixin(OptimizationProblem):
     def bounds(self):
         # Call parent class first for default values.
         bounds = super(CSVMixin, self).bounds()
-
-        # Load bounds from timeseries
-        for variable in self.dae_variables['free_variables']:
-            m, M = None, None
-            for alias in self.variable_aliases(variable.getName()):
-                try:
-                    timeseries_id = self.min_timeseries_id(alias.name)
-                    m = alias.sign * self._timeseries[0][timeseries_id]
-                    logger.debug("CSVMixin: Read lower bound for variable {} from {}".format(
-                        variable.getName(), timeseries_id))
-                except (KeyError, ValueError):
-                    pass
-
-                try:
-                    timeseries_id = self.max_timeseries_id(alias.name)
-                    M = alias.sign * self._timeseries[0][timeseries_id]
-                    logger.debug("CSVMixin: Read upper bound for variable {} from {}".format(
-                        variable.getName(), timeseries_id))
-                except (KeyError, ValueError):
-                    pass
-
-                if m != None and M != None:
-                    break
-
-            # Replace NaN with +/- inf, and create Timeseries objects
-            if m != None:
-                m[np.isnan(m)] = np.finfo(m.dtype).min
-                m = Timeseries(self._timeseries_times_sec, m)
-            if M != None:
-                M[np.isnan(M)] = np.finfo(M.dtype).max
-                M = Timeseries(self._timeseries_times_sec, M)
-
-            # Store
-            if m != None or M != None:
-                bounds[variable.getName()] = (m, M)
+        bounds.update(self._csv_bounds)
         return bounds
 
     @property

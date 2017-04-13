@@ -120,6 +120,46 @@ class PIMixin(OptimizationProblem):
                         raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
                             self._timeseries_import.times[i + 1]))
 
+        # Load bounds from timeseries
+        self._pi_bounds = {}
+        for variable in self.dae_variables['free_variables']:
+            m, M = None, None
+            for alias in self.variable_aliases(variable.getName()):
+                try:
+                    timeseries_id = self.min_timeseries_id(alias.name)
+                    m = alias.sign * self._timeseries_import.get(timeseries_id, ensemble_member=0)[
+                        self._timeseries_import.forecast_index:]
+                    logger.debug("Read lower bound for variable {} from {}".format(
+                        variable.getName(), timeseries_id))
+                except KeyError:
+                    pass
+
+                try:
+                    timeseries_id = self.max_timeseries_id(alias.name)
+                    M = alias.sign * self._timeseries_import.get(timeseries_id, ensemble_member=0)[
+                        self._timeseries_import.forecast_index:]
+                    logger.debug("Read upper bound for variable {} from {}".format(
+                        variable.getName(), timeseries_id))
+                except KeyError:
+                    pass
+
+                if m != None and M != None:
+                    break
+
+            # Replace NaN with +/- inf, and create Timeseries objects
+            if m != None:
+                m[np.isnan(m)] = np.finfo(m.dtype).min
+                m = Timeseries(self._timeseries_import_times[
+                               self._timeseries_import.forecast_index:], m)
+            if M != None:
+                M[np.isnan(M)] = np.finfo(M.dtype).max
+                M = Timeseries(self._timeseries_import_times[
+                               self._timeseries_import.forecast_index:], M)
+
+            # Store
+            if m != None or M != None:
+                self._pi_bounds[variable.getName()] = (m, M)
+
     def times(self, variable=None):
         return self._timeseries_import_times[self._timeseries_import.forecast_index:]
 
@@ -190,44 +230,6 @@ class PIMixin(OptimizationProblem):
         # Call parent class first for default values.
         bounds = super(PIMixin, self).bounds()
 
-        # Load bounds from timeseries
-        for variable in self.dae_variables['free_variables']:
-            m, M = None, None
-            for alias in self.variable_aliases(variable.getName()):
-                try:
-                    timeseries_id = self.min_timeseries_id(alias.name)
-                    m = alias.sign * self._timeseries_import.get(timeseries_id, ensemble_member=0)[
-                        self._timeseries_import.forecast_index:]
-                    logger.debug("Read lower bound for variable {} from {}".format(
-                        variable.getName(), timeseries_id))
-                except KeyError:
-                    pass
-
-                try:
-                    timeseries_id = self.max_timeseries_id(alias.name)
-                    M = alias.sign * self._timeseries_import.get(timeseries_id, ensemble_member=0)[
-                        self._timeseries_import.forecast_index:]
-                    logger.debug("Read upper bound for variable {} from {}".format(
-                        variable.getName(), timeseries_id))
-                except KeyError:
-                    pass
-
-                if m != None and M != None:
-                    break
-
-            # Replace NaN with +/- inf, and create Timeseries objects
-            if m != None:
-                m[np.isnan(m)] = np.finfo(m.dtype).min
-                m = Timeseries(self._timeseries_import_times[
-                               self._timeseries_import.forecast_index:], m)
-            if M != None:
-                M[np.isnan(M)] = np.finfo(M.dtype).max
-                M = Timeseries(self._timeseries_import_times[
-                               self._timeseries_import.forecast_index:], M)
-
-            # Store
-            if m != None or M != None:
-                bounds[variable.getName()] = (m, M)
         return bounds
 
     def history(self, ensemble_member):

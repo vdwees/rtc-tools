@@ -301,6 +301,7 @@ class GoalProgrammingMixin(OptimizationProblem):
     def path_variables(self):
         return self._subproblem_path_epsilons + [variable for (variable, value) in self._subproblem_path_timeseries]
 
+    # TODO: Reduce the amount of processing here.
     def bounds(self):
         bounds = super(GoalProgrammingMixin, self).bounds()
         for epsilon in self._subproblem_epsilons + self._subproblem_path_epsilons:

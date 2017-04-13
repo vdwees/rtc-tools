@@ -151,6 +151,48 @@ class ModelicaMixin(OptimizationProblem):
         # Call parent class first for default behaviour.
         super(ModelicaMixin, self).__init__(**kwargs)
 
+    def pre(self):
+        # Call parent class first for default behaviour.
+        super(ModelicaMixin, self).pre()
+
+        # Load additional bounds from model
+        # If a bound contains a parameter, we assume this parameter to be equal for all ensemble
+        # members.
+        self._modelica_bounds = {}
+
+        parameters = self.parameters(0)
+        parameter_values = [None] * len(self.dae_variables['parameters'])
+        values = []
+        for i, symbol in enumerate(self.dae_variables['parameters']):
+            found = False
+            for alias in self.variable_aliases(symbol.getName()):
+                if alias.name in parameters:
+                    parameter_values[i] = alias.sign * parameters[alias.name]
+                    found = True
+                    break
+            if not found:
+                raise Exception("No value specified for parameter {}".format(symbol.getName()))
+        parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
+
+        for variable in self._mx['states'] + self._mx['algebraics'] + self._mx['control_inputs']:
+            variable = variable.getName()
+            var = self._jm_model.getVariable(variable)
+            if var.getType() == var.BOOLEAN:
+                m, M = 0, 1
+            else:
+                m, M = None, None
+            if var.hasAttributeSet('min'):
+                [m] = substitute([var.getAttribute('min')], self.dae_variables['parameters'], parameter_values)
+                m = float(m)
+                if np.isnan(m):
+                    m = -np.inf
+            if var.hasAttributeSet('max'):
+                [M] = substitute([var.getAttribute('max')], self.dae_variables['parameters'], parameter_values)
+                M = float(M)
+                if np.isnan(M):
+                    M = np.inf
+            self._modelica_bounds[variable] = (m, M)
+
     def compiler_options(self):
         """
         Subclasses can configure the `JModelica.org <http://www.jmodelica.org/>`_ compiler options here.
@@ -252,43 +294,7 @@ class ModelicaMixin(OptimizationProblem):
     def bounds(self):
         # Call parent class first for default values.
         bounds = super(ModelicaMixin, self).bounds()
-
-        # Load additional bounds from model
-        # If a bound contains a parameter, we assume this parameter to be equal for all ensemble
-        # members.
-        parameters = self.parameters(0)        
-        parameter_values = [None] * len(self.dae_variables['parameters'])
-        values = []
-        for i, symbol in enumerate(self.dae_variables['parameters']):
-            found = False
-            for alias in self.variable_aliases(symbol.getName()):
-                if alias.name in parameters:
-                    parameter_values[i] = alias.sign * parameters[alias.name]
-                    found = True
-                    break
-            if not found:
-                raise Exception("No value specified for parameter {}".format(symbol.getName()))
-        parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
-
-        for variable in self._mx['states'] + self._mx['algebraics'] + self._mx['control_inputs']:
-            variable = variable.getName()
-            var = self._jm_model.getVariable(variable)
-            if var.getType() == var.BOOLEAN:
-                m, M = 0, 1
-            else:
-                m, M = None, None
-            if var.hasAttributeSet('min'):
-                [m] = substitute([var.getAttribute('min')], self.dae_variables['parameters'], parameter_values)
-                m = float(m)
-                if np.isnan(m):
-                    m = -np.inf
-            if var.hasAttributeSet('max'):
-                [M] = substitute([var.getAttribute('max')], self.dae_variables['parameters'], parameter_values)
-                M = float(M)
-                if np.isnan(M):
-                    M = np.inf
-            bounds[variable] = (m, M)
-
+        bounds.update(self._modelica_bounds)
         return bounds
 
     def variable_is_discrete(self, variable):
