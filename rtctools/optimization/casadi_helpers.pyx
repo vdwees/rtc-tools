@@ -1,37 +1,13 @@
-from casadi import MX, MXFunction, SXFunction, jacobian, vertcat, reshape, mul, IMatrix, sumCols, substitute
+from casadi import MX, MXFunction, jacobian, vertcat, reshape, mul, substitute
 import numpy as np
 import logging
 
 logger = logging.getLogger("rtctools")
 
 
-# Borrowed from
-# https://gist.github.com/jgillis/5aebf6b09ada29355418783e8f60e8ef
-def classify_linear(e, v):
-    """
-    Takes vector expression e, and symbolic primitives v
-    Returns classification vector
-    For each element in e, determines if:
-      - element is nonlinear in v               (2)
-      - element is    linear in v               (1)
-      - element does not depend on v at all     (0)
-
-    This method can be sped up a lot with JacSparsityTraits::sp
-    """
-
-    try:
-        f = SXFunction("f", [v], [jacobian(e, v)])
-    except:
-        f = MXFunction("f", [v], [jacobian(e, v)])
-    ret = list(sumCols(IMatrix(f.outputSparsity(0), 1)) > 0)
-    pattern = IMatrix(f.jacSparsity(0, 0), 1).reshape((e.shape[0], -1))
-    if pattern.isscalar() and pattern.size() == 0:
-        s2 = pattern
-    else:
-        s2 = sumCols(pattern)
-    for k in s2.row():
-        ret[k] = 2
-    return ret
+def is_affine(e, v):
+    f = MXFunction("f", [v], [jacobian(e, v)])
+    return (f.jacSparsity(0, 0).nnz() == 0)
 
 
 def nullvertcat(L):

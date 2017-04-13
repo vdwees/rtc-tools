@@ -192,7 +192,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Insert lookup tables.  No support yet for different lookup tables per ensemble member.
         lookup_tables = self.lookup_tables(0)
         inserted_lookup_tables = set()
-        
+
         for sym in self.dae_variables['lookup_tables']:
             found = False
             sym_key = None
@@ -325,7 +325,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Aggregate ensemble data
         ensemble_aggregate = {}
         ensemble_aggregate["parameters"] = horzcat([nullvertcat(l) for l in ensemble_parameter_values])
-        ensemble_aggregate["initial_constant_inputs"] = horzcat([nullvertcat([float(d["constant_inputs"][variable.getName()][0]) 
+        ensemble_aggregate["initial_constant_inputs"] = horzcat([nullvertcat([float(d["constant_inputs"][variable.getName()][0])
             for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
         ensemble_aggregate["initial_state"] = horzcat([d["initial_state"] for d in ensemble_store])
         ensemble_aggregate["initial_state"] = reduce_matvec(ensemble_aggregate["initial_state"], self.solver_input)
@@ -357,15 +357,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         self._affine_collocation_constraints = True
         if self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
             # Check linearity of collocation constraints, which is a necessary condition for the optimization problem to be convex
-            classification = classify_linear(dae_residual_collocated, vertcat(
-                collocated_variables + integrated_variables + collocated_derivatives + integrated_derivatives))
-            for j in range(len(classification)):
-                # TODO detect conditionals!
-                if classification[j] == 2:
-                    self._affine_collocation_constraints = False
+            if not is_affine(dae_residual_collocated, vertcat(
+                collocated_variables + integrated_variables + collocated_derivatives + integrated_derivatives)):
+                  self._affine_collocation_constraints = False
 
-                    logger.warning(
-                        "The DAE equation {} is non-linear.  The optimization problem is not convex.  This will, in general, result in the existence of multiple local optima and trouble finding a feasible initial solution.".format(dae_residual_collocated[j]))
+                  logger.warning(
+                      "The DAE residual containts equations that are not affine.  There is therefore no guarantee that the optimization problem is convex.  This will, in general, result in the existence of multiple local optima and trouble finding a feasible initial solution.")
 
         # Transcribe DAE using theta method collocation
         f = []
@@ -692,7 +689,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             # Construct matrix using O(states) CasADi operations
             # This is faster than using blockcat, presumably because of the
             # row-wise scaling operations.
-            logger.info("Aggregating and de-scaling variables")     
+            logger.info("Aggregating and de-scaling variables")
 
             accumulation_U = transpose(horzcat(accumulation_U))
 
@@ -803,7 +800,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             # Objective
             f_member = self.objective(ensemble_member)
             if path_objective.size1() > 0:
-                initial_path_objective = path_objective_function([parameters, 
+                initial_path_objective = path_objective_function([parameters,
                                                                   vertcat([initial_state
                                                                               , initial_derivatives
                                                                               , initial_constant_inputs,
@@ -828,7 +825,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             lbg_constraint = [lb for (f_constraint, lb, ub) in constraints]
             lbg.extend(lbg_constraint)
-            
+
             ubg_constraint = [ub for (f_constraint, lb, ub) in constraints]
             ubg.extend(ubg_constraint)
 
