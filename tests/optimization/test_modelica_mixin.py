@@ -25,10 +25,6 @@ class TestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
         # Collocation points
         return np.linspace(0.0, 1.0, 21)
 
-    def pre(self):
-        # Do nothing
-        pass
-
     def delayed_feedback(self):
         # Delayed feedback
         return [('x', 'x_delayed', 0.1)]

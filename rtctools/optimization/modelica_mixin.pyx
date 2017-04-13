@@ -148,6 +148,8 @@ class ModelicaMixin(OptimizationProblem):
                 logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
                     var.getName(), self._nominals[var.getName()]))
 
+        self._modelica_bounds = {}
+
         # Call parent class first for default behaviour.
         super(ModelicaMixin, self).__init__(**kwargs)
 
@@ -158,8 +160,6 @@ class ModelicaMixin(OptimizationProblem):
         # Load additional bounds from model
         # If a bound contains a parameter, we assume this parameter to be equal for all ensemble
         # members.
-        self._modelica_bounds = {}
-
         parameters = self.parameters(0)
         parameter_values = [None] * len(self.dae_variables['parameters'])
         values = []
