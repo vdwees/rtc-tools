@@ -64,10 +64,6 @@ class PIMixin(OptimizationProblem):
         # Call parent class first for default behaviour.
         super(PIMixin, self).__init__(**kwargs)
 
-    def pre(self):
-        # Call parent class first for default behaviour.
-        super(PIMixin, self).pre()
-
         # rtcParameterConfig
         self._parameter_config = []
         try:
@@ -119,6 +115,10 @@ class PIMixin(OptimizationProblem):
                     if self._timeseries_import_times[i + 1] - self._timeseries_import_times[i] != dt:
                         raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
                             self._timeseries_import.times[i + 1]))
+
+    def pre(self):
+        # Call parent class first for default behaviour.
+        super(PIMixin, self).pre()
 
         # Load bounds from timeseries
         self._pi_bounds = {}

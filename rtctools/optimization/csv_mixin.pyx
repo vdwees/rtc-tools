@@ -59,10 +59,6 @@ class CSVMixin(OptimizationProblem):
         # Call parent class first for default behaviour.
         super(CSVMixin, self).__init__(**kwargs)
 
-    def pre(self):
-        # Call parent class first for default behaviour.
-        super(CSVMixin, self).pre()
-
         # Helper function to check if initiale state array actually defines
         # only the initial state
         def check_initial_state_array(initial_state):
@@ -158,6 +154,11 @@ class CSVMixin(OptimizationProblem):
                     if self._timeseries_times_sec[i + 1] - self._timeseries_times_sec[i] != dt:
                         raise Exception('CSVMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set equidistant=False if this is intended.'.format(
                             self._timeseries_times[i + 1]))
+
+
+    def pre(self):
+        # Call parent class first for default behaviour.
+        super(CSVMixin, self).pre()
 
         # Load bounds from timeseries
         self._csv_bounds = {}
