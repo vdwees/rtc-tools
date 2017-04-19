@@ -1,9 +1,10 @@
 # cython: embedsignature=True
 
-from casadi import MX, substitute, repmat
+from casadi import MX, substitute, repmat, vertcat
 import numpy as np
 import logging
 import pyjmi
+import sets
 import os
 
 from timeseries import Timeseries
@@ -148,8 +149,135 @@ class ModelicaMixin(OptimizationProblem):
                 logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
                     var.getName(), self._nominals[var.getName()]))
 
+        # Now condense equations
+        self._condense_dae()
+
         # Call parent class first for default behaviour.
         super(ModelicaMixin, self).__init__(**kwargs)
+
+    def _condense_dae(self):
+        # This function condenses the DAE in such a way that unnecessary states are eliminated.
+
+        logger.debug("ModelicaMixin: Condensing DAE")
+
+        # An algebraic variable becomes a constraint residual candidate if it A) has numerical bounds and B) internal causality.
+        # An algebraic variable is marked as private if it A) is unbounded, B) has internal causality, and C) starts with an underscore ('_').
+        constraint_residual_candidates = []
+        private_variables = []
+        for var in self._jm_model.getVariables(self._jm_model.REAL_ALGEBRAIC):
+            sym = var.getVar()
+            if var.getCausality() == var.INTERNAL:
+                m, M = None, None
+                if var.hasAttributeSet('min'):
+                    m = var.getAttribute('min')
+                if var.hasAttributeSet('max'):
+                    M = var.getAttribute('max')
+                if m is not None or M is not None:
+                    logger.debug("ModelicaMixin: Marking {} as a potential constraint residual.".format(sym.getName()))
+
+                    if m is not None and m.isConstant() and M is not None and M.isConstant():
+                        constraint_residual_candidates.append((sym, float(m), float(M)))
+                    else:
+                        if m is not None:
+                            if m.isConstant():
+                                constraint_residual_candidates.append((sym, float(m), np.inf))
+                            else:
+                                constraint_residual_candidates.append((sym - m, 0.0, np.inf))
+                        if M is not None:
+                            if M.isConstant():
+                                constraint_residual_candidates.append((sym, -np.inf, float(M)))
+                            else:
+                                constraint_residual_candidates.append((sym - M, -np.inf, 0.0))
+                else:
+                    name = sym.getName()
+                    if name.startswith('_'):
+                        logger.debug("ModelicaMixin: Marking {} as a private variable to be eliminated.".format(name))
+
+                        private_variables.append(name)
+
+        # Eliminate equations of the form x = y or z = f(x), where z is a private variable.
+        dae = []
+        dae_eq = []
+        substitutions = {}
+        algebraics_names = [sym.getName() for sym in self._mx['algebraics']]
+        for eq in self._jm_model.getDaeEquations():
+            lhs, rhs = eq.getLhs(), eq.getRhs()
+            skip = False
+
+            # This is an equation of the form x = y.  Create an alias, and substitute one with the other.
+            if not skip:
+                if lhs.isSymbolic() and rhs.isSymbolic():
+                    if rhs.getName() in algebraics_names:
+                        logger.debug("ModelicaMixin: Aliased {} to {}".format(rhs.getName(), lhs.getName()))
+                        self.variable_aliases(lhs.getName()).extend(self.variable_aliases(rhs.getName()))
+                        substitutions[rhs] = lhs
+                        skip = True
+                    elif lhs.getName() in algebraics_names:
+                        logger.debug("ModelicaMixin: Aliased {} to {}".format(lhs.getName(), rhs.getName()))
+                        self.variable_aliases(rhs.getName()).extend(self.variable_aliases(lhs.getName()))
+                        substitutions[lhs] = rhs
+                        skip = True
+
+            # Look for equations of the form z = f(x), where z is a private variable.
+            if not skip:
+                if lhs.isSymbolic() and lhs.getName() in private_variables:
+                    substitutions[lhs] = rhs
+                    skip = True
+                elif rhs.isSymbolic() and rhs.getName() in private_variables:
+                    substitutions[rhs] = lhs
+                    skip = True
+
+            # Add equation, if it is not to be skipped.
+            if skip:
+                logger.debug("ModelicaMixin: Eliminating equation {} = {}".format(lhs, rhs))
+            else:
+                dae.append(lhs - rhs)
+                dae_eq.append(eq)
+
+        # Substitute eliminated variables z with f(x) in rest of DAE.
+        logger.debug("ModelicaMixin: Substituting {} with {}".format(substitutions.keys(), substitutions.values()))
+
+        self._mx['algebraics'] = list(sets.Set(self._mx['algebraics']) - sets.Set(substitutions.keys()))
+
+        dae = substitute(dae, substitutions.keys(), substitutions.values())
+
+        # Add path constraints for bounded, orphan algebraic residuals.
+        self._path_constraints = []
+        for constraint_residual_candidate in constraint_residual_candidates:
+            matches = 0
+            constraint_function = None
+            constraint_eq = None
+            for eq in dae_eq:
+                lhs, rhs = eq.getLhs(), eq.getRhs()
+                if lhs.isSymbolic() and (lhs.getName() == constraint_residual_candidate[0].getName()):
+                    constraint_function = rhs
+                    constraint_eq = eq
+                    matches += 1
+                if rhs.isSymbolic() and (rhs.getName() == constraint_residual_candidate[0].getName()):
+                    constraint_function = lhs
+                    constraint_eq = eq
+                    matches += 1
+                if matches > 1:
+                    break
+            if matches == 1:
+                if constraint_function is not None:
+                    # Remove from DAE
+                    index = dae_eq.index(constraint_eq)
+                    del dae[index]
+                    del dae_eq[index]
+                    self._mx['algebraics'].remove(constraint_residual_candidate[0])
+
+                    # Add to constraints
+                    constraint = (constraint_function, constraint_residual_candidate[1], constraint_residual_candidate[2])
+                    logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
+                    self._path_constraints.append(constraint)
+
+        # Store condensed DAE residual
+        self._dae_residual = vertcat(dae)
+
+        # Store condensed initial residual
+        initial_residual = self._jm_model.getInitialResidual()
+        [self._initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
 
     def compiler_options(self):
         """
@@ -189,8 +317,7 @@ class ModelicaMixin(OptimizationProblem):
 
     @property
     def dae_residual(self):
-        # Extract the DAE residual
-        return self._jm_model.getDaeResidual()
+        return self._dae_residual
 
     @property
     def dae_variables(self):
@@ -246,8 +373,7 @@ class ModelicaMixin(OptimizationProblem):
 
     @property
     def initial_residual(self):
-        # Extract the initial residual
-        return self._jm_model.getInitialResidual()
+        return self._initial_residual
 
     def bounds(self):
         # Call parent class first for default values.
@@ -297,6 +423,11 @@ class ModelicaMixin(OptimizationProblem):
             return False
         else:
             return (var.getVariability() == var.DISCRETE)
+
+    def path_constraints(self, ensemble_member):
+        path_constraints = super(ModelicaMixin, self).path_constraints(ensemble_member)
+        path_constraints.extend(self._path_constraints)
+        return path_constraints
 
     def variable_aliases(self, variable):
         try:
