@@ -209,12 +209,12 @@ class ModelicaMixin(OptimizationProblem):
                 if lhs.isSymbolic() and rhs.isSymbolic():
                     if rhs.getName() in algebraics_names:
                         logger.debug("ModelicaMixin: Aliased {} to {}".format(rhs.getName(), lhs.getName()))
-                        self.variable_aliases(lhs.getName()).extend(self.variable_aliases(rhs.getName()))
+                        self._aliases[lhs.getName()] = self.variable_aliases(lhs.getName()) + self.variable_aliases(rhs.getName())
                         substitutions[rhs] = lhs
                         skip = True
                     elif lhs.getName() in algebraics_names:
                         logger.debug("ModelicaMixin: Aliased {} to {}".format(lhs.getName(), rhs.getName()))
-                        self.variable_aliases(rhs.getName()).extend(self.variable_aliases(lhs.getName()))
+                        self._aliases[rhs.getName()] = self.variable_aliases(rhs.getName()) + self.variable_aliases(lhs.getName())
                         substitutions[lhs] = rhs
                         skip = True
 
