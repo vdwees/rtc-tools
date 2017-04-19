@@ -350,7 +350,7 @@ class GoalProgrammingMixin(OptimizationProblem):
             return MX(0)
 
     def constraints(self, ensemble_member):
-        constraints = []
+        constraints = super(GoalProgrammingMixin, self).constraints(ensemble_member)
         for l in self._subproblem_constraints[ensemble_member].values():
             constraints.extend(map(lambda constraint: (
                 constraint.function(self), constraint.min, constraint.max), l))
@@ -361,7 +361,7 @@ class GoalProgrammingMixin(OptimizationProblem):
         return constraints
 
     def path_constraints(self, ensemble_member):
-        path_constraints = []
+        path_constraints = super(GoalProgrammingMixin, self).path_constraints(ensemble_member)
         for l in self._subproblem_path_constraints[ensemble_member].values():
             path_constraints.extend(map(lambda constraint: (
                 constraint.function(self), constraint.min, constraint.max), l))
@@ -383,7 +383,7 @@ class GoalProgrammingMixin(OptimizationProblem):
             options['mu_strategy'] = 'monotone'
             options['gather_stats'] = True
             if not self._first_run:
-                options['mu_init'] = self.nlp_solver.getStat('iterations')[
+                options['mu_init'] = self.solver_stats['iterations'][
                     'mu'][-1]
 
         # Done
