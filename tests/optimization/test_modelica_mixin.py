@@ -35,7 +35,7 @@ class TestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def constant_inputs(self, ensemble_member):
         # Constant inputs
-        return {'constant_input': Timeseries(self.times(), np.linspace(1.0, 0.0, 21))}
+        return {'constant_input': Timeseries(self.times(), 1 - self.times())}
 
     def seed(self, ensemble_member):
         # No particular seeding
@@ -221,8 +221,6 @@ class TestModelicaMixin(TestCase):
         self.assertAlmostGreaterThan(self.results['u'], -2, self.tolerance)
         self.assertAlmostLessThan(self.results['u'], 2, self.tolerance)
 
-    # Pipethrough of constant data is currently not supported.
-    @expectedFailure
     def test_constant_input(self):
         verify = np.linspace(1.0, 0.0, 21)
         self.assertAlmostEqual(
