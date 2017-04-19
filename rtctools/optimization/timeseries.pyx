@@ -16,7 +16,7 @@ class Timeseries(object):
         :param values: Iterable of values.
         """
         self._times = times
-        self._values = np.copy(values)
+        self._values = np.array(values, dtype=np.float64, copy=True)
 
     @property
     def times(self):
