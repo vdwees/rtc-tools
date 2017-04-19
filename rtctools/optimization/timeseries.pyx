@@ -16,7 +16,12 @@ class Timeseries(object):
         :param values: Iterable of values.
         """
         self._times = times
-        self._values = np.array(values, dtype=np.float64, copy=True)
+        if len(values) == 1:
+            values = values[0]
+        if hasattr(values, '__iter__'):
+            self._values = np.array(values, dtype=np.float64, copy=True)
+        else:
+            self._values = np.full_like(times, values, dtype=np.float64)
 
     @property
     def times(self):

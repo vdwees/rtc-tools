@@ -317,13 +317,8 @@ class GoalProgrammingMixin(OptimizationProblem):
         else:
             # Seed with previous results
             seed = {}
-            epsilons = set(map(lambda sym: sym.getName(
-            ), self._subproblem_epsilons + self._subproblem_path_epsilons))
-            for key in self._results[ensemble_member].keys():
-                if key in epsilons:
-                    continue  # Don't seed epsilon values.
-                seed[key] = Timeseries(self.times(key), self._results[
-                                       ensemble_member][key])
+            for key, result in self._results[ensemble_member].iteritems():
+                seed[key] = Timeseries(self.times(key), result)
 
         # Seed epsilons
         for epsilon in self._subproblem_epsilons:
