@@ -1282,6 +1282,20 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     if alias.name != variable:
                         results[alias.name] = alias.sign * results[variable]
 
+        # Extract constant input aliases
+        constant_inputs = self.constant_inputs(ensemble_member)
+        for variable in self.dae_variables['constant_inputs']:
+            variable = variable.getName()
+            constant_input = None
+            for alias in self.variable_aliases(variable):
+                if alias.name in constant_inputs:
+                    constant_input = constant_inputs[alias.name]
+                    break
+            if constant_input is not None:
+                for alias in self.variable_aliases(variable):
+                    if alias.name != variable:
+                        results[alias.name] = alias.sign * np.interp(self.times(alias.name), constant_input.times, constant_input.values)
+
         # Extract path variables
         n_collocation_times = len(self.times())
         for variable in self.path_variables:
