@@ -175,19 +175,7 @@ class ModelicaMixin(OptimizationProblem):
                 if m is not None or M is not None:
                     logger.debug("ModelicaMixin: Marking {} as a potential constraint residual.".format(sym.getName()))
 
-                    if m is not None and m.isConstant() and M is not None and M.isConstant():
-                        constraint_residual_candidates.append((sym, float(m), float(M)))
-                    else:
-                        if m is not None:
-                            if m.isConstant():
-                                constraint_residual_candidates.append((sym, float(m), np.inf))
-                            else:
-                                constraint_residual_candidates.append((sym - m, 0.0, np.inf))
-                        if M is not None:
-                            if M.isConstant():
-                                constraint_residual_candidates.append((sym, -np.inf, float(M)))
-                            else:
-                                constraint_residual_candidates.append((sym - M, -np.inf, 0.0))
+                    constraint_residual_candidates.append((sym, m, M))
                 else:
                     name = sym.getName()
                     if name.startswith('_'):
@@ -249,14 +237,16 @@ class ModelicaMixin(OptimizationProblem):
             constraint_eq = None
             for eq in dae_eq:
                 lhs, rhs = eq.getLhs(), eq.getRhs()
-                if lhs.isSymbolic() and (lhs.getName() == constraint_residual_candidate[0].getName()):
-                    constraint_function = rhs
-                    constraint_eq = eq
-                    matches += 1
-                if rhs.isSymbolic() and (rhs.getName() == constraint_residual_candidate[0].getName()):
-                    constraint_function = lhs
-                    constraint_eq = eq
-                    matches += 1
+                if lhs.isSymbolic():
+                    if lhs.getName() == constraint_residual_candidate[0].getName():
+                        constraint_function = rhs
+                        constraint_eq = eq
+                        matches += 1
+                if rhs.isSymbolic():
+                    if rhs.getName() == constraint_residual_candidate[0].getName():
+                        constraint_function = lhs
+                        constraint_eq = eq
+                        matches += 1
                 if matches > 1:
                     break
             if matches == 1:
@@ -268,9 +258,34 @@ class ModelicaMixin(OptimizationProblem):
                     self._mx['algebraics'].remove(constraint_residual_candidate[0])
 
                     # Add to constraints
-                    constraint = (constraint_function, constraint_residual_candidate[1], constraint_residual_candidate[2])
-                    logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
-                    self._path_constraints.append(constraint)
+                    m, M = constraint_residual_candidate[1], constraint_residual_candidate[2]
+                    if m is None:
+                        m = -np.inf
+                    elif m.isConstant():
+                        m = float(m)
+                    else:
+                        m_symbolic = True
+                    if M is None:
+                        M = np.inf
+                    elif M.isConstant():
+                        M = float(M)
+                    else:
+                        M_symbolic = True
+
+                    if not m_symbolic and not M_symbolic:
+                        constraint = (constraint_function, m, M)
+                        logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
+                        self._path_constraints.append(constraint)
+                    else:
+                        if m_symbolic or np.isfinite(m):
+                            constraint = (constraint_function - m, 0.0, np.inf)
+                            logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
+                            self._path_constraints.append(constraint)
+
+                        if M_symbolic or np.isfinite(M):
+                            constraint = (constraint_function - M, -np.inf, 0.0)
+                            logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
+                            self._path_constraints.append(constraint)
 
         # Store condensed DAE residual
         self._dae_residual = vertcat(dae)
