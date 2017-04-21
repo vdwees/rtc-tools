@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, substitute, repmat, vertcat
+from casadi import MX, substitute, repmat, vertcat, dependsOn
 import numpy as np
 import logging
 import pyjmi
@@ -227,7 +227,10 @@ class ModelicaMixin(OptimizationProblem):
 
         self._mx['algebraics'] = list(sets.Set(self._mx['algebraics']) - sets.Set(substitutions.keys()))
 
-        dae = substitute(dae, substitutions.keys(), substitutions.values())
+        dae = vertcat(dae)
+        [dae] = substitute([dae], substitutions.keys(), substitutions.values())
+        while dependsOn(dae, vertcat(substitutions.keys())):
+            [dae] = substitute([dae], substitutions.keys(), substitutions.values())
 
         # Add path constraints for bounded, orphan algebraic residuals.
         self._path_constraints = []
@@ -288,7 +291,7 @@ class ModelicaMixin(OptimizationProblem):
                             self._path_constraints.append(constraint)
 
         # Store condensed DAE residual
-        self._dae_residual = vertcat(dae)
+        self._dae_residual = dae
 
         # Store condensed initial residual
         initial_residual = self._jm_model.getInitialResidual()
