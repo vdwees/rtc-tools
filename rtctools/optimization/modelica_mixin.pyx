@@ -178,7 +178,7 @@ class ModelicaMixin(OptimizationProblem):
                     constraint_residual_candidates.append((sym, m, M))
                 else:
                     name = sym.getName()
-                    if name.startswith('_') or ('._' in name): # or name.startswith('temp_'):
+                    if name.startswith('_') or ('._' in name):
                         logger.debug("ModelicaMixin: Marking {} as a private variable to be eliminated.".format(name))
 
                         private_variables.append(name)
@@ -310,6 +310,9 @@ class ModelicaMixin(OptimizationProblem):
         # Don't automatically add initial equations.  The user generally provides initial conditions
         # through CSV or PI input files.
         compiler_options['automatic_add_initial_equations'] = False
+
+        # Inline all functions by default.
+        compiler_options['inline_functions'] = 'all'
 
         # We scale the model ourselves.
         compiler_options['enable_variable_scaling'] = False
