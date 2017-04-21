@@ -227,10 +227,17 @@ class ModelicaMixin(OptimizationProblem):
 
         self._mx['algebraics'] = list(sets.Set(self._mx['algebraics']) - sets.Set(substitutions.keys()))
 
-        dae = vertcat(dae)
-        [dae] = substitute([dae], substitutions.keys(), substitutions.values())
-        while dependsOn(dae, vertcat(substitutions.keys())):
-            [dae] = substitute([dae], substitutions.keys(), substitutions.values())
+        dae_residual = vertcat(dae)
+        [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
+        while dependsOn(dae_residual, vertcat(substitutions.keys())):
+            [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
+        self._dae_residual = dae_residual
+
+        initial_residual = self._jm_model.getInitialResidual()
+        [initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
+        while dependsOn(initial_residual, vertcat(substitutions.keys())):
+            [initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
+        self._initial_residual = initial_residual
 
         # Add path constraints for bounded, orphan algebraic residuals.
         self._path_constraints = []
@@ -288,14 +295,7 @@ class ModelicaMixin(OptimizationProblem):
                         if M_symbolic or np.isfinite(M):
                             constraint = (constraint_function - M, -np.inf, 0.0)
                             logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
-                            self._path_constraints.append(constraint)
-
-        # Store condensed DAE residual
-        self._dae_residual = dae
-
-        # Store condensed initial residual
-        initial_residual = self._jm_model.getInitialResidual()
-        [self._initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
+                            self._path_constraints.append(constraint)        
 
     def compiler_options(self):
         """
