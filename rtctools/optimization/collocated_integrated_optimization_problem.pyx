@@ -1565,21 +1565,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             history_and_times = times
 
         # Collect time stamps and states, "knots".
-        t = []
-        x = []
-        t.append(t0)
-        x.append(self.state_at(variable, t0, ensemble_member=ensemble_member))
-        for point in history_and_times:
-            if point > t0 and point < tf:
-                t.append(point)
-                x.append(self.state_at(variable, point,
-                                       ensemble_member=ensemble_member))
-            if point >= tf:
-                break
-        if t0 != tf:
-            t.append(tf)
-            x.append(self.state_at(variable, tf,
-                                   ensemble_member=ensemble_member))
+        t = ([t0] +
+             list(history_and_times[np.logical_and(history_and_times > t0, history_and_times < tf)]) +
+             [tf] if t0 != tf else [])
+        x = [self.state_at(variable, ti, ensemble_member=ensemble_member) for ti in t]
+
         t = vertcat(t)
         x = vertcat(x)
 
