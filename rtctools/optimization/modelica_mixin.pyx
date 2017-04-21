@@ -178,7 +178,7 @@ class ModelicaMixin(OptimizationProblem):
                     constraint_residual_candidates.append((sym, m, M))
                 else:
                     name = sym.getName()
-                    if name.startswith('_') or ('._' in name) or name.startswith('temp_'):
+                    if name.startswith('_') or ('._' in name): # or name.startswith('temp_'):
                         logger.debug("ModelicaMixin: Marking {} as a private variable to be eliminated.".format(name))
 
                         private_variables.append(name)
