@@ -85,10 +85,9 @@ class CSVMixin(OptimizationProblem):
             for ensemble_member_name in self._ensemble['name']:
                 _timeseries = csv.load(os.path.join(self._input_folder, ensemble_member_name,
                                                     'timeseries_import.csv'), delimiter=self.csv_delimiter, with_time=True)
-                # Makes slices of the original matrix, and refer to them in a
-                # dict.
+                self._timeseries_times = _timeseries[_timeseries.dtype.names[0]]
                 self._timeseries.append(
-                    {key: _timeseries[key] for key in _timeseries.dtype.names})
+                    {key: _timeseries[key] for key in _timeseries.dtype.names[1:]})
             logger.debug("CSVMixin: Read timeseries")
 
             for ensemble_member_name in self._ensemble['name']:
@@ -112,9 +111,9 @@ class CSVMixin(OptimizationProblem):
         else:
             _timeseries = csv.load(os.path.join(
                 self._input_folder, 'timeseries_import.csv'), delimiter=self.csv_delimiter, with_time=True)
-            # Makes slices of the original matrix, and refer to them in a dict.
+            self._timeseries_times = _timeseries[_timeseries.dtype.names[0]]
             self._timeseries.append(
-                {key: _timeseries[key] for key in _timeseries.dtype.names})
+                {key: _timeseries[key] for key in _timeseries.dtype.names[1:]})
             logger.debug("CSVMixin: Read timeseries.")
 
             try:
@@ -134,11 +133,6 @@ class CSVMixin(OptimizationProblem):
                 _initial_state = {}
             self._initial_state.append(_initial_state)
 
-        # Use [_timeseries.dtype.names[0]] instead of [self._timeseries[0].keys()[0]],
-        # because of slicing, the order of the keys is not necessarily the same
-        # as the order of the original header.
-        self._timeseries_times = self._timeseries[
-            0][_timeseries.dtype.names[0]]
         self._timeseries_times_sec = self._datetime_to_sec(
             self._timeseries_times)
 
