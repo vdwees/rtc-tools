@@ -265,27 +265,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             ensemble_data["initial_derivatives"] = vertcat(initial_derivatives)
 
         # Replace parameters which are constant across the entire ensemble
-        ensemble_const_parameters = []
-        ensemble_const_parameter_values = []
-
-        ensemble_parameters = []
-        ensemble_parameter_values = [[] for i in range(self.ensemble_size)]
-
-        for i, parameter in enumerate(self.dae_variables['parameters']):
-            values = [ensemble_store[ensemble_member]["parameters"][i] for ensemble_member in range(self.ensemble_size)]
-            if False: #np.min(values) == np.max(values):
-                ensemble_const_parameters.append(parameter)
-                ensemble_const_parameter_values.append(values[0])
-            else:
-                ensemble_parameters.append(parameter)
-                for ensemble_member in range(self.ensemble_size):
-                    ensemble_parameter_values[ensemble_member].append(values[ensemble_member])
-
-        [dae_residual, initial_residual] = \
-            substitute([dae_residual, initial_residual],
-                ensemble_const_parameters, ensemble_const_parameter_values)
-
-        ensemble_parameters = vertcat(ensemble_parameters)
+        ensemble_parameters = vertcat(self.dae_variables['parameters'])
 
         # Aggregate ensemble data
         ensemble_aggregate = {}
