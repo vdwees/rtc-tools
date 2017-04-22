@@ -40,8 +40,10 @@ class TimestepRescalingMixin(OptimizationProblem):
         try:
             mro_list = [class_instance.__name__ for class_instance in type(self).mro()]
             assert(mro_list.index('PIMixin') > mro_list.index('TimestepRescalingMixin'))
+        except ValueError:
+            raise AssertionError('TimestepRescalingMixin requires PIMixin')
         except AssertionError:
-            raise AssertionError('TimestepRescalingMixin must be lower on the mro than PIMixin. Current mro is: \n{}'.format(', '.join(mro_list)))
+            raise AssertionError('TimestepRescalingMixin must be inherited before PIMixin. Current order is: \n{}'.format(', '.join(mro_list)))
 
 
     def pre(self):
