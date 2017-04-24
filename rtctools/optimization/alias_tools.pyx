@@ -19,6 +19,7 @@ class OrderedSet(collections.MutableSet):
         return key in self.map
 
     def __getitem__(self, index):
+        # Method added by JB
         if isinstance(index, slice):
             start, stop, stride = index.indices(len(self))
             return [self.__getitem__(i) for i in xrange(start, stop, stride)]
@@ -75,6 +76,7 @@ class OrderedSet(collections.MutableSet):
         if isinstance(other, OrderedSet):
             return len(self) == len(other) and list(self) == list(other)
         return set(self) == set(other)
+# End snippet
 
 
 class _AliasVariable:
