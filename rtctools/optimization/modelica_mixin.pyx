@@ -10,6 +10,7 @@ import os
 from timeseries import Timeseries
 from optimization_problem import OptimizationProblem, Alias
 from casadi_helpers import resolve_interdependencies
+from alias_tools import AliasRelation
 
 logger = logging.getLogger("rtctools")
 
@@ -184,60 +185,72 @@ class ModelicaMixin(OptimizationProblem):
                         private_variables.append(name)
 
         # Eliminate equations of the form x = y or z = f(x), where z is a private variable.
-        dae = []
-        dae_eq = []
-        substitutions = {}
+        rel = AliasRelation()
+        expr = {}
+        dae_eq_1pass = []
         algebraics_names = [sym.getName() for sym in self._mx['algebraics']]
         for eq in self._jm_model.getDaeEquations():
             lhs, rhs = eq.getLhs(), eq.getRhs()
             skip = False
 
-            # This is an equation of the form x = y.  Create an alias, and substitute one with the other.
-            if not skip:
-                if lhs.isSymbolic() and rhs.isSymbolic():
-                    if rhs.getName() in algebraics_names:
-                        logger.debug("ModelicaMixin: Aliased {} to {}".format(rhs.getName(), lhs.getName()))
-                        self._aliases[lhs.getName()] = self.variable_aliases(lhs.getName()) + self.variable_aliases(rhs.getName())
-                        substitutions[rhs] = lhs
-                        skip = True
-                    elif lhs.getName() in algebraics_names:
-                        logger.debug("ModelicaMixin: Aliased {} to {}".format(lhs.getName(), rhs.getName()))
-                        self._aliases[rhs.getName()] = self.variable_aliases(rhs.getName()) + self.variable_aliases(lhs.getName())
-                        substitutions[lhs] = rhs
-                        skip = True
+            if lhs.isSymbolic():
+                lhs_name = lhs.getName()
+                expr[lhs_name] = lhs
+            if rhs.isSymbolic():
+                rhs_name = rhs.getName()
+                expr[rhs_name] = rhs
 
-            # Look for equations of the form z = f(x), where z is a private variable.
-            if not skip:
-                if lhs.isSymbolic() and lhs.getName() in private_variables:
-                    substitutions[lhs] = rhs
+            # This is an equation of the form x = y.  Create an alias, and substitute one with the other.
+            if lhs.isSymbolic() and rhs.isSymbolic():
+                if lhs_name in algebraics_names:
+                    logger.debug("ModelicaMixin: Aliased {} to {}".format(lhs_name, rhs_name))
+                    # We may alias multiple variables to the same variable, or alias the same variable to multiple variables.  
+                    # We handle these cases using an AliasRelation.  The first variable to an alias relation becomes
+                    # the canonical variable.  Algebraic variables may always be eliminated; for inputs this is not the case.
+                    rel.add(rhs_name, lhs_name)
                     skip = True
-                elif rhs.isSymbolic() and rhs.getName() in private_variables:
-                    substitutions[rhs] = lhs
+                elif rhs_name in algebraics_names:
+                    logger.debug("ModelicaMixin: Aliased {} to {}".format(rhs_name, lhs_name))
+                    # We may alias multiple variables to the same variable, or alias the same variable to multiple variables.  
+                    # We handle these cases using an AliasRelation.  The first variable to an alias relation becomes
+                    # the canonical variable.  Algebraic variables may always be eliminated; for inputs this is not the case.
+                    rel.add(lhs_name, rhs_name)
                     skip = True
 
             # Add equation, if it is not to be skipped.
             if skip:
-                logger.debug("ModelicaMixin: Eliminating equation {} = {}".format(lhs, rhs))
+                logger.debug("ModelicaMixin: Condensation pass 1: Eliminating equation {} = {}".format(lhs, rhs))
             else:
-                dae.append(lhs - rhs)
-                dae_eq.append(eq)
+                dae_eq_1pass.append(eq)
 
-        # Substitute eliminated variables z with f(x) in rest of DAE.
-        logger.debug("ModelicaMixin: Substituting {} with {}".format(substitutions.keys(), substitutions.values()))
+        dae_eq_2pass = []
+        substitutions = {}
+        for eq in dae_eq_1pass:
+            lhs, rhs = eq.getLhs(), eq.getRhs()
+            skip = False
 
-        self._mx['algebraics'] = list(sets.Set(self._mx['algebraics']) - sets.Set(substitutions.keys()))
+            # Look for equations of the form z = f(x), where z is a private variable.
+            if lhs.isSymbolic() and lhs.getName() in private_variables:
+                substitutions[expr[rel.canonical(lhs.getName())]] = rhs
+                skip = True
+            elif rhs.isSymbolic() and rhs.getName() in private_variables:
+                substitutions[expr[rel.canonical(rhs.getName())]] = lhs
+                skip = True
 
-        dae_residual = vertcat(dae)
-        [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
-        while dependsOn(dae_residual, vertcat(substitutions.keys())):
-            [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
-        self._dae_residual = dae_residual
+            # Add equation, if it is not to be skipped.
+            if skip:
+                logger.debug("ModelicaMixin: Condensation pass 2: Eliminating equation {} = {}".format(lhs, rhs))
+            else:
+                dae_eq_2pass.append(eq)
+        dae_eq = dae_eq_2pass
 
-        initial_residual = self._jm_model.getInitialResidual()
-        [initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
-        while dependsOn(initial_residual, vertcat(substitutions.keys())):
-            [initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
-        self._initial_residual = initial_residual
+        # Translate alias relation to substitutions and variable aliases
+        for canonical, aliases in rel:
+            for alias in aliases:
+                expr_alias = expr[alias]
+                substitutions[expr_alias] = expr[canonical]
+                self._aliases[canonical] = self.variable_aliases(canonical) + self.variable_aliases(alias)
+                del self._aliases[alias]
 
         # Add path constraints for bounded, orphan algebraic residuals.
         self._path_constraints = []
@@ -263,9 +276,13 @@ class ModelicaMixin(OptimizationProblem):
                 if constraint_function is not None:
                     # Remove from DAE
                     index = dae_eq.index(constraint_eq)
-                    del dae[index]
                     del dae_eq[index]
                     self._mx['algebraics'].remove(constraint_residual_candidate[0])
+
+                    # Substitute aliases
+                    [constraint_function] = substitute([constraint_function], substitutions.keys(), substitutions.values())
+                    while dependsOn(constraint_function, vertcat(substitutions.keys())):
+                        [constraint_function] = substitute([constraint_function], substitutions.keys(), substitutions.values())
 
                     # Add to constraints
                     m, M = constraint_residual_candidate[1], constraint_residual_candidate[2]
@@ -295,7 +312,25 @@ class ModelicaMixin(OptimizationProblem):
                         if M_symbolic or np.isfinite(M):
                             constraint = (constraint_function - M, -np.inf, 0.0)
                             logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
-                            self._path_constraints.append(constraint)        
+                            self._path_constraints.append(constraint)   
+
+        # Substitute eliminated variables z with f(x) in rest of DAE.
+        logger.debug("ModelicaMixin: Substituting {} with {}".format(substitutions.keys(), substitutions.values()))
+
+        self._mx['eliminated_algebraics'] = substitutions.keys()
+        self._mx['algebraics'] = list(sets.Set(self._mx['algebraics']) - sets.Set(self._mx['eliminated_algebraics']))
+       
+        dae_residual = vertcat([eq.getLhs() - eq.getRhs() for eq in dae_eq])
+        [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
+        while dependsOn(dae_residual, vertcat(substitutions.keys())):
+            [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
+        self._dae_residual = dae_residual
+
+        initial_residual = self._jm_model.getInitialResidual()
+        [initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
+        while dependsOn(initial_residual, vertcat(substitutions.keys())):
+            [initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
+        self._initial_residual = initial_residual     
 
     def compiler_options(self):
         """
@@ -417,7 +452,7 @@ class ModelicaMixin(OptimizationProblem):
                 raise Exception("No value specified for parameter {}".format(symbol.getName()))
         parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
 
-        for variable in self._mx['states'] + self._mx['algebraics'] + self._mx['control_inputs']:
+        for variable in self._mx['states'] + self._mx['algebraics'] + self._mx['eliminated_algebraics'] + self._mx['control_inputs']:
             variable = variable.getName()
             var = self._jm_model.getVariable(variable)
             if var.getType() == var.BOOLEAN:
