@@ -1,5 +1,3 @@
-# TODO signed aliases
-
 import collections
 
 # From https://code.activestate.com/recipes/576694/
@@ -80,9 +78,15 @@ class OrderedSet(collections.MutableSet):
 
 
 class _AliasVariable:
-    def __init__(self, relation, name):
+    def __init__(self, relation, name, sign=1):
         self._relation = relation
-        self._name = name
+        if sign < 0:
+            if name.startswith('-'):
+                self._name = name[1:]
+            else:
+                self._name = '-' + name
+        else:
+            self._name = name
 
     @property
     def name(self):
@@ -173,13 +177,27 @@ class AliasDict:
         self._d = {}
 
     def __setitem__(self, key, val):
-        self._d[_AliasVariable(self._relation, key)] = val
+        varp = _AliasVariable(self._relation, key, sign=1)
+        if varp.name in self._relation:
+            self._d[varp] = val
+        else:
+            varn = _AliasVariable(self._relation, key, sign=-1)
+            if varn.name in self._relation:
+                self._d[varn] = -val
+            else:
+                self._d[varp] = val
 
     def __getitem__(self, key):
-        return self._d[_AliasVariable(self._relation, key)]
+        try:
+            return self._d[_AliasVariable(self._relation, key, sign=1)]
+        except KeyError:
+            return -self._d[_AliasVariable(self._relation, key, sign=-1)]
 
     def __delitem__(self, key):
-        del self._d[_AliasVariable(self._relation, key)]
+        try:
+            del self._d[_AliasVariable(self._relation, key, sign=1)]
+        except KeyError:
+            del self._d[_AliasVariable(self._relation, key, sign=-1)]
 
     def __len__(self):
         return len(self._d)
