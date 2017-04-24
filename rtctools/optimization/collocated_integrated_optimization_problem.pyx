@@ -1497,41 +1497,47 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         if tf is None:
             tf = times[-1]
 
+        # Find canonical variable
+        found = False
+        for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.controls):
+            aliases = self.variable_aliases(free_variable)
+            if variable in [alias.name for alias in aliases]:
+                state = self.state_vector(free_variable, ensemble_member)
+                found = True
+                break
+        if not found:
+            raise KeyError
+
         # Compute combined points
         if t0 < times[0]:
             history = self.history(ensemble_member)
             found = False
-            for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states):
-                aliases = self.variable_aliases(free_variable)
-                if variable in [alias.name for alias in aliases]:
-                    for alias in self.variable_aliases(free_variable):
-                        if alias.name in history:
-                            htimes = history[variable].times[:-1]
-                            found = True
-                            break
-                if found:
+            for alias in self.variable_aliases(free_variable):
+                if alias.name in history:
+                    history_times = history[variable].times[:-1]
+                    history = alias.sign * history[variable].values
+                    found = True
                     break
             if not found:
                 raise Exception("No history found for variable {}, but a historical value was requested".format(variable))
-
-            history_and_times = np.hstack((htimes, times))
         else:
-            history_and_times = times
+            history_times = np.empty(0)
+            history = np.empty(0)
 
-        # Yield left boundary point
-        yield self.state_at(variable, t0, ensemble_member=ensemble_member)
+        # Collect states within specified interval
+        indices, = np.where(np.logical_and(times >= t0, times <= tf))
+        history_indices, = np.where(np.logical_and(history_times >= t0, history_times <= tf))
+        if (t0 not in times[indices]) and (t0 not in history_times[history_indices]):
+            x0 = self.state_at(variable, t0, ensemble_member)
+        else:
+            x0 = MX()
+        if (tf not in times[indices]) and (tf not in history_times[history_indices]):
+            xf = self.state_at(variable, tf, ensemble_member)
+        else:
+            xf = MX()
+        x = vertcat([x0, history[history_indices], state[indices[0]:indices[-1] + 1], xf])
 
-        # Yield interior points
-        for point in history_and_times:
-            if point > t0 and point < tf:
-                yield self.state_at(variable, point, ensemble_member=ensemble_member)
-            if point >= tf:
-                break
-
-        # Yield right boundary point, if it differs from the left boundary
-        # point
-        if t0 != tf:
-            yield self.state_at(variable, tf, ensemble_member=ensemble_member)
+        return x
 
     def integral(self, variable, t0=None, tf=None, ensemble_member=0):
         # Time stamps for this variale
@@ -1543,35 +1549,46 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         if tf is None:
             tf = times[-1]
 
+        # Find canonical variable
+        found = False
+        for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.controls):
+            aliases = self.variable_aliases(free_variable)
+            if variable in [alias.name for alias in aliases]:
+                state = self.state_vector(free_variable, ensemble_member)
+                found = True
+                break
+        if not found:
+            raise KeyError
+
         # Compute combined points
         if t0 < times[0]:
             history = self.history(ensemble_member)
             found = False
-            for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states):
-                aliases = self.variable_aliases(free_variable)
-                if variable in [alias.name for alias in aliases]:
-                    for alias in self.variable_aliases(free_variable):
-                        if alias.name in history:
-                            htimes = history[variable].times[:-1]
-                            found = True
-                            break
-                if found:
+            for alias in self.variable_aliases(free_variable):
+                if alias.name in history:
+                    history_times = history[variable].times[:-1]
+                    history = alias.sign * history[variable].values
+                    found = True
                     break
             if not found:
                 raise Exception("No history found for variable {}, but a historical value was requested".format(variable))
-
-            history_and_times = np.hstack((htimes, times))
         else:
-            history_and_times = times
-
+            history_times = np.empty(0)
+            history = np.empty(0)
+        
         # Collect time stamps and states, "knots".
-        t = ([t0] +
-             list(history_and_times[np.logical_and(history_and_times > t0, history_and_times < tf)]) +
-             [tf] if t0 != tf else [])
-        x = [self.state_at(variable, ti, ensemble_member=ensemble_member) for ti in t]
-
-        t = vertcat(t)
-        x = vertcat(x)
+        indices, = np.where(np.logical_and(times >= t0, times <= tf))
+        history_indices, = np.where(np.logical_and(history_times >= t0, history_times <= tf))
+        if (t0 not in times[indices]) and (t0 not in history_times[history_indices]):
+            x0 = self.state_at(variable, t0, ensemble_member)
+        else:
+            t0 = x0 = MX()
+        if (tf not in times[indices]) and (tf not in history_times[history_indices]):
+            xf = self.state_at(variable, tf, ensemble_member)
+        else:
+            tf = xf = MX()
+        t = vertcat([t0, history_times[history_indices], times[indices], tf])
+        x = vertcat([x0, history[history_indices], state[indices[0]:indices[-1] + 1], xf])
 
         # Integrate knots using trapezoid rule
         x_avg = 0.5 * (x[:x.size1() - 1] + x[1:])
