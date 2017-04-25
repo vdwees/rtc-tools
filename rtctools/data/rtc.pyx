@@ -78,19 +78,18 @@ class DataConfig:
                     pi_parameter = parameter.find('fews:PIParameter', ns)
                     if pi_parameter is not None:
                         internal_id   = parameter.get('id')
-                        external_ids = self._pi_model_parameter_id(pi_parameter, 'fews')
+                        external_id = self._pi_parameter_id(pi_parameter, 'fews')
 
                         if internal_id in self._model_parameter_ids:
                             logger.error("Found more than one external parameter mapped to internal id {} in {}.".format(internal_id, path))
                             raise Exception
-                        if external_ids in self._parameter_map:
+                        if external_id in self._parameter_map:
                             logger.error("Found more than one interal parameter mapped to external modelId {}, locationId {}, parameterId {} in {}.".format( \
-                                          external_ids.model_id, external_ids.location_id, external_ids.parameter_id, path))
+                                          external_id.model_id, external_id.location_id, external_id.parameter_id, path))
                             raise Exception
                         else:
-                            self._model_parameter_ids[internal_id] = external_ids
-                            self._parameter_map[self._pi_parameter_id(
-                                 pi_parameter, 'fews')] = internal_id
+                            self._model_parameter_ids[internal_id] = self._pi_model_parameter_id(pi_parameter, 'fews')
+                            self._parameter_map[external_id] = internal_id
 
         except IOError:
             logger.error(
