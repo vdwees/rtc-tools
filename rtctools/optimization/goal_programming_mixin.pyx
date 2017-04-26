@@ -671,11 +671,14 @@ class GoalProgrammingMixin(OptimizationProblem):
 
             if goal.function_nominal <= 0:
                 raise Exception("Nonpositive nominal value specified for goal {}".format(goal))
+        try:
+            priorities = set([int(goal.priority) for goal in itertools.chain(goals, path_goals)])
+        except ValueError:
+            raise Exception("GoalProgrammingMixin: All goal priorities must be of type int or castable to int")
 
-        priorities = set([goal.priority for goal in itertools.chain(goals, path_goals)])
         for priority in sorted(priorities):
-            subproblems.append((priority, [goal for goal in goals if goal.priority == priority], [
-                               goal for goal in path_goals if goal.priority == priority]))
+            subproblems.append((priority, [goal for goal in goals if int(goal.priority) == priority], [
+                               goal for goal in path_goals if int(goal.priority) == priority]))
 
         # Solve the subproblems one by one
         logger.info("Starting goal programming")
