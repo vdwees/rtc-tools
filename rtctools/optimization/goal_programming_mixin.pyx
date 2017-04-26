@@ -163,6 +163,12 @@ class Goal(object):
         """
         return (self.has_target_min or self.has_target_max)
 
+    @property
+    def is_empty(self):
+        min_empty = (isinstance(self.target_min, Timeseries) and not np.any(np.isfinite(self.target_min.values)))
+        max_empty = (isinstance(self.target_max, Timeseries) and not np.any(np.isfinite(self.target_max.values)))
+        return min_empty and max_empty
+
     def get_function_key(self, optimization_problem, ensemble_member):
         """
         Returns a key string uniquely identifying the goal function.  This
@@ -672,13 +678,13 @@ class GoalProgrammingMixin(OptimizationProblem):
             if goal.function_nominal <= 0:
                 raise Exception("Nonpositive nominal value specified for goal {}".format(goal))
         try:
-            priorities = set([int(goal.priority) for goal in itertools.chain(goals, path_goals)])
+            priorities = set([int(goal.priority) for goal in itertools.chain(goals, path_goals) if not goal.is_empty])
         except ValueError:
             raise Exception("GoalProgrammingMixin: All goal priorities must be of type int or castable to int")
 
         for priority in sorted(priorities):
-            subproblems.append((priority, [goal for goal in goals if int(goal.priority) == priority], [
-                               goal for goal in path_goals if int(goal.priority) == priority]))
+            subproblems.append((priority, [goal for goal in goals if int(goal.priority) == priority and not goal.is_empty], [
+                               goal for goal in path_goals if int(goal.priority) == priority and not goal.is_empty]))
 
         # Solve the subproblems one by one
         logger.info("Starting goal programming")
