@@ -52,15 +52,18 @@ class DataConfig:
                 pi_timeseries = timeseries.find('fews:PITimeSeries', ns)
                 if pi_timeseries is not None:
                     internal_id = timeseries.get('id')
+                    external_id = self._pi_timeseries_id(pi_timeseries, 'fews')
 
                     if internal_id in self._location_parameter_ids:
                         logger.error("Found more than one external timeseries mapped to internal id {} in {}.".format(internal_id, path))
                         raise Exception
+                    elif external_id in self._variable_map:
+                        logger.error("Found more than one internal timeseries mapped to external id {} in {}.".format(external_id, path))
+                        raise Exception
                     else:
                         self._location_parameter_ids[internal_id] = \
                             self._pi_location_parameter_id(pi_timeseries, 'fews')
-                        self._variable_map[self._pi_timeseries_id(
-                            pi_timeseries, 'fews')] = internal_id
+                        self._variable_map[external_id] = internal_id
 
             for k in ['import', 'export']:
                 res = root.find(
@@ -74,16 +77,19 @@ class DataConfig:
                 for parameter in parameters:
                     pi_parameter = parameter.find('fews:PIParameter', ns)
                     if pi_parameter is not None:
-                        internal_id = parameter.get('id')
+                        internal_id   = parameter.get('id')
+                        external_id = self._pi_parameter_id(pi_parameter, 'fews')
 
                         if internal_id in self._model_parameter_ids:
                             logger.error("Found more than one external parameter mapped to internal id {} in {}.".format(internal_id, path))
                             raise Exception
+                        if external_id in self._parameter_map:
+                            logger.error("Found more than one interal parameter mapped to external modelId {}, locationId {}, parameterId {} in {}.".format( \
+                                          external_id.model_id, external_id.location_id, external_id.parameter_id, path))
+                            raise Exception
                         else:
-                            self._model_parameter_ids[parameter.get('id')] = \
-                                self._pi_model_parameter_id(pi_parameter, 'fews')
-                            self._parameter_map[self._pi_parameter_id(
-                                 pi_parameter, 'fews')] = parameter.get('id')
+                            self._model_parameter_ids[internal_id] = self._pi_model_parameter_id(pi_parameter, 'fews')
+                            self._parameter_map[external_id] = internal_id
 
         except IOError:
             logger.error(

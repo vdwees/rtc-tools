@@ -172,7 +172,7 @@ class OptimizationProblem(object):
         self._solver_stats = solver.getStats()
 
         # Get the return status
-        if self._solver_stats['return_status'] in ['Solve_Succeeded', 'Solved_To_Acceptable_Level', 'SUCCESS']:
+        if self._solver_stats['return_status'] in ['Solve_Succeeded', 'Solved_To_Acceptable_Level', 'User_Requested_Stop', 'SUCCESS']:
             logger.info("Solver succeeded with status {}".format(
                 self._solver_stats['return_status']))
 
