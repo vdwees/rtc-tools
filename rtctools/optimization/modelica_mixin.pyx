@@ -12,6 +12,8 @@ from optimization_problem import OptimizationProblem, Alias
 from casadi_helpers import resolve_interdependencies
 from alias_tools import AliasRelation
 
+from collections import OrderedDict
+
 logger = logging.getLogger("rtctools")
 
 
@@ -224,7 +226,7 @@ class ModelicaMixin(OptimizationProblem):
                 dae_eq_1pass.append(eq)
 
         dae_eq_2pass = []
-        substitutions = {}
+        substitutions = OrderedDict()
         for eq in dae_eq_1pass:
             lhs, rhs = eq.getLhs(), eq.getRhs()
             skip = False
@@ -318,7 +320,7 @@ class ModelicaMixin(OptimizationProblem):
         logger.debug("ModelicaMixin: Substituting {} with {}".format(substitutions.keys(), substitutions.values()))
 
         self._mx['eliminated_algebraics'] = substitutions.keys()
-        self._mx['algebraics'] = list(sets.Set(self._mx['algebraics']) - sets.Set(self._mx['eliminated_algebraics']))
+        self._mx['algebraics'] = [var for var in self._mx['algebraics'] if var not in set(self._mx['eliminated_algebraics'])]
        
         dae_residual = vertcat([eq.getLhs() - eq.getRhs() for eq in dae_eq])
         [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
