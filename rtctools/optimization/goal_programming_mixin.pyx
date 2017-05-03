@@ -7,7 +7,6 @@ cimport numpy as np
 import itertools
 import logging
 import cython
-import uuid
 import sys
 
 from optimization_problem import OptimizationProblem
@@ -177,7 +176,11 @@ class Goal(object):
         if hasattr(self, 'function_key'):
             return self.function_key
 
-        self.function_key = uuid.uuid4()
+        # This must be deterministic.  See RTCTOOLS-485.
+        if not hasattr(Goal, '_function_key_counter'):
+            Goal._function_key_counter = 0
+        self.function_key = '{}_{}'.format(self.__class__.__name__, Goal._function_key_counter)
+        Goal._function_key_counter += 1
 
         return self.function_key
 
@@ -339,23 +342,13 @@ class GoalProgrammingMixin(OptimizationProblem):
     def constraints(self, ensemble_member):
         constraints = super(GoalProgrammingMixin, self).constraints(ensemble_member)
         for l in self._subproblem_constraints[ensemble_member].values():
-            constraints.extend(map(lambda constraint: (
-                constraint.function(self), constraint.min, constraint.max), l))
-        # Enforce a consistent ordering for the constraints, so that the ordering is not dependent on randomly
-        # generated UUIDs.  See RTCTOOLS-485.
-        constraints.sort(key=lambda constraint: ','.join(
-            [repr(constraint[0]), str(constraint[1]), str(constraint[2])]))
+            constraints.extend(((constraint.function(self), constraint.min, constraint.max) for constraint in l))
         return constraints
 
     def path_constraints(self, ensemble_member):
         path_constraints = super(GoalProgrammingMixin, self).path_constraints(ensemble_member)
         for l in self._subproblem_path_constraints[ensemble_member].values():
-            path_constraints.extend(map(lambda constraint: (
-                constraint.function(self), constraint.min, constraint.max), l))
-        # Enforce a consistent ordering for the constraints, so that the ordering is not dependent on randomly
-        # generated UUIDs.  See RTCTOOLS-485.
-        path_constraints.sort(key=lambda constraint: ','.join(
-            [repr(constraint[0]), str(constraint[1]), str(constraint[2])]))
+            path_constraints.extend(((constraint.function(self), constraint.min, constraint.max) for constraint in l))
         return path_constraints
 
     def solver_options(self):
