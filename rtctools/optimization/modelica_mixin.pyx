@@ -449,13 +449,9 @@ class ModelicaMixin(OptimizationProblem):
         parameter_values = [None] * len(self.dae_variables['parameters'])
         values = []
         for i, symbol in enumerate(self.dae_variables['parameters']):
-            found = False
-            for alias in self.variable_aliases(symbol.getName()):
-                if alias.name in parameters:
-                    parameter_values[i] = alias.sign * parameters[alias.name]
-                    found = True
-                    break
-            if not found:
+            try:
+                parameter_values[i] = parameters[symbol.getName()]
+            except KeyError:
                 raise Exception("No value specified for parameter {}".format(symbol.getName()))
         parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
 

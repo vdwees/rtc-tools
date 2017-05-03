@@ -242,13 +242,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             parameter_values = [None] * len(self.dae_variables['parameters'])
             values = []
             for i, symbol in enumerate(self.dae_variables['parameters']):
-                found = False
-                for alias in self.variable_aliases(symbol.getName()):
-                    if alias.name in parameters:
-                        parameter_values[i] = alias.sign * parameters[alias.name]
-                        found = True
-                        break
-                if not found:
+                try:
+                    parameter_values[i] = parameters[symbol.getName()]
+                except KeyError:
                     raise Exception("No value specified for parameter {}".format(symbol.getName()))
             parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
             ensemble_data["parameters"] = nullvertcat(parameter_values)
@@ -1436,15 +1432,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         break
             if not found:
                 parameters = self.parameters(ensemble_member)
-                for parameter in parameters.keys():
-                    for alias in self.variable_aliases(parameter):
-                        if alias.name == variable:
-                            sym = parameters[parameter]
-                            sym *= alias.sign
-                            found = True
-                            break
-                    if found:
-                        break
+                try:
+                    sym = parameters[variable]
+                    found = True
+                except KeyError:
+                    pass
             if not found:
                 raise KeyError(variable)
 
@@ -1691,13 +1683,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         parameter_values = [None] * len(self.dae_variables['parameters'])
         values = []
         for i, symbol in enumerate(self.dae_variables['parameters']):
-            found = False
-            for alias in self.variable_aliases(symbol.getName()):
-                if alias.name in parameters:
-                    parameter_values[i] = alias.sign * parameters[alias.name]
-                    found = True
-                    break
-            if not found:
+            try:
+                parameter_values[i] = parameters[symbol.getName()]
+            except KeyError:
                 raise Exception("No value specified for parameter {}".format(symbol.getName()))
         parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
 

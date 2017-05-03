@@ -391,7 +391,7 @@ class OptimizationProblem(object):
 
         :returns: A dictionary of parameter names and values.
         """
-        return {}
+        return AliasDict(self.alias_relation)
 
     def constant_inputs(self, ensemble_member):
         """
