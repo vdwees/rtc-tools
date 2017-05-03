@@ -129,6 +129,7 @@ class ModelicaMixin(OptimizationProblem):
 
         # Initialize aliases
         self._aliases = {}
+        self._alias_relation = AliasRelation()
         for var in self._jm_model.getAliases():
             model_var = var.getModelVariable()
             l = self._aliases.get(model_var.getName(), [
@@ -136,11 +137,15 @@ class ModelicaMixin(OptimizationProblem):
             l.append(Alias(var.getName(), var.isNegated()))
             self._aliases[model_var.getName()] = l
 
+            
+
             sign = ''
             if var.isNegated():
                 sign = '-'
             logger.debug("ModelicaMixin: Aliased {} to {}{}".format(
                 var.getName(), sign, model_var.getName()))
+
+            self._alias_relation.add(model_var.getName(), sign + var.getName())
 
         # Initialize nominals
         self._nominals = {}
@@ -486,6 +491,10 @@ class ModelicaMixin(OptimizationProblem):
         path_constraints = super(ModelicaMixin, self).path_constraints(ensemble_member)
         path_constraints.extend(self._path_constraints)
         return path_constraints
+
+    @property
+    def alias_relation(self):
+        return self._alias_relation
 
     def variable_aliases(self, variable):
         try:

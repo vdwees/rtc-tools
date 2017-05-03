@@ -200,12 +200,11 @@ class ControlTreeMixin(OptimizationProblem):
                 discrete[self._control_indices[variable][
                     ensemble_member, :]] = self.variable_is_discrete(variable)
 
-                for alias in self.variable_aliases(variable):
-                    try:
-                        bound = bounds[alias.name]
-                    except KeyError:
-                        continue
-
+                try:
+                    bound = bounds[variable]
+                except KeyError:
+                    pass
+                else:
                     nominal = self.variable_nominal(variable)
                     if bound[0] != None:
                         if isinstance(bound[0], Timeseries):
@@ -228,8 +227,6 @@ class ControlTreeMixin(OptimizationProblem):
                             times, seed_k.times, seed_k.values, 0, 0) / nominal
                     except KeyError:
                         pass
-
-                    break
 
         # Return number of control variables
         return count, discrete, lbx, ubx, x0

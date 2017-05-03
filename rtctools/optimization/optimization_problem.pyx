@@ -9,6 +9,7 @@ import logging
 import cython
 
 from timeseries import Timeseries
+from alias_tools import AliasDict
 
 logger = logging.getLogger("rtctools")
 
@@ -425,7 +426,7 @@ class OptimizationProblem(object):
                 return {'x': (1.0, 2.0), 'y': (2.0, 3.0)}
 
         """
-        return {}
+        return AliasDict(self.alias_relation)
 
     def history(self, ensemble_member):
         """
@@ -437,6 +438,10 @@ class OptimizationProblem(object):
         """
         initial_state = self.initial_state(ensemble_member)
         return {variable: Timeseries(np.array([self.initial_time]), np.array([state])) for variable, state in initial_state.iteritems()}
+
+    @abstractproperty
+    def alias_relation(self):
+        raise NotImplementedError
 
     def variable_is_discrete(self, variable):
         """

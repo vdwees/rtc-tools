@@ -948,12 +948,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             discrete[offset:offset +
                      n_times] = self.variable_is_discrete(variable)
 
-            for alias in self.variable_aliases(variable):
-                try:
-                    bound = bounds[alias.name]
-                except KeyError:
-                    continue
-
+            try:
+                bound = bounds[variable]
+            except KeyError:
+                pass
+            else:
                 nominal = self.variable_nominal(variable)
                 if bound[0] != None:
                     if isinstance(bound[0], Timeseries):
@@ -974,8 +973,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         times, seed_k.times, seed_k.values, 0, 0) / nominal
                 except KeyError:
                     pass
-
-                break
 
             offset += n_times
 
@@ -1135,27 +1132,24 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             offset = ensemble_member * ensemble_member_size
             for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
                 if variable in self.integrated_states:
-                    for alias in self.variable_aliases(variable):
-                        try:
-                            bound = bounds[alias.name]
-                        except KeyError:
-                            continue
-
+                    try:
+                        bound = bounds[variable]
+                    except KeyError:
+                        pass
+                    else:
                         nominal = self.variable_nominal(variable)
                         if bound[0] != None:
                             if isinstance(bound[0], Timeseries):
                                 lbx[offset] = self.interpolate(self.initial_time, bound[0].times, bound[
-                                                               0].values, -np.inf, -np.inf) / nominal
+                                                                0].values, -np.inf, -np.inf) / nominal
                             else:
                                 lbx[offset] = bound[0] / nominal
                         if bound[1] != None:
                             if isinstance(bound[1], Timeseries):
                                 ubx[offset] = self.interpolate(self.initial_time, bound[1].times, bound[
-                                                               1].values, +np.inf, +np.inf) / nominal
+                                                                1].values, +np.inf, +np.inf) / nominal
                             else:
                                 ubx[offset] = bound[1] / nominal
-
-                        break
 
                     offset += 1
 
@@ -1163,12 +1157,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     times = self.times(variable)
                     n_times = len(times)
 
-                    for alias in self.variable_aliases(variable):
-                        try:
-                            bound = bounds[alias.name]
-                        except KeyError:
-                            continue
-
+                    try:
+                        bound = bounds[variable]
+                    except KeyError:
+                        logger.error("Bound for {} not found".format(variable))
+                        pass
+                    else:
                         nominal = self.variable_nominal(variable)
                         if bound[0] != None:
                             if isinstance(bound[0], Timeseries):
@@ -1182,8 +1176,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                     times, bound[1].times, bound[1].values, +np.inf, +np.inf) / nominal
                             else:
                                 ubx[offset:offset + n_times] = bound[1] / nominal
-
-                        break
 
                     offset += n_times
 

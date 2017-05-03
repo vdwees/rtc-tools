@@ -236,21 +236,7 @@ class StateGoal(Goal):
         try:
             self.function_range = optimization_problem.bounds()[self.state]
         except KeyError:
-            # If KeyError, check the variable the state is aliased to for bounds
-            found = False
-            for variable in itertools.chain(optimization_problem.differentiated_states, optimization_problem.algebraic_states):
-                for alias in optimization_problem.variable_aliases(variable):
-                    if self.state == alias.name:
-                        bounds = optimization_problem.bounds()[variable]
-                        if alias.sign < 0:
-                            self.function_range[0] = -bounds[1]
-                            self.function_range[1] = -bounds[0]
-                        else:
-                            self.function_range = bounds
-                        found = True
-                        break
-            if not found:
-                raise Exception('State {} has no bounds or does not exist in the model.'.format(self.state))
+            raise Exception('State {} has no bounds or does not exist in the model.'.format(self.state))
 
         if self.function_range[0] is None:
             raise Exception('Please provide a lower bound for state {}.'.format(self.state))

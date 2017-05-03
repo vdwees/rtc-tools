@@ -199,6 +199,15 @@ class AliasDict:
         except KeyError:
             del self._d[_AliasVariable(self._relation, key, sign=-1)]
 
+    def __contains__(self, key):
+        if _AliasVariable(self._relation, key, sign=1) in self._d:
+            return True
+        else:
+            if _AliasVariable(self._relation, key, sign=-1) in self._d:
+                return True
+            else:
+                return False
+
     def __len__(self):
         return len(self._d)
 
@@ -206,9 +215,29 @@ class AliasDict:
         for key, value in self._d:
             yield key.name, value
 
+    def update(self, other):
+        for key, value in other.iteritems():
+            self[key] = value
+
+    def get(self, key, default=None):
+        if key in self:
+            return self[key]
+        else:
+            return default
+
+    def setdefault(self, key, default):
+        if key in self:
+            return self[key]
+        else:
+            self[key] = default
+            return default
+
     def keys(self):
         for key in self._d.keys():
             yield key.name
 
     def values(self):
         return self._d.values()
+
+    def iteritems(self):
+        return self.__iter__()
