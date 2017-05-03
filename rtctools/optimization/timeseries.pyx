@@ -37,5 +37,8 @@ class Timeseries(object):
         """
         return self._values
 
+    def __neg__(self):
+        return self.__class__(self.times, -self.values)
+
     def __repr__(self):
         return 'Timeseries({}, {})'.format(self._times, self._values)

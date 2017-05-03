@@ -253,21 +253,20 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             constant_inputs = self.constant_inputs(ensemble_member)
             constant_inputs_interpolated = {}
             for variable in self.dae_variables['constant_inputs']:
-                found = False
-                for alias in self.variable_aliases(variable.getName()):
-                    if alias.name in constant_inputs:
-                        constant_input = constant_inputs[alias.name]
-                        values = constant_input.values
-                        if isinstance(values, MX):
-                            [values] = substitute([values], self.dae_variables['parameters'], parameter_values)
-                        elif np.any([not MX(value).isConstant() for value in values]):
-                            values = substitute(values, self.dae_variables['parameters'], parameter_values)
-                        constant_inputs_interpolated[variable.getName()] = alias.sign * self.interpolate(
-                            collocation_times, constant_input.times, values, 0.0, 0.0)
-                        found = True
-                        break
-                if not found:
+                variable = variable.getName()
+                try:
+                    constant_input = constant_inputs[variable]
+                except KeyError:
                     raise Exception("No values found for constant input {}".format(variable.getName()))
+                else:
+                    values = constant_input.values
+                    if isinstance(values, MX):
+                        [values] = substitute([values], self.dae_variables['parameters'], parameter_values)
+                    elif np.any([not MX(value).isConstant() for value in values]):
+                        values = substitute(values, self.dae_variables['parameters'], parameter_values)
+                    constant_inputs_interpolated[variable] = self.interpolate(
+                        collocation_times, constant_input.times, values, 0.0, 0.0)
+                
             ensemble_data["constant_inputs"] = constant_inputs_interpolated
 
             # Store initial state and derivatives
@@ -1156,7 +1155,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     try:
                         bound = bounds[variable]
                     except KeyError:
-                        logger.error("Bound for {} not found".format(variable))
                         pass
                     else:
                         nominal = self.variable_nominal(variable)
@@ -1274,15 +1272,18 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         constant_inputs = self.constant_inputs(ensemble_member)
         for variable in self.dae_variables['constant_inputs']:
             variable = variable.getName()
-            constant_input = None
-            for alias in self.variable_aliases(variable):
-                if alias.name in constant_inputs:
-                    constant_input = constant_inputs[alias.name]
-                    break
-            if constant_input is not None:
-                for alias in self.variable_aliases(variable):
-                    if alias.name != variable:
-                        results[alias.name] = alias.sign * np.interp(self.times(alias.name), constant_input.times, constant_input.values)
+            try:
+                constant_input = constant_inputs[variable]
+            except KeyError:
+                pass
+            else:
+                for alias in self.alias_relation.aliases(variable):
+                    if alias == variable:
+                        continue
+                    if alias[0] == '-':
+                        results[alias[1:]] = -np.interp(self.times(alias), constant_input.times, constant_input.values)
+                    else:
+                        results[alias] = np.interp(self.times(alias), constant_input.times, constant_input.values)
 
         # Extract path variables
         n_collocation_times = len(self.times())
@@ -1412,24 +1413,19 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     pass
             if not found:
                 constant_inputs = self.constant_inputs(ensemble_member)
-                for constant_input_variable in constant_inputs.keys():
-                    for alias in self.variable_aliases(constant_input_variable):
-                        if alias.name == variable:
-                            times = self.times(constant_input_variable)
-                            n_times = len(times)
-                            constant_input = constant_inputs[
-                                constant_input_variable]
-                            f_left, f_right = np.nan, np.nan
-                            if extrapolate:
-                                f_left = constant_input.values[0]
-                                f_right = constant_input.values[-1]
-                            sym = self.interpolate(
-                                t, constant_input.times, constant_input.values, f_left, f_right)
-                            sym *= alias.sign
-                            found = True
-                            break
-                    if found:
-                        break
+                try:
+                    constant_input = constant_inputs[variable]
+                except KeyError:
+                    pass
+                else:
+                    times = self.times(variable)
+                    n_times = len(times)
+                    f_left, f_right = np.nan, np.nan
+                    if extrapolate:
+                        f_left = constant_input.values[0]
+                        f_right = constant_input.values[-1]
+                    sym = self.interpolate(
+                        t, constant_input.times, constant_input.values, f_left, f_right)
             if not found:
                 parameters = self.parameters(ensemble_member)
                 try:
@@ -1693,21 +1689,19 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         constant_inputs = self.constant_inputs(ensemble_member)
         accumulation_constant_inputs = [None] * len(self.dae_variables['constant_inputs'])
         for i, variable in enumerate(self.dae_variables['constant_inputs']):
-            found = False
-            for alias in self.variable_aliases(variable.getName()):
-                if alias.name in constant_inputs:
-                    constant_input = constant_inputs[alias.name]
-                    values = constant_input.values
-                    if isinstance(values, MX):
-                        [values] = substitute([values], self.dae_variables['parameters'], parameter_values)
-                    elif np.any([not MX(value).isConstant() for value in values]):
-                        values = substitute(values, self.dae_variables['parameters'], parameter_values)
-                    accumulation_constant_inputs[i] = alias.sign * self.interpolate(
-                        collocation_times, constant_input.times, values, 0.0, 0.0)
-                    found = True
-                    break
-            if not found:
+            try:
+                constant_input = constant_inputs[variable.getName()]
+            except KeyError:
                 raise Exception("No data specified for constant input {}".format(variable.getName()))
+            else:
+                values = constant_input.values
+                if isinstance(values, MX):
+                    [values] = substitute([values], self.dae_variables['parameters'], parameter_values)
+                elif np.any([not MX(value).isConstant() for value in values]):
+                    values = substitute(values, self.dae_variables['parameters'], parameter_values)
+                accumulation_constant_inputs[i] = self.interpolate(
+                    collocation_times, constant_input.times, values, 0.0, 0.0)
+                
         accumulation_constant_inputs = transpose(horzcat(accumulation_constant_inputs))
 
         # Map

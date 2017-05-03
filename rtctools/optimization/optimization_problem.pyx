@@ -401,7 +401,7 @@ class OptimizationProblem(object):
 
         :returns: A dictionary of constant input names and time series.
         """
-        return {}
+        return AliasDict(self.alias_relation)
 
     def lookup_tables(self, ensemble_member):
         """

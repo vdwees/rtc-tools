@@ -137,8 +137,6 @@ class ModelicaMixin(OptimizationProblem):
             l.append(Alias(var.getName(), var.isNegated()))
             self._aliases[model_var.getName()] = l
 
-            
-
             sign = ''
             if var.isNegated():
                 sign = '-'
@@ -258,6 +256,7 @@ class ModelicaMixin(OptimizationProblem):
                 substitutions[expr_alias] = expr[canonical]
                 self._aliases[canonical] = self.variable_aliases(canonical) + self.variable_aliases(alias)
                 del self._aliases[alias]
+                self._alias_relation.add(canonical, alias)
 
         # Add path constraints for bounded, orphan algebraic residuals.
         self._path_constraints = []
