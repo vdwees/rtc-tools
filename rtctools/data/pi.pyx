@@ -948,5 +948,5 @@ class Timeseries:
         Returns an iterator over all timeseries IDs and value arrays for the given
         ensemble member.
         """
-        for key in self._values[0].keys():
+        for key in self._values[ensemble_member].keys():
             yield key, self.get(key)
