@@ -99,11 +99,18 @@ class AliasRelation:
     def aliases(self, a):
         return self._aliases.setdefault(a, OrderedSet([a]))
 
-    def equal(self, a, b):
-        return a in self.aliases(b)
-
     def canonical(self, a):
         return self.aliases(a)[0]
+
+    def canonical_signed(self, a):
+        if a in self._aliases:
+            return self.aliases(a)[0], 1
+        else:
+            b = '-' + a
+            if b in self._aliases:
+                return self.aliases(b)[0], -1
+            else:
+                return self.aliases(a)[0], 1
 
     @property
     def canonical_variables(self):
@@ -170,7 +177,10 @@ class AliasDict:
         else:
             varn = self._relation.canonical('-' + key)
             if varn in self._d:
-                self._d[varn] = -val
+                if hasattr(val, '__iter__'):
+                    self._d[varn] = [-c for c in val]
+                else:
+                    self._d[varn] = -val
             else:
                 self._d[varp] = val
 
@@ -178,7 +188,15 @@ class AliasDict:
         try:
             return self._d[self._relation.canonical(key)]
         except KeyError:
-            return -self._d[self._relation.canonical('-' + key)]
+            try:
+                val = self._d[self._relation.canonical('-' + key)]
+            except KeyError:
+                raise KeyError(key)
+            else:
+                if hasattr(val, '__iter__'):
+                    return [-c for c in val]
+                else:
+                    return -val
 
     def __delitem__(self, key):
         try:

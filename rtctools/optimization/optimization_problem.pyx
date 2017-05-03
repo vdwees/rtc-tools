@@ -330,23 +330,6 @@ class OptimizationProblem(object):
         """
         return []
 
-    def variable(self, variable):
-        """
-        Returns an :class:`MX` symbol for the given variable.
-
-        :param variable: Variable name.
-
-        :returns: The associated CasADi :class:`MX` symbol.
-        """
-        lists = self.dae_variables.values()
-        lists.append(self.path_variables)
-        lists.append(self.extra_variables)
-        for var in itertools.chain(*lists):
-            for alias in self.variable_aliases(var.getName()):
-                if alias.name == variable:
-                    return alias.sign * var
-        raise KeyError(variable)
-
     def delayed_feedback(self):
         """
         Returns the delayed feedback mappings.  These are given as a list of triples :math:`(x, y, \\tau)`,

@@ -9,6 +9,7 @@ import logging
 from optimization_problem import OptimizationProblem
 from timeseries import Timeseries
 from casadi_helpers import *
+from alias_tools import AliasDict
 
 logger = logging.getLogger("rtctools")
 
@@ -47,6 +48,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                   for variable in self.dae_variables['algebraics']]
         self._controls = [variable.getName()
                           for variable in self.dae_variables['control_inputs']]
+
+        # Create dictionary of variables so that we have O(1) state lookup available
+        self._variables = AliasDict(self.alias_relation)
+        for var in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.dae_variables['control_inputs'], self.dae_variables['constant_inputs'], self.dae_variables['parameters'], self.dae_variables['time']):
+            self._variables[var.getName()] = var
 
     @abstractmethod
     def times(self, variable=None):
@@ -102,6 +108,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         logger.info("Transcribing problem with a DAE of {} equations, {} collocation points, and {} free variables".format(
             dae_residual.size1(), len(self.times()), len(self.dae_variables['free_variables'])))
+
+        # Reset dictionary of variables
+        for var in itertools.chain(self.path_variables, self.extra_variables):
+            self._variables[var.getName()] = var
 
         # Cache path variable names
         self._path_variable_names = [variable.getName()
@@ -698,29 +708,20 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             # delay() support in JModelica.
             for (out_variable_name, in_variable_name, delay) in delayed_feedback:
                 # Resolve aliases
-                in_canonical = self.alias_relation.canonical(in_variable_name)
-                if in_canonical[0] == '-':
-                    in_canonical = in_canonical[1:]
-                    in_sign = -1
-                else:
-                    in_sign = 1
+                in_canonical, in_sign = self.alias_relation.canonical_signed(in_variable_name)
                 in_times = self.times(in_canonical)
-                in_values = self.state_vector(in_canonical, ensemble_member=ensemble_member)
+                in_nominal = self.variable_nominal(in_canonical)
+                in_values = in_nominal * self.state_vector(in_canonical, ensemble_member=ensemble_member)
                 if in_sign < 0:
                     in_values *= in_sign
 
-                out_canonical = self.alias_relation.canonical(out_variable_name)
-                if out_canonical[0] == '-':
-                    out_canonical = out_canonical[1:]
-                    out_sign = -1
-                else:
-                    out_sign = 1
+                out_canonical, out_sign = self.alias_relation.canonical_signed(out_variable_name)
                 out_times = self.times(out_canonical)
                 out_nominal = self.variable_nominal(out_canonical)
                 try:
-                    out_values = constant_inputs[out_canonical] / out_nominal
+                    out_values = constant_inputs[out_canonical]
                 except KeyError:
-                    out_values = self.state_vector(out_canonical, ensemble_member=ensemble_member)
+                    out_values = out_nominal * self.state_vector(out_canonical, ensemble_member=ensemble_member)
                     try:
                         history_timeseries = history[out_canonical]
                         if np.any(np.isnan(history_timeseries.values[:-1])):
@@ -728,7 +729,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         out_times = np.concatenate(
                             [history_timeseries.times[:-1], out_times])
                         out_values = vertcat(
-                            [history_timeseries.values[:-1] / out_nominal, out_values])
+                            [history_timeseries.values[:-1], out_values])
                     except KeyError:
                         logger.warning("No history available for delayed variable {}. Extrapolating t0 value backwards in time.".format(out_variable_name))
                 if out_sign < 0:
@@ -743,7 +744,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 x_out_delayed = interp1d(
                     out_times, out_values, collocation_times - delay, self.equidistant)
 
-                g.append(x_in - x_out_delayed)
+                nominal = 0.5 * (in_nominal + out_nominal)
+
+                g.append((x_in - x_out_delayed) / nominal)
                 zeros = np.zeros(n_collocation_times)
                 lbg.extend(zeros)
                 ubg.extend(zeros)
@@ -1388,6 +1391,16 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             return sym
 
+    def variable(self, variable):
+        """
+        Returns an :class:`MX` symbol for the given variable.
+
+        :param variable: Variable name.
+
+        :returns: The associated CasADi :class:`MX` symbol.
+        """
+        return self._variables[variable]
+
     def extra_variable(self, extra_variable, ensemble_member=0):
         # Look up transcribe_problem() state.
         X = self.solver_input
@@ -1425,26 +1438,24 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             tf = times[-1]
 
         # Find canonical variable
-        found = False
-        for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.controls):
-            aliases = self.variable_aliases(free_variable)
-            if variable in [alias.name for alias in aliases]:
-                state = self.state_vector(free_variable, ensemble_member)
-                found = True
-                break
-        if not found:
-            raise KeyError
+        canonical, sign = self.alias_relation.canonical_signed(variable)
+        nominal = self.variable_nominal(canonical)
+        state = nominal * self.state_vector(canonical, ensemble_member)
+        if sign < 0:
+            state *= -1
 
         # Compute combined points
         if t0 < times[0]:
             history = self.history(ensemble_member)
             try:
-                history_timeseries = history[free_variable]
+                history_timeseries = history[canonical]
             except KeyError:
                 raise Exception("No history found for variable {}, but a historical value was requested".format(variable))
             else:
                 history_times = history_timeseries.times[:-1]
                 history = history_timeseries.values[:-1]
+                if sign < 0:
+                    history *= -1
         else:
             history_times = np.empty(0)
             history = np.empty(0)
@@ -1475,26 +1486,24 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             tf = times[-1]
 
         # Find canonical variable
-        found = False
-        for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.controls):
-            aliases = self.variable_aliases(free_variable)
-            if variable in [alias.name for alias in aliases]:
-                state = self.state_vector(free_variable, ensemble_member)
-                found = True
-                break
-        if not found:
-            raise KeyError
+        canonical, sign = self.alias_relation.canonical_signed(variable)
+        nominal = self.variable_nominal(canonical)
+        state = nominal * self.state_vector(canonical, ensemble_member)
+        if sign < 0:
+            state *= -1
 
         # Compute combined points
         if t0 < times[0]:
             history = self.history(ensemble_member)
             try:
-                history_timeseries = history[free_variable]
+                history_timeseries = history[canonical]
             except KeyError:
                 raise Exception("No history found for variable {}, but a historical value was requested".format(variable))
             else:
                 history_times = history_timeseries.times[:-1]
                 history = history_timeseries.values[:-1]
+                if sign < 0:
+                    history *= -1
         else:
             history_times = np.empty(0)
             history = np.empty(0)
@@ -1520,15 +1529,16 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
     def der(self, variable):
         # Look up the derivative variable for the given non-derivative variable
-        for i, var in enumerate(self.differentiated_states):
-            for alias in self.variable_aliases(var):
-                if alias.name == variable:
-                    return alias.sign * self.dae_variables['derivatives'][i]
-        for i, var in enumerate(itertools.chain(self.algebraic_states, self.controls)):
-            for alias in self.variable_aliases(var):
-                if alias.name == variable:
-                    return alias.sign * self._algebraic_and_control_derivatives[i]
-        raise KeyError
+        canonical, sign = self.alias_relation.canonical_signed(variable)
+        try:
+            i = self.differentiated_states.index(canonical)
+            return sign * self.dae_variables['derivatives'][i]
+        except ValueError:
+            try:
+                i = self.algebraic_states.index(canonical)
+            except ValueError:
+                i = len(self.algebraic_states) + self.controls.index(canonical)
+            return sign * self._algebraic_and_control_derivatives[i]
 
     def der_at(self, variable, t, ensemble_member=0):
         # Special case t being t0 for differentiated states
@@ -1538,12 +1548,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             control_size = self._control_size
             ensemble_member_size = self._state_size / self.ensemble_size
 
-            canonical = self.alias_relation.canonical(variable)
-            if canonical[0] == '-':
-                canonical = canonical[1:]
-                sign = -1
-            else:
-                sign = 1
+            canonical, sign = self.alias_relation.canonical_signed(variable)
             try:
                 i = self.differentiated_states.index(canonical)
             except ValueError:

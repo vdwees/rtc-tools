@@ -338,7 +338,8 @@ class ModelicaMixin(OptimizationProblem):
             logger.debug("ModelicaMixin: Substituting {} with {}".format(substitutions.keys(), substitutions.values()))
 
         self._mx['eliminated_algebraics'] = substitutions.keys()
-        self._mx['algebraics'] = [var for var in self._mx['algebraics'] if var not in set(self._mx['eliminated_algebraics'])]
+        eliminated_algebraics_names = [sym.getName() for sym in self._mx['eliminated_algebraics']]
+        self._mx['algebraics'] = [var for var in self._mx['algebraics'] if var.getName() not in eliminated_algebraics_names]
        
         dae_residual = vertcat([eq.getLhs() - eq.getRhs() for eq in dae_eq])
         [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
