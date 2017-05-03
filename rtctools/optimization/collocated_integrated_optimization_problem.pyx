@@ -1538,11 +1538,19 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             control_size = self._control_size
             ensemble_member_size = self._state_size / self.ensemble_size
 
-            for i, state in enumerate(self.differentiated_states):
-                for alias in self.variable_aliases(state):
-                    if alias.name == variable:
-                        return alias.sign * X[control_size + (ensemble_member + 1) * ensemble_member_size - len(self.dae_variables['derivatives']) + i]
-            # Fall through, in case 'variable' is not a differentiated state.
+            canonical = self.alias_relation.canonical(variable)
+            if canonical[0] == '-':
+                canonical = canonical[1:]
+                sign = -1
+            else:
+                sign = 1
+            try:
+                i = self.differentiated_states.index(canonical)
+            except ValueError:
+                # Fall through, in case 'variable' is not a differentiated state.
+                pass
+            else:
+                return sign * X[control_size + (ensemble_member + 1) * ensemble_member_size - len(self.dae_variables['derivatives']) + i]
 
         # Time stamps for this variale
         times = self.times(variable)
