@@ -1,7 +1,5 @@
 import collections
 
-import logging
-logger = logging.getLogger("rtctools")
 
 # From https://code.activestate.com/recipes/576694/
 class OrderedSet(collections.MutableSet):
@@ -80,31 +78,10 @@ class OrderedSet(collections.MutableSet):
 # End snippet
 
 
-class _AliasVariable:
-    def __init__(self, relation, name, sign=1):
-        self._relation = relation
-        if sign < 0:
-            if name.startswith('-'):
-                self._name = name[1:]
-            else:
-                self._name = '-' + name
-        else:
-            self._name = name
-
-    @property
-    def name(self):
-        return self._name
-
-    def __eq__(self, other):
-        return self._relation.equal(self._name, other._name)
-
-    def __hash__(self):
-        return hash(self._relation.canonical(self._name))
-
-
 class AliasRelation:
     def __init__(self):
         self._aliases = {}
+        self._canonical_variables = OrderedSet()
 
     def add(self, a, b):
         aliases = self.aliases(a)
@@ -112,6 +89,12 @@ class AliasRelation:
             aliases.add(v)
         for v in aliases:
             self._aliases[v] = aliases
+        self._canonical_variables.add(aliases[0])
+        for v in aliases[1:]:
+            try:
+                self._canonical_variables.remove(b)
+            except KeyError:
+                pass
 
     def aliases(self, a):
         return self._aliases.setdefault(a, OrderedSet([a]))
@@ -124,12 +107,10 @@ class AliasRelation:
 
     @property
     def canonical_variables(self):
-        return set([aliases[0] for aliases in self._aliases.values()])
+        return self._canonical_variables
 
     def __iter__(self):
-        # TODO optimize
-        for canonical_variable in self.canonical_variables:
-            yield canonical_variable, self.aliases(canonical_variable)[1:]
+        return ((canonical_variable, self.aliases(canonical_variable)[1:]) for canonical_variable in self._canonical_variables)
 
 
 class AliasSet:
@@ -138,10 +119,10 @@ class AliasSet:
         self._s = set()
 
     def add(self, a):
-        self._s.add(_AliasVariable(self._relation, a))
+        self._s.add(self._relation.canonical(a))
 
     def remove(self, a):
-        self._s.remove(_AliasVariable(self._relation, a))
+        self._s.remove(self._relation.canonical(a))
 
     def __add__(self, other):
         new = AliasSet(self._relation)
@@ -172,8 +153,7 @@ class AliasSet:
         return len(self._s)
 
     def __iter__(self):
-        for alias_variable in self._s:
-            yield alias_variable.name
+        return self._s.__iter__()
 
 
 class AliasDict:
@@ -184,33 +164,33 @@ class AliasDict:
             self.update(other)
 
     def __setitem__(self, key, val):
-        varp = _AliasVariable(self._relation, key, sign=1)
-        if varp.name in self._relation:
+        varp = self._relation.canonical(key)
+        if varp in self._d:
             self._d[varp] = val
         else:
-            varn = _AliasVariable(self._relation, key, sign=-1)
-            if varn.name in self._relation:
+            varn = self._relation.canonical('-' + key)
+            if varn in self._d:
                 self._d[varn] = -val
             else:
                 self._d[varp] = val
 
     def __getitem__(self, key):
         try:
-            return self._d[_AliasVariable(self._relation, key, sign=1)]
+            return self._d[self._relation.canonical(key)]
         except KeyError:
-            return -self._d[_AliasVariable(self._relation, key, sign=-1)]
+            return -self._d[self._relation.canonical('-' + key)]
 
     def __delitem__(self, key):
         try:
-            del self._d[_AliasVariable(self._relation, key, sign=1)]
+            del self._d[self._relation.canonical(key)]
         except KeyError:
-            del self._d[_AliasVariable(self._relation, key, sign=-1)]
+            del self._d[self._relation.canonical('-' + key)]
 
     def __contains__(self, key):
-        if _AliasVariable(self._relation, key, sign=1) in self._d:
+        if self._relation.canonical(key) in self._d:
             return True
         else:
-            if _AliasVariable(self._relation, key, sign=-1) in self._d:
+            if self._relation.canonical('-' + key) in self._d:
                 return True
             else:
                 return False
@@ -219,8 +199,7 @@ class AliasDict:
         return len(self._d)
 
     def __iter__(self):
-        for key, value in self._d.iteritems():
-            yield key.name, value
+        return self._d.iteritems()
 
     def update(self, other):
         for key, value in other.iteritems():
@@ -240,8 +219,7 @@ class AliasDict:
             return default
 
     def keys(self):
-        for key in self._d.keys():
-            yield key.name
+        return self._d.keys()
 
     def values(self):
         return self._d.values()
