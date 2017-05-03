@@ -1,5 +1,8 @@
 import collections
 
+import logging
+logger = logging.getLogger("rtctools")
+
 # From https://code.activestate.com/recipes/576694/
 class OrderedSet(collections.MutableSet):
 
@@ -104,9 +107,11 @@ class AliasRelation:
         self._aliases = {}
 
     def add(self, a, b):
-        aliases = self.aliases(a) | self.aliases(b)
-        self._aliases[a] = aliases
-        self._aliases[b] = aliases
+        aliases = self.aliases(a)
+        for v in self.aliases(b):
+            aliases.add(v)
+        for v in aliases:
+            self._aliases[v] = aliases
 
     def aliases(self, a):
         return self._aliases.setdefault(a, OrderedSet([a]))

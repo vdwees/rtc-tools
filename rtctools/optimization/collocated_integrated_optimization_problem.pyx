@@ -201,20 +201,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 raise Exception(
                     "Unable to find lookup table function for {}".format(sym_name))
             else:
-                input_syms = []
-                for input in lookup_table.inputs:
-                    found = False
-                    input_sym = None
-                    for symbol in self.dae_variables['free_variables']:
-                        for alias in self.variable_aliases(symbol.getName()):
-                            if alias.name == input.getName():
-                                input_sym = symbol
-                                found = True
-                                break
-                    if not found:
-                        raise Exception(
-                            "Unable to find input symbol {} in model".format(input.getName()))
-                    input_syms.append(input_sym)
+                input_syms = [self.variable(input_sym.getName()) for input_sym in lookup_table.inputs]
 
                 [value] = lookup_table.function(input_syms)
                 [dae_residual] = substitute(
@@ -702,7 +689,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 #if self._affine_collocation_constraints:
                 #    collocation_constraints = reduce_matvec_plus_b(collocation_constraints, self.solver_input)
                 g.append(collocation_constraints)
-                zeros = collocation_constraints.size1() * [0.0]
+                zeros = np.zeros(collocation_constraints.size1())
                 lbg.extend(zeros)
                 ubg.extend(zeros)
 
@@ -711,51 +698,41 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             # delay() support in JModelica.
             for (out_variable_name, in_variable_name, delay) in delayed_feedback:
                 # Resolve aliases
-                in_times = None
-                in_values = None
-                out_times = None
-                out_values = None
-                for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.controls):
-                    for alias in self.variable_aliases(variable):
-                        if alias.name == in_variable_name:
-                            in_times = self.times(variable)
-                            in_values = alias.sign * self.variable_nominal(
-                                variable) * self.state_vector(variable, ensemble_member=ensemble_member)
-                        if alias.name == out_variable_name:
-                            out_times = self.times(variable)
-                            out_values = alias.sign * self.variable_nominal(
-                                variable) * self.state_vector(variable, ensemble_member=ensemble_member)
-                            history_found = False
-                            for history_alias in self.variable_aliases(variable):
-                                if history_alias.name in history:
-                                    if np.any(np.isnan(history[history_alias.name].values[:-1])):
-                                        raise Exception('History for delayed variable {} contains NaN.'.format(out_variable_name))
-                                    out_times = np.concatenate(
-                                        [history[history_alias.name].times[:-1], out_times])
-                                    out_values = vertcat(
-                                        [history[history_alias.name].values[:-1], out_values])
-                                    history_found = True
-                                    break
-                            if not history_found:
-                                logger.warning("No history available for delayed variable {}. Extrapolating t0 value backwards in time.".format(out_variable_name))
-                            out_values *= alias.sign
-                    if in_times is not None and out_times is not None:
-                        break
-                for variable in self.dae_variables['constant_inputs']:
-                    variable = variable.getName()
-                    for alias in self.variable_aliases(variable):
-                        if alias.name == out_variable_name:
-                            out_times = collocation_times
-                            out_values = alias.sign * \
-                                constant_inputs[variable]
-                    if out_times is not None:
-                        break
-                if in_times is None:
-                    raise Exception(
-                        "Could not find variable with name {}".format(in_variable_name))
-                if out_times is None:
-                    raise Exception(
-                        "Could not find variable with name {}".format(out_variable_name))
+                in_canonical = self.alias_relation.canonical(in_variable_name)
+                if in_canonical[0] == '-':
+                    in_canonical = in_canonical[1:]
+                    in_sign = -1
+                else:
+                    in_sign = 1
+                in_times = self.times(in_canonical)
+                in_values = self.state_vector(in_canonical, ensemble_member=ensemble_member)
+                if in_sign < 0:
+                    in_values *= in_sign
+
+                out_canonical = self.alias_relation.canonical(out_variable_name)
+                if out_canonical[0] == '-':
+                    out_canonical = out_canonical[1:]
+                    out_sign = -1
+                else:
+                    out_sign = 1
+                out_times = self.times(out_canonical)
+                out_nominal = self.variable_nominal(out_canonical)
+                try:
+                    out_values = constant_inputs[out_canonical] / out_nominal
+                except KeyError:
+                    out_values = self.state_vector(out_canonical, ensemble_member=ensemble_member)
+                    try:
+                        history_timeseries = history[out_canonical]
+                        if np.any(np.isnan(history_timeseries.values[:-1])):
+                            raise Exception('History for delayed variable {} contains NaN.'.format(out_variable_name))
+                        out_times = np.concatenate(
+                            [history_timeseries.times[:-1], out_times])
+                        out_values = vertcat(
+                            [history_timeseries.values[:-1] / out_nominal, out_values])
+                    except KeyError:
+                        logger.warning("No history available for delayed variable {}. Extrapolating t0 value backwards in time.".format(out_variable_name))
+                if out_sign < 0:
+                    out_values *= out_sign
 
                 # Set up delay constraints
                 if len(collocation_times) != len(in_times):
@@ -767,8 +744,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     out_times, out_values, collocation_times - delay, self.equidistant)
 
                 g.append(x_in - x_out_delayed)
-                lbg.extend(n_collocation_times * [0.0])
-                ubg.extend(n_collocation_times * [0.0])
+                zeros = np.zeros(n_collocation_times)
+                lbg.extend(zeros)
+                ubg.extend(zeros)
 
             # Objective
             f_member = self.objective(ensemble_member)
@@ -1251,13 +1229,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             except KeyError:
                 pass
             else:
+                result = np.interp(self.times(alias), constant_input.times, constant_input.values)
                 for alias in self.alias_relation.aliases(variable):
                     if alias == variable:
                         continue
                     if alias[0] == '-':
-                        results[alias[1:]] = -np.interp(self.times(alias), constant_input.times, constant_input.values)
+                        results[alias[1:]] = -result
                     else:
-                        results[alias] = np.interp(self.times(alias), constant_input.times, constant_input.values)
+                        results[alias] = result
 
         # Extract path variables
         n_collocation_times = len(self.times())
