@@ -437,7 +437,7 @@ class OptimizationProblem(object):
         :returns: A dictionary of variable names and historical time series (up to and including t0).
         """
         initial_state = self.initial_state(ensemble_member)
-        return {variable: Timeseries(np.array([self.initial_time]), np.array([state])) for variable, state in initial_state.iteritems()}
+        return AliasDict(self.alias_relation, {variable: Timeseries(np.array([self.initial_time]), np.array([state])) for variable, state in initial_state.iteritems()})
 
     @abstractproperty
     def alias_relation(self):
@@ -514,7 +514,7 @@ class OptimizationProblem(object):
 
         :returns: A dictionary of variable names and seed time series.
         """
-        return {}
+        return AliasDict(self.alias_relation)
 
     def objective(self, ensemble_member):
         """

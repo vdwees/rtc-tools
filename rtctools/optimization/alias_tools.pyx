@@ -214,7 +214,7 @@ class AliasDict:
         return len(self._d)
 
     def __iter__(self):
-        for key, value in self._d:
+        for key, value in self._d.iteritems():
             yield key.name, value
 
     def update(self, other):

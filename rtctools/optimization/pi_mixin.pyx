@@ -11,6 +11,7 @@ import rtctools.data.pi as pi
 
 from optimization_problem import OptimizationProblem
 from timeseries import Timeseries
+from alias_tools import AliasDict
 
 logger = logging.getLogger("rtctools")
 
@@ -232,7 +233,7 @@ class PIMixin(OptimizationProblem):
 
     def history(self, ensemble_member):
         # Load history
-        history = {}
+        history = AliasDict(self.alias_relation)
         for state in self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs'] + self.dae_variables['constant_inputs']:
             for alias in self.variable_aliases(state.getName()):
                 try:
@@ -251,7 +252,7 @@ class PIMixin(OptimizationProblem):
 
     def initial_state(self, ensemble_member):
         history = self.history(ensemble_member)
-        return {variable: timeseries.values[-1] for variable, timeseries in history.iteritems()}
+        return AliasDict(self.alias_relation, {variable: timeseries.values[-1] for variable, timeseries in history.iteritems()})
 
     def seed(self, ensemble_member):
         # Call parent class first for default values.

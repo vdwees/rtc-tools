@@ -585,37 +585,20 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             # Initial conditions specified in history timeseries
             history = self.history(ensemble_member)
-            for state in history.keys():
+            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.controls):
                 try:
-                    history_timeseries = history[state]
-                    xinit = self.interpolate(
-                        t0, history_timeseries.times, history_timeseries.values, np.nan, np.nan)
-
+                    history_timeseries = history[variable]
                 except KeyError:
-                    xinit = np.nan
+                    pass
+                else:
+                    sym = self.state_vector(variable, ensemble_member=ensemble_member)[0]
+                    g.append(sym)
 
-                if np.isfinite(xinit):
-                    # Avoid the use of slow state_at().  We don't need
-                    # interpolation or history values here.
-                    value = None
-                    for variable in self.dae_variables['free_variables']:
-                        variable = variable.getName()
-                        for alias in self.variable_aliases(variable):
-                            if alias.name == state:
-                                value = self.state_vector(
-                                    variable, ensemble_member=ensemble_member)[0]
-                                nominal = self.variable_nominal(variable)
-                                if nominal != 1:
-                                    value *= nominal
-                                if alias.sign < 0:
-                                    value *= -1
-                                break
-                    if value is None:
-                        # This was no free variable.
-                        continue
-                    g.append(value)
-                    lbg.append(float(xinit))
-                    ubg.append(float(xinit))
+                    val = self.interpolate(
+                        t0, history_timeseries.times, history_timeseries.values, np.nan, np.nan)
+                    val /= self.variable_nominal(variable)
+                    lbg.append(val)
+                    ubg.append(val)
 
             # Initial conditions for integrator
             accumulation_X0 = []
@@ -1023,25 +1006,21 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     f_left, f_right = np.nan, np.nan
                     if t < t0:
                         history = self.history(ensemble_member)
-                        history_found = False
-                        for history_alias in self.variable_aliases(control_input):
-                            if history_alias.name in history:
-                                history_timeseries = history[
-                                    history_alias.name]
-                                if extrapolate:
-                                    f_left = history_timeseries.values[0]
-                                    f_right = history_timeseries.values[-1]
-                                sym = history_alias.sign * \
-                                    self.interpolate(
-                                        t, history_timeseries.times, history_timeseries.values, f_left, f_right)
-                                history_found = True
-                        if not history_found:
+                        try:
+                            history_timeseries = history[control_input]
+                        except KeyError:
                             if extrapolate:
                                 sym = variable_values[0]
                             else:
                                 sym = np.nan
-                            if not scaled and nominal != 1:
-                                sym *= nominal
+                        else:
+                            if extrapolate:
+                                f_left = history_timeseries.values[0]
+                                f_right = history_timeseries.values[-1]
+                            sym = self.interpolate(
+                                    t, history_timeseries.times, history_timeseries.values, f_left, f_right)
+                        if not scaled and nominal != 1:
+                            sym *= nominal
                     else:
                         if extrapolate:
                             f_left = variable_values[0]
@@ -1360,27 +1339,21 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                             f_left, f_right = np.nan, np.nan
                             if t < t0:
                                 history = self.history(ensemble_member)
-                                history_found = False
-                                for history_alias in self.variable_aliases(free_variable):
-                                    if history_alias.name in history:
-                                        history_timeseries = history[
-                                            history_alias.name]
-                                        if extrapolate:
-                                            f_left = history_timeseries.values[
-                                                0]
-                                            f_right = history_timeseries.values[
-                                                -1]
-                                        sym = history_alias.sign * \
-                                            self.interpolate(
-                                                t, history_timeseries.times, history_timeseries.values, f_left, f_right)
-                                        history_found = True
-                                if not history_found:
+                                try:
+                                    history_timeseries = history[free_variable]
+                                except KeyError:
                                     if extrapolate:
                                         sym = variable_values[0]
                                     else:
                                         sym = np.nan
-                                    if not scaled and nominal != 1:
-                                        sym *= nominal
+                                else:
+                                    if extrapolate:
+                                        f_left = history_timeseries.values[0]
+                                        f_right = history_timeseries.values[-1]
+                                    sym = self.interpolate(
+                                            t, history_timeseries.times, history_timeseries.values, f_left, f_right)
+                                if not scaled and nominal != 1:
+                                    sym *= nominal
                             else:
                                 if extrapolate:
                                     f_left = variable_values[0]
@@ -1486,15 +1459,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Compute combined points
         if t0 < times[0]:
             history = self.history(ensemble_member)
-            found = False
-            for alias in self.variable_aliases(free_variable):
-                if alias.name in history:
-                    history_times = history[variable].times[:-1]
-                    history = alias.sign * history[variable].values
-                    found = True
-                    break
-            if not found:
+            try:
+                history_timeseries = history[free_variable]
+            except KeyError:
                 raise Exception("No history found for variable {}, but a historical value was requested".format(variable))
+            else:
+                history_times = history_timeseries.times[:-1]
+                history = history_timeseries.values[:-1]
         else:
             history_times = np.empty(0)
             history = np.empty(0)
@@ -1538,15 +1509,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Compute combined points
         if t0 < times[0]:
             history = self.history(ensemble_member)
-            found = False
-            for alias in self.variable_aliases(free_variable):
-                if alias.name in history:
-                    history_times = history[variable].times[:-1]
-                    history = alias.sign * history[variable].values
-                    found = True
-                    break
-            if not found:
+            try:
+                history_timeseries = history[free_variable]
+            except KeyError:
                 raise Exception("No history found for variable {}, but a historical value was requested".format(variable))
+            else:
+                history_times = history_timeseries.times[:-1]
+                history = history_timeseries.values[:-1]
         else:
             history_times = np.empty(0)
             history = np.empty(0)

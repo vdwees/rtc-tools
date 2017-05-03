@@ -266,25 +266,21 @@ class ControlTreeMixin(OptimizationProblem):
                     f_left, f_right = np.nan, np.nan
                     if t < t0:
                         history = self.history(ensemble_member)
-                        history_found = False
-                        for history_alias in self.variable_aliases(control_input):
-                            if history_alias.name in history:
-                                history_timeseries = history[
-                                    history_alias.name]
-                                if extrapolate:
-                                    f_left = history_timeseries.values[0]
-                                    f_right = history_timeseries.values[-1]
-                                sym = history_alias.sign * \
-                                    self.interpolate(
-                                        t, history_timeseries.times, history_timeseries.values, f_left, f_right)
-                                history_found = True
-                        if not history_found:
+                        try:
+                            history_timeseries = history[control_input]
+                        except KeyError:
                             if extrapolate:
                                 sym = variable_values[0]
                             else:
                                 sym = np.nan
-                            if not scaled and nominal != 1:
-                                sym *= nominal
+                        else:
+                            if extrapolate:
+                                f_left = history_timeseries.values[0]
+                                f_right = history_timeseries.values[-1]
+                            sym = self.interpolate(
+                                    t, history_timeseries.times, history_timeseries.values, f_left, f_right)
+                        if not scaled and nominal != 1:
+                            sym *= nominal
                     else:
                         if extrapolate:
                             f_left = variable_values[0]
