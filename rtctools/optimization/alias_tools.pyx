@@ -172,9 +172,11 @@ class AliasSet:
 
 
 class AliasDict:
-    def __init__(self, relation):
+    def __init__(self, relation, other=None):
         self._relation = relation
         self._d = {}
+        if other:
+            self.update(other)
 
     def __setitem__(self, key, val):
         varp = _AliasVariable(self._relation, key, sign=1)

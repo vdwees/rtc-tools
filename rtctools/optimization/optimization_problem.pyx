@@ -411,7 +411,7 @@ class OptimizationProblem(object):
 
         :returns: A dictionary of variable names and lookup tables.
         """
-        return {}
+        return AliasDict(self.alias_relation)
 
     def bounds(self):
         """

@@ -191,39 +191,34 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Insert lookup tables.  No support yet for different lookup tables per ensemble member.
         lookup_tables = self.lookup_tables(0)
-        inserted_lookup_tables = set()
 
         for sym in self.dae_variables['lookup_tables']:
-            found = False
-            sym_key = None
-            for alias in self.variable_aliases(sym.getName()):
-                if alias.name in lookup_tables:
-                    sym_key = alias.name
-                    inserted_lookup_tables.add(alias.name)
-                    found = True
-                    break
-            if not found:
+            sym_name = sym.getName()
+
+            try:
+                lookup_table = lookup_tables[sym_name]
+            except KeyError:
                 raise Exception(
-                    "Unable to find lookup table function for {}".format(sym.getName()))
+                    "Unable to find lookup table function for {}".format(sym_name))
+            else:
+                input_syms = []
+                for input in lookup_table.inputs:
+                    found = False
+                    input_sym = None
+                    for symbol in self.dae_variables['free_variables']:
+                        for alias in self.variable_aliases(symbol.getName()):
+                            if alias.name == input.getName():
+                                input_sym = symbol
+                                found = True
+                                break
+                    if not found:
+                        raise Exception(
+                            "Unable to find input symbol {} in model".format(input.getName()))
+                    input_syms.append(input_sym)
 
-            input_syms = []
-            for input in lookup_tables[sym_key].inputs:
-                found = False
-                input_sym = None
-                for symbol in self.dae_variables['free_variables']:
-                    for alias in self.variable_aliases(symbol.getName()):
-                        if alias.name == input.getName():
-                            input_sym = symbol
-                            found = True
-                            break
-                if not found:
-                    raise Exception(
-                        "Unable to find input symbol {} in model".format(input.getName()))
-                input_syms.append(input_sym)
-
-            [value] = lookup_tables[sym_key].function(input_syms)
-            [dae_residual] = substitute(
-                [dae_residual], [sym], [value])
+                [value] = lookup_table.function(input_syms)
+                [dae_residual] = substitute(
+                    [dae_residual], [sym], [value])
 
         if len(self.dae_variables['lookup_tables']) > 0 and self.ensemble_size > 1:
             logger.warning("Using lookup tables of ensemble member #0 for all members.")
