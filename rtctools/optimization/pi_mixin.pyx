@@ -180,8 +180,9 @@ class PIMixin(OptimizationProblem):
                     if np.any(np.isnan(timeseries.values[self._timeseries_import.forecast_index:])):
                         raise Exception("Constant input {} contains NaN".format(variable.getName()))
                     constant_inputs[variable.getName()] = timeseries
-                    logger.debug("Read constant input {} from {}".format(
-                        variable.getName(), alias.name))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("Read constant input {} from {}".format(
+                            variable.getName(), alias.name))
                     break
                 except KeyError:
                     continue
@@ -199,8 +200,9 @@ class PIMixin(OptimizationProblem):
                     timeseries_id = self.min_timeseries_id(alias.name)
                     m = alias.sign * self._timeseries_import.get(timeseries_id, ensemble_member=0)[
                         self._timeseries_import.forecast_index:]
-                    logger.debug("Read lower bound for variable {} from {}".format(
-                        variable.getName(), timeseries_id))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("Read lower bound for variable {} from {}".format(
+                            variable.getName(), timeseries_id))
                 except KeyError:
                     pass
 
@@ -208,8 +210,9 @@ class PIMixin(OptimizationProblem):
                     timeseries_id = self.max_timeseries_id(alias.name)
                     M = alias.sign * self._timeseries_import.get(timeseries_id, ensemble_member=0)[
                         self._timeseries_import.forecast_index:]
-                    logger.debug("Read upper bound for variable {} from {}".format(
-                        variable.getName(), timeseries_id))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("Read upper bound for variable {} from {}".format(
+                            variable.getName(), timeseries_id))
                 except KeyError:
                     pass
 
@@ -239,8 +242,9 @@ class PIMixin(OptimizationProblem):
                 try:
                     history[state.getName()] = Timeseries(self._timeseries_import_times[:self._timeseries_import.forecast_index + 1], alias.sign *
                                                           self._timeseries_import.get(alias.name, ensemble_member=ensemble_member)[:self._timeseries_import.forecast_index + 1])
-                    logger.debug("Read history for state {} from {}".format(
-                        state.getName(), alias.name))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("Read history for state {} from {}".format(
+                            state.getName(), alias.name))
                     break
                 except KeyError:
                     continue
@@ -264,8 +268,9 @@ class PIMixin(OptimizationProblem):
                 try:
                     s = Timeseries(self._timeseries_import_times, alias.sign *
                                    self._timeseries_import.get(alias.name, ensemble_member=ensemble_member))
-                    logger.debug("Seeded free variable {} from {}".format(
-                        variable.getName(), alias.name))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("Seeded free variable {} from {}".format(
+                            variable.getName(), alias.name))
                     # A seeding of NaN means no seeding
                     s.values[np.isnan(s.values)] = 0.0
                     seed[variable.getName()] = s

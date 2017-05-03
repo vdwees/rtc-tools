@@ -47,7 +47,8 @@ class ModelicaMixin(OptimizationProblem):
                                                   kwargs['model_folder']) if f.endswith('.mo')],
                                               compiler_options=self.compiler_options())
 
-        logger.debug("\n" + repr(self._jm_model))
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            logger.debug("\n" + repr(self._jm_model))
 
         # Extract the CasADi MX variables used in the model
         state_vars = filter(lambda var: not var.isAlias(
@@ -114,18 +115,19 @@ class ModelicaMixin(OptimizationProblem):
                 parameter_kind) if not var.isAlias()])
 
         # Output variables
-        logger.debug("ModelicaMixin: Found states {}".format(
-            ', '.join([var.getName() for var in self._mx['states']])))
-        logger.debug("ModelicaMixin: Found derivatives {}".format(
-            ', '.join([var.getName() for var in self._mx['derivatives']])))
-        logger.debug("ModelicaMixin: Found algebraics {}".format(
-            ', '.join([var.getName() for var in self._mx['algebraics']])))
-        logger.debug("ModelicaMixin: Found control inputs {}".format(
-            ', '.join([var.getName() for var in self._mx['control_inputs']])))
-        logger.debug("ModelicaMixin: Found constant inputs {}".format(
-            ', '.join([var.getName() for var in self._mx['constant_inputs']])))
-        logger.debug("ModelicaMixin: Found parameters {}".format(
-            ', '.join([var.getName() for var in self._mx['parameters']])))
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            logger.debug("ModelicaMixin: Found states {}".format(
+                ', '.join([var.getName() for var in self._mx['states']])))
+            logger.debug("ModelicaMixin: Found derivatives {}".format(
+                ', '.join([var.getName() for var in self._mx['derivatives']])))
+            logger.debug("ModelicaMixin: Found algebraics {}".format(
+                ', '.join([var.getName() for var in self._mx['algebraics']])))
+            logger.debug("ModelicaMixin: Found control inputs {}".format(
+                ', '.join([var.getName() for var in self._mx['control_inputs']])))
+            logger.debug("ModelicaMixin: Found constant inputs {}".format(
+                ', '.join([var.getName() for var in self._mx['constant_inputs']])))
+            logger.debug("ModelicaMixin: Found parameters {}".format(
+                ', '.join([var.getName() for var in self._mx['parameters']])))
 
         # Initialize aliases
         self._aliases = {}
@@ -140,8 +142,9 @@ class ModelicaMixin(OptimizationProblem):
             sign = ''
             if var.isNegated():
                 sign = '-'
-            logger.debug("ModelicaMixin: Aliased {} to {}{}".format(
-                var.getName(), sign, model_var.getName()))
+            if logger.getEffectiveLevel() == logging.DEBUG:
+                logger.debug("ModelicaMixin: Aliased {} to {}{}".format(
+                    var.getName(), sign, model_var.getName()))
 
             self._alias_relation.add(model_var.getName(), sign + var.getName())
 
@@ -152,8 +155,9 @@ class ModelicaMixin(OptimizationProblem):
             if nominal and nominal != 0:
                 self._nominals[var.getName()] = abs(float(nominal))
 
-                logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
-                    var.getName(), self._nominals[var.getName()]))
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
+                        var.getName(), self._nominals[var.getName()]))
 
         # Now condense equations
         self._condense_dae()
@@ -179,13 +183,15 @@ class ModelicaMixin(OptimizationProblem):
                 if var.hasAttributeSet('max'):
                     M = var.getAttribute('max')
                 if m is not None or M is not None:
-                    logger.debug("ModelicaMixin: Marking {} as a potential constraint residual.".format(sym.getName()))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("ModelicaMixin: Marking {} as a potential constraint residual.".format(sym.getName()))
 
                     constraint_residual_candidates.append((sym, m, M))
                 else:
                     name = sym.getName()
                     if name.startswith('_') or ('._' in name):
-                        logger.debug("ModelicaMixin: Marking {} as a private variable to be eliminated.".format(name))
+                        if logger.getEffectiveLevel() == logging.DEBUG:
+                            logger.debug("ModelicaMixin: Marking {} as a private variable to be eliminated.".format(name))
 
                         private_variables.append(name)
 
@@ -208,14 +214,16 @@ class ModelicaMixin(OptimizationProblem):
             # This is an equation of the form x = y.  Create an alias, and substitute one with the other.
             if lhs.isSymbolic() and rhs.isSymbolic():
                 if lhs_name in algebraics_names:
-                    logger.debug("ModelicaMixin: Aliased {} to {}".format(lhs_name, rhs_name))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("ModelicaMixin: Aliased {} to {}".format(lhs_name, rhs_name))
                     # We may alias multiple variables to the same variable, or alias the same variable to multiple variables.  
                     # We handle these cases using an AliasRelation.  The first variable to an alias relation becomes
                     # the canonical variable.  Algebraic variables may always be eliminated; for inputs this is not the case.
                     rel.add(rhs_name, lhs_name)
                     skip = True
                 elif rhs_name in algebraics_names:
-                    logger.debug("ModelicaMixin: Aliased {} to {}".format(rhs_name, lhs_name))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("ModelicaMixin: Aliased {} to {}".format(rhs_name, lhs_name))
                     # We may alias multiple variables to the same variable, or alias the same variable to multiple variables.  
                     # We handle these cases using an AliasRelation.  The first variable to an alias relation becomes
                     # the canonical variable.  Algebraic variables may always be eliminated; for inputs this is not the case.
@@ -224,7 +232,8 @@ class ModelicaMixin(OptimizationProblem):
 
             # Add equation, if it is not to be skipped.
             if skip:
-                logger.debug("ModelicaMixin: Condensation pass 1: Eliminating equation {} = {}".format(lhs, rhs))
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("ModelicaMixin: Condensation pass 1: Eliminating equation {} = {}".format(lhs, rhs))
             else:
                 dae_eq_1pass.append(eq)
 
@@ -244,7 +253,8 @@ class ModelicaMixin(OptimizationProblem):
 
             # Add equation, if it is not to be skipped.
             if skip:
-                logger.debug("ModelicaMixin: Condensation pass 2: Eliminating equation {} = {}".format(lhs, rhs))
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("ModelicaMixin: Condensation pass 2: Eliminating equation {} = {}".format(lhs, rhs))
             else:
                 dae_eq_2pass.append(eq)
         dae_eq = dae_eq_2pass
@@ -307,21 +317,25 @@ class ModelicaMixin(OptimizationProblem):
 
                     if not m_symbolic and not M_symbolic:
                         constraint = (constraint_function, m, M)
-                        logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
+                        if logger.getEffectiveLevel() == logging.DEBUG:
+                            logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
                         self._path_constraints.append(constraint)
                     else:
                         if m_symbolic or np.isfinite(m):
                             constraint = (constraint_function - m, 0.0, np.inf)
-                            logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
+                            if logger.getEffectiveLevel() == logging.DEBUG:
+                                logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
                             self._path_constraints.append(constraint)
 
                         if M_symbolic or np.isfinite(M):
                             constraint = (constraint_function - M, -np.inf, 0.0)
-                            logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
+                            if logger.getEffectiveLevel() == logging.DEBUG:
+                                logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
                             self._path_constraints.append(constraint)   
 
         # Substitute eliminated variables z with f(x) in rest of DAE.
-        logger.debug("ModelicaMixin: Substituting {} with {}".format(substitutions.keys(), substitutions.values()))
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            logger.debug("ModelicaMixin: Substituting {} with {}".format(substitutions.keys(), substitutions.values()))
 
         self._mx['eliminated_algebraics'] = substitutions.keys()
         self._mx['algebraics'] = [var for var in self._mx['algebraics'] if var not in set(self._mx['eliminated_algebraics'])]
@@ -399,8 +413,9 @@ class ModelicaMixin(OptimizationProblem):
             var = self._jm_model.getVariable(variable)
             if var.hasAttributeSet('bindingExpression'):
                 parameters[variable] = var.getAttribute('bindingExpression')
-                logger.debug("Read parameter {} from Modelica model".format(
-                    variable))
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("Read parameter {} from Modelica model".format(
+                        variable))
             else:
                 # Value will be provided by a subclass.
                 pass
@@ -420,8 +435,9 @@ class ModelicaMixin(OptimizationProblem):
                 value = var.getAttribute('bindingExpression')
                 constant_inputs[variable] = Timeseries(
                     times, repmat([value], len(times)))
-                logger.debug("Read constant input {} from Modelica model".format(
-                    variable))
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("Read constant input {} from Modelica model".format(
+                        variable))
             else:
                 # Value will be provided by a subclass.
                 pass

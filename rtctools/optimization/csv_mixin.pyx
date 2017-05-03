@@ -183,8 +183,9 @@ class CSVMixin(OptimizationProblem):
                 try:
                     parameters[parameter.getName()] = alias.sign * \
                         self._parameters[ensemble_member][alias.name]
-                    logger.debug("CSVMixin: Read parameter {} from {}".format(
-                        parameter.getName(), alias.name))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("CSVMixin: Read parameter {} from {}".format(
+                            parameter.getName(), alias.name))
                     break
                 except (KeyError, ValueError):
                     continue
@@ -201,8 +202,9 @@ class CSVMixin(OptimizationProblem):
                 try:
                     constant_inputs[variable.getName()] = Timeseries(
                         self._timeseries_times_sec, alias.sign * self._timeseries[ensemble_member][alias.name])
-                    logger.debug("CSVMixin: Read constant input {} from {}".format(
-                        variable.getName(), alias.name))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("CSVMixin: Read constant input {} from {}".format(
+                            variable.getName(), alias.name))
                     break
                 except (KeyError, ValueError):
                     continue
@@ -220,16 +222,18 @@ class CSVMixin(OptimizationProblem):
                 try:
                     timeseries_id = self.min_timeseries_id(alias.name)
                     m = alias.sign * self._timeseries[0][timeseries_id]
-                    logger.debug("CSVMixin: Read lower bound for variable {} from {}".format(
-                        variable.getName(), timeseries_id))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("CSVMixin: Read lower bound for variable {} from {}".format(
+                            variable.getName(), timeseries_id))
                 except (KeyError, ValueError):
                     pass
 
                 try:
                     timeseries_id = self.max_timeseries_id(alias.name)
                     M = alias.sign * self._timeseries[0][timeseries_id]
-                    logger.debug("CSVMixin: Read upper bound for variable {} from {}".format(
-                        variable.getName(), timeseries_id))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("CSVMixin: Read upper bound for variable {} from {}".format(
+                            variable.getName(), timeseries_id))
                 except (KeyError, ValueError):
                     pass
 
@@ -263,8 +267,9 @@ class CSVMixin(OptimizationProblem):
                 try:
                     initial_state[variable.getName()] = alias.sign * \
                         self._initial_state[ensemble_member][alias.name]
-                    logger.debug("CSVMixin: Read initial state {} from {}".format(
-                        variable.getName(), alias.name))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("CSVMixin: Read initial state {} from {}".format(
+                            variable.getName(), alias.name))
                     break
                 except (KeyError, ValueError):
                     continue
@@ -280,8 +285,9 @@ class CSVMixin(OptimizationProblem):
                 try:
                     s = Timeseries(self._timeseries_times_sec, alias.sign *
                                    self._timeseries[ensemble_member][alias.name])
-                    logger.debug("CSVMixin: Seeded free variable {} from {}".format(
-                        variable.getName(), alias.name))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("CSVMixin: Seeded free variable {} from {}".format(
+                            variable.getName(), alias.name))
                     # A seeding of NaN means no seeding
                     s.values[np.isnan(s.values)] = 0.0
                     seed[variable.getName()] = s
