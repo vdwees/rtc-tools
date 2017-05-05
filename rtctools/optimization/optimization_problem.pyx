@@ -124,12 +124,12 @@ class OptimizationProblem(object):
         # the model
         if preprocessing:
             self.pre()
+
+            # Check if control inputs are bounded
+            self._check_bounds_control_input()
         else:
             logger.debug(
                 'Skipping Preprocessing in OptimizationProblem.optimize()')
-
-        # Check if control inputs are bounded
-        self._check_bounds_control_input()
 
         # Transcribe problem
         discrete, lbx, ubx, lbg, ubg, x0, nlp = self.transcribe()
