@@ -227,7 +227,7 @@ class OptimizationProblem(object):
 
         :returns: A dictionary of CasADi :class:`NlpSolver` options.  See the CasADi, Ipopt, and Bonmin documentation for details.
         """
-        options = {'optimized_num_dir': 3}
+        options = {'optimized_num_dir': 3, 'inputs_check': False, 'ignore_check_vec': True, 'regularity_check': False}
         if self._mixed_integer:
             options['solver'] = 'bonmin'
             options['algorithm'] = 'B-BB'
