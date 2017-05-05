@@ -857,6 +857,20 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         return discrete, lbx, ubx, lbg, ubg, x0, nlp
 
+    def clear_transcription_cache(self):
+        """
+        Clears the DAE ``MXFunctions`` that were cached by ``transcribe``.
+        """
+        try:
+            del self._dae_residual_function_collocated
+        except AttributeError:
+            pass
+        try:
+            del self._integrator_step_function
+        except AttributeError:
+            pass
+        del self._initial_residual_with_params_fun_map
+
     def extract_results(self, ensemble_member=0):
         logger.info("Extracting results")
 

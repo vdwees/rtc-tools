@@ -45,8 +45,11 @@ class HomotopyMixin(OptimizationProblem):
     def dynamic_parameters(self):
         dynamic_parameters = super(HomotopyMixin, self).dynamic_parameters()
 
-        options = self.homotopy_options()
-        dynamic_parameters.append(self.variable(options['homotopy_parameter']))
+        if self._theta > 0:
+            # For theta = 0, we don't mark the homotopy parameter as being dynamic,
+            # so that the correct sparsity structure is obtained for the linear model.
+            options = self.homotopy_options()
+            dynamic_parameters.append(self.variable(options['homotopy_parameter']))
 
         return dynamic_parameters
 
@@ -96,8 +99,13 @@ class HomotopyMixin(OptimizationProblem):
             if success:
                 self._results = [self.extract_results(ensemble_member) for ensemble_member in range(self.ensemble_size)]
 
-                self.check_collocation_linearity = False
-                self.linear_collocation = False
+                if self._theta == 0.0:
+                    self.check_collocation_linearity = False
+                    self.linear_collocation = False
+
+                    # Recompute the sparsity structure for the nonlinear model family.
+                    self.clear_transcription_cache()
+
             else:
                 if self._theta == 0.0:
                     break
