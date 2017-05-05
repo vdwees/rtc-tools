@@ -2,6 +2,7 @@
 
 from casadi import MX, substitute, repmat, vertcat, dependsOn
 import numpy as np
+import itertools
 import logging
 import pyjmi
 import sets
@@ -337,8 +338,8 @@ class ModelicaMixin(OptimizationProblem):
         if logger.getEffectiveLevel() == logging.DEBUG:
             logger.debug("ModelicaMixin: Substituting {} with {}".format(substitutions.keys(), substitutions.values()))
 
-        self._mx['eliminated_algebraics'] = substitutions.keys()
-        eliminated_algebraics_names = [sym.getName() for sym in self._mx['eliminated_algebraics']]
+        self._eliminated_algebraics = substitutions.keys()
+        eliminated_algebraics_names = [sym.getName() for sym in self._eliminated_algebraics]
         self._mx['algebraics'] = [var for var in self._mx['algebraics'] if var.getName() not in eliminated_algebraics_names]
        
         dae_residual = vertcat([eq.getLhs() - eq.getRhs() for eq in dae_eq])
@@ -471,23 +472,25 @@ class ModelicaMixin(OptimizationProblem):
                 raise Exception("No value specified for parameter {}".format(symbol.getName()))
         parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
 
-        for variable in self._mx['states'] + self._mx['algebraics'] + self._mx['eliminated_algebraics'] + self._mx['control_inputs']:
+        for variable in itertools.chain(self._mx['states'], self._mx['algebraics'], self._mx['control_inputs'], self._eliminated_algebraics):
             variable = variable.getName()
             var = self._jm_model.getVariable(variable)
+            (m, M) = bounds.get(variable, (None, None))
             if var.getType() == var.BOOLEAN:
-                m, M = 0, 1
-            else:
-                m, M = None, None
+                if m is None:
+                    m = 0
+                if M is None:
+                    M = 1
             if var.hasAttributeSet('min'):
-                [m] = substitute([var.getAttribute('min')], self.dae_variables['parameters'], parameter_values)
-                m = float(m)
-                if np.isnan(m):
-                    m = -np.inf
+                [m_] = substitute([var.getAttribute('min')], self.dae_variables['parameters'], parameter_values)
+                m_ = float(m_)
+                if np.isfinite(m_):
+                    m = m_
             if var.hasAttributeSet('max'):
-                [M] = substitute([var.getAttribute('max')], self.dae_variables['parameters'], parameter_values)
-                M = float(M)
-                if np.isnan(M):
-                    M = np.inf
+                [M_] = substitute([var.getAttribute('max')], self.dae_variables['parameters'], parameter_values)
+                M_ = float(M_)
+                if np.isfinite(M_):
+                    M = M_
             bounds[variable] = (m, M)
 
         return bounds
