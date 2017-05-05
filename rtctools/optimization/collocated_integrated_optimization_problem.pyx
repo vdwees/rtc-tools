@@ -231,10 +231,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 except KeyError:
                     raise Exception("No value specified for parameter {}".format(variable))
 
-            jac = jacobian(nullvertcat(parameter_values), vertcat(dynamic_parameters))
-            for i, symbol in enumerate(self.dae_variables['parameters']):
-                if jac[i, :].nnz() > 0:
-                    dynamic_parameter_names.add(symbol.getName())
+            if len(dynamic_parameters) > 0:
+                jac = jacobian(vertcat(parameter_values), vertcat(dynamic_parameters))
+                for i, symbol in enumerate(self.dae_variables['parameters']):
+                    if jac[i, :].nnz() > 0:
+                        dynamic_parameter_names.add(symbol.getName())
 
             parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
             ensemble_data["parameters"] = nullvertcat(parameter_values)
