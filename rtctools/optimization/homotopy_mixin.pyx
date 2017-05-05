@@ -42,6 +42,14 @@ class HomotopyMixin(OptimizationProblem):
 
         return parameters
 
+    def dynamic_parameters(self):
+        dynamic_parameters = super(HomotopyMixin, self).dynamic_parameters()
+
+        options = self.homotopy_options()
+        dynamic_parameters.append(self.variable(options['homotopy_parameter']))
+
+        return dynamic_parameters
+
     def homotopy_options(self):
         """
         Returns a dictionary of options controlling the homotopy process.
@@ -87,6 +95,9 @@ class HomotopyMixin(OptimizationProblem):
             success = super(HomotopyMixin, self).optimize(preprocessing=False, postprocessing=False)
             if success:
                 self._results = [self.extract_results(ensemble_member) for ensemble_member in range(self.ensemble_size)]
+
+                self.check_collocation_linearity = False
+                self.linear_collocation = False
             else:
                 if self._theta == 0.0:
                     break
