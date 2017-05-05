@@ -207,20 +207,9 @@ class OptimizationProblem(object):
 
         for variable in self.dae_variables['control_inputs']:
             variable = variable.getName()
-
-            found_bound = False
-            for alias in self.variable_aliases(variable):
-                try:
-                    bound = bounds[alias.name]
-                    logger.debug(
-                        "OptimizationProblem: control input {} has bounds.".format(variable))
-                    found_bound = True
-                except KeyError:
-                    pass
-
-            if not found_bound:
+            if variable not in bounds:
                 logger.warning(
-                    "OptimizationProblem: control input {} has no bounds.".format(variable))
+                    "OptimizationProblem: control input {} has no bounds.".format(variable))                
 
     @abstractmethod
     def transcribe(self):
