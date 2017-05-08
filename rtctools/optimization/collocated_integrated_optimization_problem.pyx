@@ -657,6 +657,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 interpolated_states[j] = interpolated[0:n_collocation_times - 1]
                 interpolated_states[len(collocated_variables) +
                                j] = interpolated[1:n_collocation_times]
+            # We do not cache the Jacobians, as the structure may change from ensemble member to member,
+            # and from goal programming/homotopy run to run.
+            # We could, of course, pick the states apart into controls and states,
+            # and generate Jacobians for each set separately and for each ensemble member separately, but
+            # in this case the increased complexity may well offset the performance gained by caching.
             accumulation_U[0] = reduce_matvec(horzcat(interpolated_states), self.solver_input)
 
             for j, variable in enumerate(self.dae_variables['constant_inputs']):
