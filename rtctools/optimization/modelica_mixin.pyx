@@ -149,16 +149,22 @@ class ModelicaMixin(OptimizationProblem):
 
             self._alias_relation.add(model_var.getName(), sign + var.getName())
 
-        # Initialize nominals
+        # Initialize nominals and types
         self._nominals = {}
-        for var in self._mx['states'] + self._mx['algebraics'] + self._mx['control_inputs']:
-            nominal = self._jm_model.getVariable(var.getName()).getNominal()
+        self._discrete = {}
+        for variable in self._mx['states'] + self._mx['algebraics'] + self._mx['control_inputs']:
+            variable = variable.getName()
+            model_variable = self._jm_model.getVariable(variable)
+
+            nominal = model_variable.getNominal()
             if nominal and nominal != 0:
-                self._nominals[var.getName()] = abs(float(nominal))
+                self._nominals[variable] = abs(float(nominal))
 
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
-                        var.getName(), self._nominals[var.getName()]))
+                        variable, self._nominals[variable]))
+
+            self._discrete[variable] = (var.getVariability() == var.DISCRETE)
 
         # Now condense equations
         self._condense_dae()
@@ -500,11 +506,7 @@ class ModelicaMixin(OptimizationProblem):
         return bounds
 
     def variable_is_discrete(self, variable):
-        var = self._jm_model.getVariable(variable)
-        if var is None:
-            return False
-        else:
-            return (var.getVariability() == var.DISCRETE)
+        return self._discrete.get(variable, False)
 
     def path_constraints(self, ensemble_member):
         path_constraints = super(ModelicaMixin, self).path_constraints(ensemble_member)
