@@ -17,6 +17,8 @@ logger = logging.getLogger("rtctools")
 class Alias(object):
     """
     Variable alias.
+
+    .. deprecated:: 2.0.0-beta6
     """
 
     def __init__(self, name, negated):
@@ -437,6 +439,9 @@ class OptimizationProblem(object):
     def variable_aliases(self, variable):
         """
         Returns a list of aliases for the given variable.
+
+        .. deprecated:: 2.0.0-beta6
+           Use :func:`alias_relation.aliases` instead.
 
         :param variable: Variable name.
 
