@@ -482,12 +482,16 @@ class ModelicaMixin(OptimizationProblem):
                 if M is None:
                     M = 1
             if var.hasAttributeSet('min'):
-                [m_] = substitute([var.getAttribute('min')], self.dae_variables['parameters'], parameter_values)
+                m_ = var.getAttribute('min')
+                if not m_.isConstant():
+                    [m_] = substitute([m_], self.dae_variables['parameters'], parameter_values)
                 m_ = float(m_)
                 if np.isfinite(m_):
                     m = m_
             if var.hasAttributeSet('max'):
-                [M_] = substitute([var.getAttribute('max')], self.dae_variables['parameters'], parameter_values)
+                M_ = var.getAttribute('max')
+                if not M_.isConstant():
+                    [M_] = substitute([M_], self.dae_variables['parameters'], parameter_values)
                 M_ = float(M_)
                 if np.isfinite(M_):
                     M = M_
