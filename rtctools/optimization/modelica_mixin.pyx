@@ -276,7 +276,7 @@ class ModelicaMixin(OptimizationProblem):
                 self._alias_relation.add(canonical, alias)
 
         # Add path constraints for bounded, orphan algebraic residuals.
-        self._path_constraints = []
+        self._modelica_path_constraints = []
         for constraint_residual_candidate in constraint_residual_candidates:
             matches = 0
             constraint_function = None
@@ -326,19 +326,19 @@ class ModelicaMixin(OptimizationProblem):
                         constraint = (constraint_function, m, M)
                         if logger.getEffectiveLevel() == logging.DEBUG:
                             logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
-                        self._path_constraints.append(constraint)
+                        self._modelica_path_constraints.append(constraint)
                     else:
                         if m_symbolic or np.isfinite(m):
                             constraint = (constraint_function - m, 0.0, np.inf)
                             if logger.getEffectiveLevel() == logging.DEBUG:
                                 logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
-                            self._path_constraints.append(constraint)
+                            self._modelica_path_constraints.append(constraint)
 
                         if M_symbolic or np.isfinite(M):
                             constraint = (constraint_function - M, -np.inf, 0.0)
                             if logger.getEffectiveLevel() == logging.DEBUG:
                                 logger.debug("ModelicaMixin: Adding constraint {} <= {} <= {}".format(constraint[1], constraint[0], constraint[2]))
-                            self._path_constraints.append(constraint)   
+                            self._modelica_path_constraints.append(constraint)   
 
         # Substitute eliminated variables z with f(x) in rest of DAE.
         if logger.getEffectiveLevel() == logging.DEBUG:
@@ -510,7 +510,7 @@ class ModelicaMixin(OptimizationProblem):
 
     def path_constraints(self, ensemble_member):
         path_constraints = super(ModelicaMixin, self).path_constraints(ensemble_member)
-        path_constraints.extend(self._path_constraints)
+        path_constraints.extend(self._modelica_path_constraints)
         return path_constraints
 
     @property
