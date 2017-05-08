@@ -223,9 +223,6 @@ class PIMixin(OptimizationProblem):
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("Read upper bound for variable {}".format(variable))
 
-            if m != None and M != None:
-                break
-
             # Replace NaN with +/- inf, and create Timeseries objects
             if m != None:
                 m[np.isnan(m)] = np.finfo(m.dtype).min
