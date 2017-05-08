@@ -923,14 +923,14 @@ class Timeseries:
 
         for ensemble_member in range(len(self._values)):
             if n_delta_e > 0:
-            # New end datetime lies after old end datetime (timeseries will be lengthened).
+                # New end datetime lies after old end datetime (timeseries will be lengthened).
                 filler = np.empty(n_delta_e)
                 filler.fill(np.nan)
                 for key in self._values[ensemble_member].keys():
                     self._values[ensemble_member][key] = np.hstack(
                         (self._values[ensemble_member][key], filler))
             elif n_delta_e < 0:
-            # New end datetime lies before old end datetime (timeseries will be shortened).
+                # New end datetime lies before old end datetime (timeseries will be shortened).
                 for key in self._values[ensemble_member].keys():
                     self._values[ensemble_member][key] = self._values[
                         ensemble_member][key][:n_delta_e]
