@@ -121,6 +121,9 @@ class PIMixin(OptimizationProblem):
                         raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
                             self._timeseries_import.times[i + 1]))
 
+        # Store slice of timestamps for times() method
+        self._times = self._timeseries_import_times[self._timeseries_import.forecast_index:]
+
         # Stick timeseries into an AliasDict
         self._timeseries_import_dict = [AliasDict(self.alias_relation) for ensemble_member in range(self.ensemble_size)]
         for ensemble_member in range(self.ensemble_size):
@@ -128,7 +131,7 @@ class PIMixin(OptimizationProblem):
                 self._timeseries_import_dict[ensemble_member][key] = value
 
     def times(self, variable=None):
-        return self._timeseries_import_times[self._timeseries_import.forecast_index:]
+        return self._times
 
     @property
     def equidistant(self):
