@@ -979,9 +979,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 variable) * X[offset:offset + n_times, 0]).ravel()
             offset += n_times
 
-            for alias in self.variable_aliases(variable):
-                if alias.name != variable:
-                    results[alias.name] = alias.sign * results[variable]
+            for alias in self.alias_relation.aliases(variable):
+                if alias == variable:
+                    continue
+                results[alias] = results[variable]
 
         # Done
         return results
@@ -1009,43 +1010,43 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         t0 = self.initial_time
         X = self.solver_input
 
+        canonical, sign = self.alias_relation.canonical_signed(variable)
         offset = 0
         for control_input in self.controls:
             times = self.times(control_input)
-            for alias in self.variable_aliases(control_input):
-                if alias.name == variable:
-                    nominal = self.variable_nominal(control_input)
-                    n_times = len(times)
-                    variable_values = X[offset:offset + n_times]
-                    f_left, f_right = np.nan, np.nan
-                    if t < t0:
-                        history = self.history(ensemble_member)
-                        try:
-                            history_timeseries = history[control_input]
-                        except KeyError:
-                            if extrapolate:
-                                sym = variable_values[0]
-                            else:
-                                sym = np.nan
+            if control_input == canonical:
+                nominal = self.variable_nominal(control_input)
+                n_times = len(times)
+                variable_values = X[offset:offset + n_times]
+                f_left, f_right = np.nan, np.nan
+                if t < t0:
+                    history = self.history(ensemble_member)
+                    try:
+                        history_timeseries = history[control_input]
+                    except KeyError:
+                        if extrapolate:
+                            sym = variable_values[0]
                         else:
-                            if extrapolate:
-                                f_left = history_timeseries.values[0]
-                                f_right = history_timeseries.values[-1]
-                            sym = self.interpolate(
-                                    t, history_timeseries.times, history_timeseries.values, f_left, f_right)
-                        if not scaled and nominal != 1:
-                            sym *= nominal
+                            sym = np.nan
                     else:
                         if extrapolate:
-                            f_left = variable_values[0]
-                            f_right = variable_values[-1]
+                            f_left = history_timeseries.values[0]
+                            f_right = history_timeseries.values[-1]
                         sym = self.interpolate(
-                            t, times, variable_values, f_left, f_right)
-                        if not scaled and nominal != 1:
-                            sym *= nominal
-                    if alias.sign < 0:
-                        sym *= -1
-                    return sym
+                                t, history_timeseries.times, history_timeseries.values, f_left, f_right)
+                    if not scaled and nominal != 1:
+                        sym *= nominal
+                else:
+                    if extrapolate:
+                        f_left = variable_values[0]
+                        f_right = variable_values[-1]
+                    sym = self.interpolate(
+                        t, times, variable_values, f_left, f_right)
+                    if not scaled and nominal != 1:
+                        sym *= nominal
+                if sign < 0:
+                    sym *= -1
+                return sym
             offset += len(times)
 
         raise KeyError(variable)
@@ -1252,9 +1253,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     variable) * X[offset:offset + n_times, 0]).ravel()
                 offset += n_times
 
-                for alias in self.variable_aliases(variable):
-                    if alias.name != variable:
-                        results[alias.name] = alias.sign * results[variable]
+                for alias in self.alias_relation.aliases(variable):
+                    if alias == variable:
+                        continue
+                    results[alias] = results[variable]
 
         # Extract constant input aliases
         constant_inputs = self.constant_inputs(ensemble_member)
@@ -1331,57 +1333,55 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             ensemble_member_size = self._state_size / self.ensemble_size
 
             # Fetch appropriate symbol, or value.
+            canonical, sign = self.alias_relation.canonical_signed(variable)
             found = False
             if not found:
                 offset = control_size + ensemble_member * ensemble_member_size
                 for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
-                    for alias in self.variable_aliases(free_variable):
-                        if alias.name == variable:
-                            times = self.times(free_variable)
-                            n_times = len(times)
-                            if free_variable in self.integrated_states:
-                                nominal = 1
-                                if t == self.initial_time:
-                                    sym = alias.sign * X[offset]
-                                    found = True
-                                    break
-                                else:
-                                    variable_values = self.integrators[
-                                        free_variable]
+                    if free_variable == canonical:
+                        times = self.times(free_variable)
+                        n_times = len(times)
+                        if free_variable in self.integrated_states:
+                            nominal = 1
+                            if t == self.initial_time:
+                                sym = sign * X[offset]
+                                found = True
+                                break
                             else:
-                                nominal = self.variable_nominal(free_variable)
-                                variable_values = X[offset:offset + n_times]
-                            f_left, f_right = np.nan, np.nan
-                            if t < t0:
-                                history = self.history(ensemble_member)
-                                try:
-                                    history_timeseries = history[free_variable]
-                                except KeyError:
-                                    if extrapolate:
-                                        sym = variable_values[0]
-                                    else:
-                                        sym = np.nan
+                                variable_values = self.integrators[
+                                    free_variable]
+                        else:
+                            nominal = self.variable_nominal(free_variable)
+                            variable_values = X[offset:offset + n_times]
+                        f_left, f_right = np.nan, np.nan
+                        if t < t0:
+                            history = self.history(ensemble_member)
+                            try:
+                                history_timeseries = history[free_variable]
+                            except KeyError:
+                                if extrapolate:
+                                    sym = variable_values[0]
                                 else:
-                                    if extrapolate:
-                                        f_left = history_timeseries.values[0]
-                                        f_right = history_timeseries.values[-1]
-                                    sym = self.interpolate(
-                                            t, history_timeseries.times, history_timeseries.values, f_left, f_right)
-                                if not scaled and nominal != 1:
-                                    sym *= nominal
+                                    sym = np.nan
                             else:
                                 if extrapolate:
-                                    f_left = variable_values[0]
-                                    f_right = variable_values[-1]
+                                    f_left = history_timeseries.values[0]
+                                    f_right = history_timeseries.values[-1]
                                 sym = self.interpolate(
-                                    t, times, variable_values, f_left, f_right)
-                                if not scaled and nominal != 1:
-                                    sym *= nominal
-                            if alias.sign < 0:
-                                sym *= -1
-                            found = True
-                            break
-                    if found:
+                                        t, history_timeseries.times, history_timeseries.values, f_left, f_right)
+                            if not scaled and nominal != 1:
+                                sym *= nominal
+                        else:
+                            if extrapolate:
+                                f_left = variable_values[0]
+                                f_right = variable_values[-1]
+                            sym = self.interpolate(
+                                t, times, variable_values, f_left, f_right)
+                            if not scaled and nominal != 1:
+                                sym *= nominal
+                        if sign < 0:
+                            sym *= -1
+                        found = True
                         break
                     if free_variable in self.integrated_states:
                         offset += 1

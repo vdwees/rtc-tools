@@ -241,9 +241,10 @@ class ControlTreeMixin(OptimizationProblem):
             results[variable] = np.array(self.variable_nominal(
                 variable) * X[self._control_indices[variable][ensemble_member, :], 0]).ravel()
 
-            for alias in self.variable_aliases(variable):
-                if alias.name != variable:
-                    results[alias.name] = alias.sign * results[variable]
+            for alias in self.alias_relation.aliases(variable):
+                if alias == variable:
+                    continue
+                results[alias] = results[variable]
 
         # Done
         return results
@@ -256,41 +257,41 @@ class ControlTreeMixin(OptimizationProblem):
         t0 = self.initial_time
         X = self.solver_input
 
+        canonical, sign = self.alias_relation.canonical_signed(variable)
         for control_input in self.controls:
             times = self.times(control_input)
-            for alias in self.variable_aliases(control_input):
-                if alias.name == variable:
-                    nominal = self.variable_nominal(control_input)
-                    variable_values = [X[i] for i in self._control_indices[
-                        control_input][ensemble_member, :]]
-                    f_left, f_right = np.nan, np.nan
-                    if t < t0:
-                        history = self.history(ensemble_member)
-                        try:
-                            history_timeseries = history[control_input]
-                        except KeyError:
-                            if extrapolate:
-                                sym = variable_values[0]
-                            else:
-                                sym = np.nan
+            if control_input == canonical:
+                nominal = self.variable_nominal(control_input)
+                variable_values = [X[i] for i in self._control_indices[
+                    control_input][ensemble_member, :]]
+                f_left, f_right = np.nan, np.nan
+                if t < t0:
+                    history = self.history(ensemble_member)
+                    try:
+                        history_timeseries = history[control_input]
+                    except KeyError:
+                        if extrapolate:
+                            sym = variable_values[0]
                         else:
-                            if extrapolate:
-                                f_left = history_timeseries.values[0]
-                                f_right = history_timeseries.values[-1]
-                            sym = self.interpolate(
-                                    t, history_timeseries.times, history_timeseries.values, f_left, f_right)
-                        if not scaled and nominal != 1:
-                            sym *= nominal
+                            sym = np.nan
                     else:
                         if extrapolate:
-                            f_left = variable_values[0]
-                            f_right = variable_values[-1]
+                            f_left = history_timeseries.values[0]
+                            f_right = history_timeseries.values[-1]
                         sym = self.interpolate(
-                            t, times, variable_values, f_left, f_right)
-                        if not scaled and nominal != 1:
-                            sym *= nominal
-                    if alias.sign < 0:
-                        sym *= -1
-                    return sym
+                                t, history_timeseries.times, history_timeseries.values, f_left, f_right)
+                    if not scaled and nominal != 1:
+                        sym *= nominal
+                else:
+                    if extrapolate:
+                        f_left = variable_values[0]
+                        f_right = variable_values[-1]
+                    sym = self.interpolate(
+                        t, times, variable_values, f_left, f_right)
+                    if not scaled and nominal != 1:
+                        sym *= nominal
+                if sign < 0:
+                    sym *= -1
+                return sym
 
         raise KeyError(variable)
