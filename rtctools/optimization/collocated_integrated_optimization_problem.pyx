@@ -248,7 +248,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 try:
                     constant_input = constant_inputs[variable]
                 except KeyError:
-                    raise Exception("No values found for constant input {}".format(variable.getName()))
+                    raise Exception("No values found for constant input {}".format(variable))
                 else:
                     values = constant_input.values
                     if isinstance(values, MX):

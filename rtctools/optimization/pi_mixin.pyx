@@ -121,6 +121,12 @@ class PIMixin(OptimizationProblem):
                         raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
                             self._timeseries_import.times[i + 1]))
 
+        # Stick timeseries into an AliasDict
+        self._timeseries_import_dict = [AliasDict(self.alias_relation) for ensemble_member in range(self.ensemble_size)]
+        for ensemble_member in range(self.ensemble_size):
+            for key, value in self._timeseries_import.iteritems(ensemble_member):
+                self._timeseries_import_dict[ensemble_member][key] = value
+
     def times(self, variable=None):
         return self._timeseries_import_times[self._timeseries_import.forecast_index:]
 
@@ -173,19 +179,18 @@ class PIMixin(OptimizationProblem):
 
         # Load bounds from timeseries
         for variable in self.dae_variables['constant_inputs']:
-            for alias in self.variable_aliases(variable.getName()):
-                try:
-                    timeseries = Timeseries(
-                        self._timeseries_import_times, alias.sign * self._timeseries_import.get(alias.name, ensemble_member=ensemble_member))
-                    if np.any(np.isnan(timeseries.values[self._timeseries_import.forecast_index:])):
-                        raise Exception("Constant input {} contains NaN".format(variable.getName()))
-                    constant_inputs[variable.getName()] = timeseries
-                    if logger.getEffectiveLevel() == logging.DEBUG:
-                        logger.debug("Read constant input {} from {}".format(
-                            variable.getName(), alias.name))
-                    break
-                except KeyError:
-                    continue
+            variable = variable.getName()
+            try:
+                timeseries = Timeseries(
+                    self._timeseries_import_times, self._timeseries_import_dict[ensemble_member][variable])
+            except KeyError:
+                pass
+            else:
+                if np.any(np.isnan(timeseries.values[self._timeseries_import.forecast_index:])):
+                    raise Exception("Constant input {} contains NaN".format(variable))
+                constant_inputs[variable] = timeseries
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("Read constant input {}".format(variable))
         return constant_inputs
 
     def bounds(self):
@@ -194,30 +199,32 @@ class PIMixin(OptimizationProblem):
 
         # Load bounds from timeseries
         for variable in self.dae_variables['free_variables']:
+            variable = variable.getName()
+
             m, M = None, None
-            for alias in self.variable_aliases(variable.getName()):
-                try:
-                    timeseries_id = self.min_timeseries_id(alias.name)
-                    m = alias.sign * self._timeseries_import.get(timeseries_id, ensemble_member=0)[
-                        self._timeseries_import.forecast_index:]
-                    if logger.getEffectiveLevel() == logging.DEBUG:
-                        logger.debug("Read lower bound for variable {} from {}".format(
-                            variable.getName(), timeseries_id))
-                except KeyError:
-                    pass
 
-                try:
-                    timeseries_id = self.max_timeseries_id(alias.name)
-                    M = alias.sign * self._timeseries_import.get(timeseries_id, ensemble_member=0)[
-                        self._timeseries_import.forecast_index:]
-                    if logger.getEffectiveLevel() == logging.DEBUG:
-                        logger.debug("Read upper bound for variable {} from {}".format(
-                            variable.getName(), timeseries_id))
-                except KeyError:
-                    pass
+            timeseries_id = self.min_timeseries_id(variable)
+            try:
+                m = self._timeseries_import_dict[0][timeseries_id][
+                    self._timeseries_import.forecast_index:]
+            except KeyError:
+                pass
+            else:
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("Read lower bound for variable {}".format(variable))
 
-                if m != None and M != None:
-                    break
+            timeseries_id = self.max_timeseries_id(variable)
+            try:
+                M = self._timeseries_import_dict[0][timeseries_id][
+                    self._timeseries_import.forecast_index:]
+            except KeyError:
+                pass
+            else:
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("Read upper bound for variable {}".format(variable))
+
+            if m != None and M != None:
+                break
 
             # Replace NaN with +/- inf, and create Timeseries objects
             if m != None:
@@ -231,23 +238,22 @@ class PIMixin(OptimizationProblem):
 
             # Store
             if m != None or M != None:
-                bounds[variable.getName()] = (m, M)
+                bounds[variable] = (m, M)
         return bounds
 
     def history(self, ensemble_member):
         # Load history
         history = AliasDict(self.alias_relation)
-        for state in self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs'] + self.dae_variables['constant_inputs']:
-            for alias in self.variable_aliases(state.getName()):
-                try:
-                    history[state.getName()] = Timeseries(self._timeseries_import_times[:self._timeseries_import.forecast_index + 1], alias.sign *
-                                                          self._timeseries_import.get(alias.name, ensemble_member=ensemble_member)[:self._timeseries_import.forecast_index + 1])
-                    if logger.getEffectiveLevel() == logging.DEBUG:
-                        logger.debug("Read history for state {} from {}".format(
-                            state.getName(), alias.name))
-                    break
-                except KeyError:
-                    continue
+        for variable in self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs'] + self.dae_variables['constant_inputs']:
+            variable = variable.getName()
+            try:
+                history[variable] = Timeseries(self._timeseries_import_times[:self._timeseries_import.forecast_index + 1],
+                                                        self._timeseries_import_dict[ensemble_member][variable][:self._timeseries_import.forecast_index + 1])
+            except KeyError:
+                pass
+            else:
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("Read history for state {}".format(variable))
         return history
 
     @property
@@ -264,19 +270,17 @@ class PIMixin(OptimizationProblem):
 
         # Load seeds
         for variable in self.dae_variables['free_variables']:
-            for alias in self.variable_aliases(variable.getName()):
-                try:
-                    s = Timeseries(self._timeseries_import_times, alias.sign *
-                                   self._timeseries_import.get(alias.name, ensemble_member=ensemble_member))
-                    if logger.getEffectiveLevel() == logging.DEBUG:
-                        logger.debug("Seeded free variable {} from {}".format(
-                            variable.getName(), alias.name))
-                    # A seeding of NaN means no seeding
-                    s.values[np.isnan(s.values)] = 0.0
-                    seed[variable.getName()] = s
-                    break
-                except KeyError:
-                    continue
+            variable = variable.getName()
+            try:
+                s = Timeseries(self._timeseries_import_times, self._timeseries_import_dict[ensemble_member][variable])
+            except KeyError:
+                pass
+            else:
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("Seeded free variable {}".format(variable))
+                # A seeding of NaN means no seeding
+                s.values[np.isnan(s.values)] = 0.0
+                seed[variable] = s
         return seed
 
     def post(self):
