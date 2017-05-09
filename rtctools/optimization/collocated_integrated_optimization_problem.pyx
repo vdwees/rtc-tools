@@ -125,6 +125,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         self._path_variable_names = [variable.getName()
                                      for variable in self.path_variables]
 
+        # Set up state vector cache
+        self._state_vector_cache = [{} for i in range(self.ensemble_size)]
+
         # Collocation times
         collocation_times = self.times()
         n_collocation_times = len(collocation_times)
@@ -1324,28 +1327,38 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         return results
 
     def state_vector(self, variable, ensemble_member=0):
+        if variable in self._state_vector_cache[ensemble_member]:
+            return self._state_vector_cache[ensemble_member][variable]
+
         # Look up transcribe_problem() state.
         X = self.solver_input
         control_size = self._control_size
         ensemble_member_size = self._state_size / self.ensemble_size
 
-        # Return array of indexes for state
+        # Find state vector
+        vector = None
         offset = control_size + ensemble_member * ensemble_member_size
         for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
             times = self.times(free_variable)
             n_times = len(times)
             if free_variable == variable:
                 if free_variable in self.integrated_states:
-                    return X[offset]
+                    vector = X[offset]
+                    break
                 else:
-                    return X[offset:offset + n_times]
+                    vector = X[offset:offset + n_times]
+                    break
             if free_variable in self.integrated_states:
                 offset += 1
             else:
                 offset += n_times
 
-        # Could not find state.  Try controls.
-        return self.control_vector(variable, ensemble_member=ensemble_member)
+        if vector is None:
+            # Could not find state.  Try controls.
+            vector = self.control_vector(variable, ensemble_member=ensemble_member)
+
+        self._state_vector_cache[ensemble_member][variable] = vector
+        return vector
 
     def state_at(self, variable, t, ensemble_member=0, scaled=False, extrapolate=True):
         if isinstance(variable, MX):
