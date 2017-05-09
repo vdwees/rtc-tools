@@ -1,6 +1,7 @@
 # cython: embedsignature=True
 
 from casadi import MX, substitute, repmat, vertcat, dependsOn
+from collections import OrderedDict
 import numpy as np
 import itertools
 import logging
@@ -10,10 +11,7 @@ import os
 
 from timeseries import Timeseries
 from optimization_problem import OptimizationProblem, Alias
-from casadi_helpers import resolve_interdependencies
 from alias_tools import AliasRelation
-
-from collections import OrderedDict
 
 logger = logging.getLogger("rtctools")
 
@@ -466,18 +464,6 @@ class ModelicaMixin(OptimizationProblem):
         bounds = super(ModelicaMixin, self).bounds()
 
         # Load additional bounds from model
-        # If a bound contains a parameter, we assume this parameter to be equal for all ensemble
-        # members.
-        parameters = self.parameters(0)        
-        parameter_values = [None] * len(self.dae_variables['parameters'])
-        values = []
-        for i, symbol in enumerate(self.dae_variables['parameters']):
-            try:
-                parameter_values[i] = parameters[symbol.getName()]
-            except KeyError:
-                raise Exception("No value specified for parameter {}".format(symbol.getName()))
-        parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
-
         for variable in itertools.chain(self._mx['states'], self._mx['algebraics'], self._mx['control_inputs'], self._eliminated_algebraics):
             variable = variable.getName()
             var = self._jm_model.getVariable(variable)
@@ -490,17 +476,19 @@ class ModelicaMixin(OptimizationProblem):
             if var.hasAttributeSet('min'):
                 m_ = var.getAttribute('min')
                 if not m_.isConstant():
-                    [m_] = substitute([m_], self.dae_variables['parameters'], parameter_values)
-                m_ = float(m_)
-                if np.isfinite(m_):
                     m = m_
+                else:
+                    m_ = float(m_)
+                    if np.isfinite(m_):
+                        m = m_
             if var.hasAttributeSet('max'):
                 M_ = var.getAttribute('max')
                 if not M_.isConstant():
-                    [M_] = substitute([M_], self.dae_variables['parameters'], parameter_values)
-                M_ = float(M_)
-                if np.isfinite(M_):
                     M = M_
+                else:
+                    M_ = float(M_)
+                    if np.isfinite(M_):
+                        M = M_
             bounds[variable] = (m, M)
 
         return bounds

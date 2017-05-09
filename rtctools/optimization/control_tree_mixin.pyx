@@ -45,7 +45,7 @@ class ControlTreeMixin(OptimizationProblem):
 
         return options
 
-    def discretize_controls(self):
+    def discretize_controls(self, resolved_bounds):
         # Collect options
         options = self.control_tree_options()
 
@@ -182,8 +182,6 @@ class ControlTreeMixin(OptimizationProblem):
                 count += nnz
 
         # Construct bounds and initial guess
-        bounds = self.bounds()
-
         discrete = np.zeros(count, dtype=np.bool)
 
         lbx = -sys.float_info.max * np.ones(count)
@@ -201,7 +199,7 @@ class ControlTreeMixin(OptimizationProblem):
                     ensemble_member, :]] = self.variable_is_discrete(variable)
 
                 try:
-                    bound = bounds[variable]
+                    bound = resolved_bounds[variable]
                 except KeyError:
                     pass
                 else:

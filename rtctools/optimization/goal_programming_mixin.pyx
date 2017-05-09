@@ -588,8 +588,7 @@ class GoalProgrammingMixin(OptimizationProblem):
             if goal.has_target_bounds:
                 # We use a violation variable formulation, with the violation
                 # variables epsilon bounded between 0 and 1.
-                m, M = -np.inf * \
-                    np.ones(len(times)), np.inf * np.ones(len(times))
+                m, M = np.full_like(times, -np.inf, dtype=np.object), np.full_like(times, np.inf, dtype=np.object)
 
                 # Compute each min, max value separately for every time step
                 for i, t in enumerate(times):
@@ -626,6 +625,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                     m = -np.inf * np.ones(len(times))
                 M = epsilon / goal.function_nominal
 
+            # TODO it all breaks down here
             constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal: goal.function(
                 problem, ensemble_member) / goal.function_nominal, Timeseries(times, m), Timeseries(times, M), True)
 
@@ -651,7 +651,8 @@ class GoalProgrammingMixin(OptimizationProblem):
 
         # Validate goal definitions
         for goal in itertools.chain(goals, path_goals):
-            if not np.isfinite(goal.function_range[0]) or not np.isfinite(goal.function_range[1]):
+            if not (isinstance(goal.function_range[0], MX) or np.isfinite(goal.function_range[0])) \
+            or not (isinstance(goal.function_range[1], MX) or np.isfinite(goal.function_range[1])):
                 raise Exception("No function range specified for goal {}".format(goal))
 
             if goal.function_nominal <= 0:

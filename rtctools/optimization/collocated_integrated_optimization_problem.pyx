@@ -125,11 +125,84 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         self._path_variable_names = [variable.getName()
                                      for variable in self.path_variables]
 
+        # Collocation times
+        collocation_times = self.times()
+        n_collocation_times = len(collocation_times)
+
+        # Dynamic parameters
+        dynamic_parameters = self.dynamic_parameters()
+        dynamic_parameter_names = set()
+
+        # Create a store of all ensemble-member-specific data for all ensemble members
+        ensemble_store = [{} for i in range(self.ensemble_size)] # N.B. Don't use n * [{}], as it creates n refs to the same dict.
+        for ensemble_member in range(self.ensemble_size):
+            ensemble_data = ensemble_store[ensemble_member]
+
+            # Store parameters
+            parameters = self.parameters(ensemble_member)
+            parameter_values = [None] * len(self.dae_variables['parameters'])
+            values = []
+            for i, symbol in enumerate(self.dae_variables['parameters']):
+                variable = symbol.getName()
+                try:
+                    parameter_values[i] = parameters[variable]
+                except KeyError:
+                    raise Exception("No value specified for parameter {}".format(variable))
+
+            if len(dynamic_parameters) > 0:
+                jac = jacobian(vertcat(parameter_values), vertcat(dynamic_parameters))
+                for i, symbol in enumerate(self.dae_variables['parameters']):
+                    if jac[i, :].nnz() > 0:
+                        dynamic_parameter_names.add(symbol.getName())
+
+            parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
+            if ensemble_member == 0:
+                # Store parameter values of member 0, as variable bounds may depend on these.
+                self._parameter_values_ensemble_member_0 = parameter_values
+            ensemble_data["parameters"] = nullvertcat(parameter_values)
+
+            # Store constant inputs
+            constant_inputs = self.constant_inputs(ensemble_member)
+            constant_inputs_interpolated = {}
+            for variable in self.dae_variables['constant_inputs']:
+                variable = variable.getName()
+                try:
+                    constant_input = constant_inputs[variable]
+                except KeyError:
+                    raise Exception("No values found for constant input {}".format(variable))
+                else:
+                    values = constant_input.values
+                    if isinstance(values, MX):
+                        [values] = substitute([values], self.dae_variables['parameters'], parameter_values)
+                    elif np.any([not MX(value).isConstant() for value in values]):
+                        values = substitute(values, self.dae_variables['parameters'], parameter_values)
+                    constant_inputs_interpolated[variable] = self.interpolate(
+                        collocation_times, constant_input.times, values, 0.0, 0.0)
+                
+            ensemble_data["constant_inputs"] = constant_inputs_interpolated
+        
+        # Resolve variable bounds
+        bounds = self.bounds()
+        bound_keys, bound_values = zip(*bounds.iteritems())
+        lb_values, ub_values = zip(*bound_values)
+        lb_values = np.array(lb_values, dtype=np.object)
+        ub_values = np.array(ub_values, dtype=np.object)
+        lb_mx_indices = np.where([isinstance(v, MX) and not v.isConstant() for v in lb_values])
+        ub_mx_indices = np.where([isinstance(v, MX) and not v.isConstant() for v in ub_values])
+        if len(lb_mx_indices[0]) > 0:
+            lb_values[lb_mx_indices] = substitute(list(lb_values[lb_mx_indices]), self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+        if len(ub_mx_indices[0]) > 0:
+            ub_values[ub_mx_indices] = substitute(list(ub_values[ub_mx_indices]), self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+        resolved_bounds = AliasDict(self.alias_relation)
+        for i, key in enumerate(bound_keys):
+            lb, ub = lb_values[i], ub_values[i]
+            resolved_bounds[key] = (float(lb) if isinstance(lb, MX) else lb, float(ub) if isinstance(ub, MX) else ub)
+
         # Initialize control discretization
-        control_size, discrete_control, lbx_control, ubx_control, x0_control = self.discretize_controls()
+        control_size, discrete_control, lbx_control, ubx_control, x0_control = self.discretize_controls(resolved_bounds)
 
         # Initialize state discretization
-        state_size, discrete_state, lbx_state, ubx_state, x0_state = self.discretize_states()
+        state_size, discrete_state, lbx_state, ubx_state, x0_state = self.discretize_states(resolved_bounds)
 
         # Initialize vector of optimization symbols
         X = MX.sym('X', control_size + state_size)
@@ -207,58 +280,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Establish integrator theta
         theta = self.theta
 
-        # Collocation times
-        collocation_times = self.times()
-        n_collocation_times = len(collocation_times)
-
-        # Dynamic parameters
-        dynamic_parameters = self.dynamic_parameters()
-        dynamic_parameter_names = set()
-
-        # Create a store of all ensemble-member-specific data for all ensemble members
-        ensemble_store = [{} for i in range(self.ensemble_size)] # N.B. Don't use n * [{}], as it creates n refs to the same dict.
+        # Update the store of all ensemble-member-specific data for all ensemble members
+        # with initial states, derivatives, and path variables.
         for ensemble_member in range(self.ensemble_size):
             ensemble_data = ensemble_store[ensemble_member]
-
-            # Store parameters
-            parameters = self.parameters(ensemble_member)
-            parameter_values = [None] * len(self.dae_variables['parameters'])
-            values = []
-            for i, symbol in enumerate(self.dae_variables['parameters']):
-                variable = symbol.getName()
-                try:
-                    parameter_values[i] = parameters[variable]
-                except KeyError:
-                    raise Exception("No value specified for parameter {}".format(variable))
-
-            if len(dynamic_parameters) > 0:
-                jac = jacobian(vertcat(parameter_values), vertcat(dynamic_parameters))
-                for i, symbol in enumerate(self.dae_variables['parameters']):
-                    if jac[i, :].nnz() > 0:
-                        dynamic_parameter_names.add(symbol.getName())
-
-            parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
-            ensemble_data["parameters"] = nullvertcat(parameter_values)
-
-            # Store constant inputs
-            constant_inputs = self.constant_inputs(ensemble_member)
-            constant_inputs_interpolated = {}
-            for variable in self.dae_variables['constant_inputs']:
-                variable = variable.getName()
-                try:
-                    constant_input = constant_inputs[variable]
-                except KeyError:
-                    raise Exception("No values found for constant input {}".format(variable))
-                else:
-                    values = constant_input.values
-                    if isinstance(values, MX):
-                        [values] = substitute([values], self.dae_variables['parameters'], parameter_values)
-                    elif np.any([not MX(value).isConstant() for value in values]):
-                        values = substitute(values, self.dae_variables['parameters'], parameter_values)
-                    constant_inputs_interpolated[variable] = self.interpolate(
-                        collocation_times, constant_input.times, values, 0.0, 0.0)
-                
-            ensemble_data["constant_inputs"] = constant_inputs_interpolated
 
             # Store initial state and derivatives
             initial_state = []
@@ -837,12 +862,16 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                             "Adding path constraint {}, {}, {}".format(*path_constraint))
 
                     lb = path_constraint[1]
-                    if isinstance(lb, Timeseries):
+                    if isinstance(lb, MX) and not lb.isConstant():
+                        [lb] = substitute([lb], self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+                    elif isinstance(lb, Timeseries):
                         lb = self.interpolate(
                             collocation_times, lb.times, lb.values, -np.inf, -np.inf)
 
                     ub = path_constraint[2]
-                    if isinstance(ub, Timeseries):
+                    if isinstance(ub, MX) and not ub.isConstant():
+                        [ub] = substitute([ub], self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+                    elif isinstance(ub, Timeseries):
                         ub = self.interpolate(
                             collocation_times, ub.times, ub.values, np.inf, np.inf)
 
@@ -909,7 +938,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
     def controls(self):
         return self._controls
 
-    def discretize_controls(self):
+    def discretize_controls(self, resolved_bounds):
         # Default implementation: One single set of control inputs for all
         # ensembles
         count = 0
@@ -919,18 +948,16 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             count += n_times
 
-        bounds = self.bounds()
-
         # We assume the seed for the controls to be identical for the entire ensemble.
         # After all, we don't use a stochastic tree if we end up here.
         seed = self.seed(ensemble_member=0)
 
         discrete = np.zeros(count, dtype=np.bool)
 
-        lbx = -np.inf * np.ones(count)
-        ubx = np.inf * np.ones(count)
+        lbx = np.full(count, -np.inf, dtype=np.float64)
+        ubx = np.full(count, np.inf, dtype=np.float64)
 
-        x0 = np.zeros(count)
+        x0 = np.zeros(count, dtype=np.float64)
 
         offset = 0
         for variable in self.controls:
@@ -941,7 +968,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                      n_times] = self.variable_is_discrete(variable)
 
             try:
-                bound = bounds[variable]
+                bound = resolved_bounds[variable]
             except KeyError:
                 pass
             else:
@@ -1064,7 +1091,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
     def algebraic_states(self):
         return self._algebraic_states
 
-    def discretize_states(self):
+    def discretize_states(self, resolved_bounds):
         # Default implementation: States for all ensemble members
         ensemble_member_size = 0
 
@@ -1115,14 +1142,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     offset + k] = self.variable_is_discrete(self.extra_variables[k].getName())
 
         # Bounds, defaulting to +/- inf, if not set
-        bounds = self.bounds()
-
         for ensemble_member in range(self.ensemble_size):
             offset = ensemble_member * ensemble_member_size
             for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
                 if variable in self.integrated_states:
                     try:
-                        bound = bounds[variable]
+                        bound = resolved_bounds[variable]
                     except KeyError:
                         pass
                     else:
@@ -1147,7 +1172,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     n_times = len(times)
 
                     try:
-                        bound = bounds[variable]
+                        bound = resolved_bounds[variable]
                     except KeyError:
                         pass
                     else:
@@ -1169,14 +1194,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             for k in xrange(len(self.extra_variables)):
                 try:
-                    bound = bounds[self.extra_variables[k].getName()]
+                    bound = resolved_bounds[self.extra_variables[k].getName()]
                 except KeyError:
-                    continue
-
-                if bound[0] != None:
-                    lbx[offset + k] = bound[0]
-                if bound[1] != None:
-                    ubx[offset + k] = bound[1]
+                    pass
+                else:
+                    if bound[0] != None:
+                        lbx[offset + k] = bound[0]
+                    if bound[1] != None:
+                        ubx[offset + k] = bound[1]
 
             # Initial guess based on provided seeds, defaulting to zero if no
             # seed is given
@@ -1668,17 +1693,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 (accumulation_states[i, 1:] - accumulation_states[i, :-1]) / dt])
         accumulation_derivatives = vertcat(accumulation_derivatives)
 
-        # Prepare parameters
-        parameters = self.parameters(ensemble_member)
-        parameter_values = [None] * len(self.dae_variables['parameters'])
-        values = []
-        for i, symbol in enumerate(self.dae_variables['parameters']):
-            try:
-                parameter_values[i] = parameters[symbol.getName()]
-            except KeyError:
-                raise Exception("No value specified for parameter {}".format(symbol.getName()))
-        parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
-
         # Prepare constant inputs
         constant_inputs = self.constant_inputs(ensemble_member)
         accumulation_constant_inputs = [None] * len(self.dae_variables['constant_inputs'])
@@ -1690,9 +1704,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             else:
                 values = constant_input.values
                 if isinstance(values, MX):
-                    [values] = substitute([values], self.dae_variables['parameters'], parameter_values)
+                    [values] = substitute([values], self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
                 elif np.any([not MX(value).isConstant() for value in values]):
-                    values = substitute(values, self.dae_variables['parameters'], parameter_values)
+                    values = substitute(values, self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
                 accumulation_constant_inputs[i] = self.interpolate(
                     collocation_times, constant_input.times, values, 0.0, 0.0)
                 
@@ -1700,6 +1714,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Map
         [values] = fmap([accumulation_states, accumulation_derivatives,
-            accumulation_constant_inputs, repmat(vertcat(parameter_values), 1, n_collocation_times),
+            accumulation_constant_inputs, repmat(vertcat(self._parameter_values_ensemble_member_0), 1, n_collocation_times),
             np.transpose(collocation_times)])
         return transpose(values)

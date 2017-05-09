@@ -669,10 +669,13 @@ class OptimizationProblem(object):
         pass
 
     @abstractmethod
-    def discretize_controls(self):
+    def discretize_controls(self, resolved_bounds):
         """
         Performs the discretization of the control inputs, filling lower and upper
         bound vectors for the resulting optimization variables, as well as an initial guess.
+
+        :param resolved_bounds: :class:`AliasDict` of numerical bound values.  This is the same dictionary as returned by :func:`bounds`,
+        but with all parameter symbols replaced with their numerical values.
 
         :returns: The number of control variables in the optimization problem, a lower bound vector, an upper bound vector, and a seed vector.
         """
@@ -748,10 +751,13 @@ class OptimizationProblem(object):
         pass
 
     @abstractmethod
-    def discretize_states(self):
+    def discretize_states(self, resolved_bounds):
         """
         Perform the discretization of the states, filling lower and upper
         bound vectors for the resulting optimization variables, as well as an initial guess.
+
+        :param resolved_bounds: :class:`AliasDict` of numerical bound values.  This is the same dictionary as returned by :func:`bounds`,
+        but with all parameter symbols replaced with their numerical values.
 
         :returns: The number of control variables in the optimization problem, a lower bound vector, an upper bound vector, and a seed vector.
         """
