@@ -12,6 +12,7 @@ import rtctools.data.pi as pi
 from optimization_problem import OptimizationProblem
 from timeseries import Timeseries
 from alias_tools import AliasDict
+from caching import cached
 
 logger = logging.getLogger("rtctools")
 
@@ -121,17 +122,15 @@ class PIMixin(OptimizationProblem):
                         raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
                             self._timeseries_import.times[i + 1]))
 
-        # Store slice of timestamps for times() method
-        self._times = self._timeseries_import_times[self._timeseries_import.forecast_index:]
-
         # Stick timeseries into an AliasDict
         self._timeseries_import_dict = [AliasDict(self.alias_relation) for ensemble_member in range(self.ensemble_size)]
         for ensemble_member in range(self.ensemble_size):
             for key, value in self._timeseries_import.iteritems(ensemble_member):
                 self._timeseries_import_dict[ensemble_member][key] = value
 
+    @cached
     def times(self, variable=None):
-        return self._times
+        return self._timeseries_import_times[self._timeseries_import.forecast_index:]
 
     @property
     def equidistant(self):
@@ -140,6 +139,7 @@ class PIMixin(OptimizationProblem):
         else:
             return False
 
+    @cached
     def solver_options(self):
         # Call parent
         options = super(PIMixin, self).solver_options()
@@ -155,6 +155,7 @@ class PIMixin(OptimizationProblem):
         # Done
         return options
 
+    @cached
     def parameters(self, ensemble_member):
         # Call parent class first for default values.
         parameters = super(PIMixin, self).parameters(ensemble_member)
@@ -176,6 +177,7 @@ class PIMixin(OptimizationProblem):
         # Done
         return parameters
 
+    @cached
     def constant_inputs(self, ensemble_member):
         # Call parent class first for default values.
         constant_inputs = super(PIMixin, self).constant_inputs(ensemble_member)
@@ -196,6 +198,7 @@ class PIMixin(OptimizationProblem):
                     logger.debug("Read constant input {}".format(variable))
         return constant_inputs
 
+    @cached
     def bounds(self):
         # Call parent class first for default values.
         bounds = super(PIMixin, self).bounds()
@@ -241,6 +244,7 @@ class PIMixin(OptimizationProblem):
                 bounds[variable] = (m, M)
         return bounds
 
+    @cached
     def history(self, ensemble_member):
         # Load history
         history = AliasDict(self.alias_relation)
@@ -260,10 +264,12 @@ class PIMixin(OptimizationProblem):
     def initial_time(self):
         return 0.0
 
+    @cached
     def initial_state(self, ensemble_member):
         history = self.history(ensemble_member)
         return AliasDict(self.alias_relation, {variable: timeseries.values[-1] for variable, timeseries in history.iteritems()})
 
+    @cached
     def seed(self, ensemble_member):
         # Call parent class first for default values.
         seed = super(PIMixin, self).seed(ensemble_member)

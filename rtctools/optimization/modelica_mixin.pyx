@@ -13,6 +13,7 @@ from timeseries import Timeseries
 from optimization_problem import OptimizationProblem, Alias
 from alias_tools import AliasRelation
 from casadi_helpers import resolve_interdependencies
+from caching import cached
 
 logger = logging.getLogger("rtctools")
 
@@ -359,6 +360,7 @@ class ModelicaMixin(OptimizationProblem):
             [initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
         self._initial_residual = initial_residual     
 
+    @cached
     def compiler_options(self):
         """
         Subclasses can configure the `JModelica.org <http://www.jmodelica.org/>`_ compiler options here.
@@ -410,6 +412,7 @@ class ModelicaMixin(OptimizationProblem):
     def output_variables(self):
         return self._output_variables
 
+    @cached
     def parameters(self, ensemble_member):
         # Call parent class first for default values.
         parameters = super(ModelicaMixin, self).parameters(ensemble_member)
@@ -438,6 +441,7 @@ class ModelicaMixin(OptimizationProblem):
 
         return parameters
 
+    @cached
     def constant_inputs(self, ensemble_member):
         # Call parent class first for default values.
         constant_inputs = super(ModelicaMixin, self).constant_inputs(ensemble_member)
@@ -466,6 +470,7 @@ class ModelicaMixin(OptimizationProblem):
 
         return constant_inputs
 
+    @cached
     def initial_state(self, ensemble_member):
         # Initial conditions obtained from "start=" get pulled into the initial
         # residual by JM.
@@ -475,6 +480,7 @@ class ModelicaMixin(OptimizationProblem):
     def initial_residual(self):
         return self._initial_residual
 
+    @cached
     def bounds(self):
         # Call parent class first for default values.
         bounds = super(ModelicaMixin, self).bounds()

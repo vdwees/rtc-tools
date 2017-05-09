@@ -11,6 +11,7 @@ import rtctools.data.csv as csv
 from timeseries import Timeseries
 from optimization_problem import OptimizationProblem
 from alias_tools import AliasDict
+from caching import cached
 
 logger = logging.getLogger("rtctools")
 
@@ -174,6 +175,7 @@ class CSVMixin(OptimizationProblem):
         else:
             return 1.0
 
+    @cached
     def parameters(self, ensemble_member):
         # Call parent class first for default values.
         parameters = super(CSVMixin, self).parameters(ensemble_member)
@@ -190,6 +192,7 @@ class CSVMixin(OptimizationProblem):
                     logger.debug("CSVMixin: Read parameter {} ".format(parameter))
         return parameters
 
+    @cached
     def constant_inputs(self, ensemble_member):
         # Call parent class first for default values.
         constant_inputs = super(
@@ -209,6 +212,7 @@ class CSVMixin(OptimizationProblem):
 
         return constant_inputs
 
+    @cached
     def bounds(self):
         # Call parent class first for default values.
         bounds = super(CSVMixin, self).bounds()
@@ -254,6 +258,7 @@ class CSVMixin(OptimizationProblem):
     def initial_time(self):
         return 0.0
 
+    @cached
     def initial_state(self, ensemble_member):
         # Call parent class first for default values.
         initial_state = super(CSVMixin, self).initial_state(ensemble_member)
@@ -270,6 +275,7 @@ class CSVMixin(OptimizationProblem):
                     logger.debug("CSVMixin: Read initial state {}".format(variable))
         return initial_state
 
+    @cached
     def seed(self, ensemble_member):
         # Call parent class first for default values.
         seed = super(CSVMixin, self).seed(ensemble_member)
