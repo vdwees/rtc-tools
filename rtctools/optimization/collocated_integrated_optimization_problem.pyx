@@ -140,14 +140,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             # Store parameters
             parameters = self.parameters(ensemble_member)
-            parameter_values = [None] * len(self.dae_variables['parameters'])
-            values = []
-            for i, symbol in enumerate(self.dae_variables['parameters']):
-                variable = symbol.getName()
-                try:
-                    parameter_values[i] = parameters[variable]
-                except KeyError:
-                    raise Exception("No value specified for parameter {}".format(variable))
+            parameter_values = [parameters[param.getName()] for param in self.dae_variables['parameters']]
 
             if len(dynamic_parameters) > 0:
                 jac = jacobian(vertcat(parameter_values), vertcat(dynamic_parameters))
@@ -155,7 +148,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     if jac[i, :].nnz() > 0:
                         dynamic_parameter_names.add(symbol.getName())
 
-            parameter_values = resolve_interdependencies(parameter_values, self.dae_variables['parameters'])
+            if np.any([isinstance(value, MX) and not value.isConstant() for value in parameter_values]):
+                parameter_values = substitute(parameter_values, self.dae_variables['parameters'], parameter_values)
+
             if ensemble_member == 0:
                 # Store parameter values of member 0, as variable bounds may depend on these.
                 self._parameter_values_ensemble_member_0 = parameter_values
@@ -172,9 +167,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     raise Exception("No values found for constant input {}".format(variable))
                 else:
                     values = constant_input.values
-                    if isinstance(values, MX):
+                    if isinstance(values, MX) and not values.isConstant():
                         [values] = substitute([values], self.dae_variables['parameters'], parameter_values)
-                    elif np.any([not MX(value).isConstant() for value in values]):
+                    elif np.any([isinstance(value, MX) and not value.isConstant() for value in values]):
                         values = substitute(values, self.dae_variables['parameters'], parameter_values)
                     constant_inputs_interpolated[variable] = self.interpolate(
                         collocation_times, constant_input.times, values, 0.0, 0.0)

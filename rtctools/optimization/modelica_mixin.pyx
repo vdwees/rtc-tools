@@ -12,6 +12,7 @@ import os
 from timeseries import Timeseries
 from optimization_problem import OptimizationProblem, Alias
 from alias_tools import AliasRelation
+from casadi_helpers import resolve_interdependencies
 
 logger = logging.getLogger("rtctools")
 
@@ -414,23 +415,36 @@ class ModelicaMixin(OptimizationProblem):
         parameters = super(ModelicaMixin, self).parameters(ensemble_member)
 
         # Return parameter values from JModelica model
+        symbols, keys, values = [], [], []
         for variable in self._mx['parameters']:
-            variable = variable.getName()
-            var = self._jm_model.getVariable(variable)
+            variable_name = variable.getName()
+            var = self._jm_model.getVariable(variable_name)
             if var.hasAttributeSet('bindingExpression'):
-                parameters[variable] = var.getAttribute('bindingExpression')
+                symbols.append(variable)
+                keys.append(variable_name)
+                values.append(var.getAttribute('bindingExpression'))
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("Read parameter {} from Modelica model".format(
-                        variable))
+                        variable_name))
             else:
                 # Value will be provided by a subclass.
                 pass
+
+        # Resolve interdependencies between parameters
+        if len(keys) > 0:
+            values = resolve_interdependencies(values, symbols)
+            for i, key in enumerate(keys):
+                parameters[key] = values[i]
 
         return parameters
 
     def constant_inputs(self, ensemble_member):
         # Call parent class first for default values.
         constant_inputs = super(ModelicaMixin, self).constant_inputs(ensemble_member)
+
+        # Parameter values
+        parameters = self.parameters(ensemble_member)
+        parameter_values = [parameters[param.getName()] for param in self._mx['parameters']]
 
         # Return input values from JModelica model
         times = self.times()
@@ -439,6 +453,8 @@ class ModelicaMixin(OptimizationProblem):
             var = self._jm_model.getVariable(variable)
             if var.hasAttributeSet('bindingExpression'):
                 value = var.getAttribute('bindingExpression')
+                if not value.isConstant():
+                    [value] = substitute([value], self._mx['parameters'], parameter_values)
                 constant_inputs[variable] = Timeseries(
                     times, repmat([value], len(times)))
                 if logger.getEffectiveLevel() == logging.DEBUG:
@@ -463,6 +479,10 @@ class ModelicaMixin(OptimizationProblem):
         # Call parent class first for default values.
         bounds = super(ModelicaMixin, self).bounds()
 
+        # Parameter values
+        parameters = self.parameters(0)
+        parameter_values = [parameters[param.getName()] for param in self._mx['parameters']]
+
         # Load additional bounds from model
         for variable in itertools.chain(self._mx['states'], self._mx['algebraics'], self._mx['control_inputs'], self._eliminated_algebraics):
             variable = variable.getName()
@@ -476,7 +496,9 @@ class ModelicaMixin(OptimizationProblem):
             if var.hasAttributeSet('min'):
                 m_ = var.getAttribute('min')
                 if not m_.isConstant():
-                    m = m_
+                    [m] = substitute([m_], self._mx['parameters'], parameter_values)
+                    if m.isConstant():
+                        m = float(m)
                 else:
                     m_ = float(m_)
                     if np.isfinite(m_):
@@ -484,7 +506,9 @@ class ModelicaMixin(OptimizationProblem):
             if var.hasAttributeSet('max'):
                 M_ = var.getAttribute('max')
                 if not M_.isConstant():
-                    M = M_
+                    [M] = substitute([M_], self._mx['parameters'], parameter_values)
+                    if M.isConstant():
+                        M = float(M)
                 else:
                     M_ = float(M_)
                     if np.isfinite(M_):

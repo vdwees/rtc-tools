@@ -1,4 +1,4 @@
-from casadi import MX, MXFunction, jacobian, vertcat, reshape, mul, substitute
+from casadi import MX, MXFunction, jacobian, vertcat, reshape, mul, substitute, iszero
 import numpy as np
 import logging
 
@@ -48,10 +48,12 @@ def resolve_interdependencies(e, v, max_recursion_depth=10):
     until all symbols have been resolved or a maximum recursion depth is reached.
     """
     recursion_depth = 0
-    while np.any([not MX(value).isConstant() for value in e]):
-        e = substitute(e, v, e)
+    while True:
+        e_ = substitute(e, v, e)
+        if iszero(vertcat(e) - vertcat(e_)):
+            return e_
+        e = e_
         recursion_depth += 1
         if recursion_depth > max_recursion_depth:
             raise Exception(
                 "Interdependency resolution:  Maximum recursion depth exceeded")
-    return e
