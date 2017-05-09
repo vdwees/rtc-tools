@@ -140,7 +140,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
             # Store parameters
             parameters = self.parameters(ensemble_member)
-            parameter_values = [parameters[param.getName()] for param in self.dae_variables['parameters']]
+            parameter_values = [None] * len(self.dae_variables['parameters'])
+            for i, symbol in enumerate(self.dae_variables['parameters']):
+                variable = symbol.getName()
+                try:
+                    parameter_values[i] = parameters[variable]
+                except KeyError:
+                    raise Exception("No value specified for parameter {}".format(variable))
 
             if len(dynamic_parameters) > 0:
                 jac = jacobian(vertcat(parameter_values), vertcat(dynamic_parameters))

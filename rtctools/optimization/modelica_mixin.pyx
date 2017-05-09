@@ -448,7 +448,7 @@ class ModelicaMixin(OptimizationProblem):
 
         # Parameter values
         parameters = self.parameters(ensemble_member)
-        parameter_values = [parameters[param.getName()] for param in self._mx['parameters']]
+        parameter_values = [parameters.get(param.getName(), param) for param in self._mx['parameters']]
 
         # Return input values from JModelica model
         times = self.times()
@@ -487,7 +487,7 @@ class ModelicaMixin(OptimizationProblem):
 
         # Parameter values
         parameters = self.parameters(0)
-        parameter_values = [parameters[param.getName()] for param in self._mx['parameters']]
+        parameter_values = [parameters.get(param.getName(), param) for param in self._mx['parameters']]
 
         # Load additional bounds from model
         for variable in itertools.chain(self._mx['states'], self._mx['algebraics'], self._mx['control_inputs'], self._eliminated_algebraics):
