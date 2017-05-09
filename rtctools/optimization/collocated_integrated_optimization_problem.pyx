@@ -1698,9 +1698,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 raise Exception("No data specified for constant input {}".format(variable.getName()))
             else:
                 values = constant_input.values
-                if isinstance(values, MX):
+                if isinstance(values, MX) and not values.isConstant():
                     [values] = substitute([values], self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
-                elif np.any([not MX(value).isConstant() for value in values]):
+                elif np.any([isinstance(value, MX) and not value.isConstant() for value in values]):
                     values = substitute(values, self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
                 accumulation_constant_inputs[i] = self.interpolate(
                     collocation_times, constant_input.times, values, 0.0, 0.0)
