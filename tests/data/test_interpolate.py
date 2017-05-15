@@ -1,6 +1,6 @@
 from unittest import TestCase, expectedFailure
 
-from casadi import SX, SXFunction, linspace
+from casadi import SX, Function, linspace
 
 import numpy as np
 import rtctools.data.interpolation.bspline1d

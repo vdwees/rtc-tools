@@ -1,4 +1,4 @@
-from data_path import data_path
+from .data_path import data_path
 from test_case import TestCase
 
 from rtctools.optimization.optimization_problem import OptimizationProblem

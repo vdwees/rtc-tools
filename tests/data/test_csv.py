@@ -5,7 +5,7 @@ import os
 import numpy as np
 from datetime import datetime
 
-from data_path import data_path
+from .data_path import data_path
 
 
 class TestCSV(TestCase):

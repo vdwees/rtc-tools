@@ -8,7 +8,7 @@ import os
 import datetime
 import copy
 
-from data_path import data_path
+from .data_path import data_path
 
 
 class TestPI(TestCase):

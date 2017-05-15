@@ -30,13 +30,13 @@ def load(fname, delimiter=',', with_time=False):
             # Read the first line, this should be a header. Count columns by
             # counting separator.
             sample_csvfile = csvfile.readline()
-            n_semicolon = sample_csvfile.count(';')
+            n_semicolon = sample_csvfile.count(b';')
             # We actually only need one number to evaluate if commas are used as decimal separator, but
             # certain csv writers don't use a decimal when the value has no meaningful decimal
             # (e.g. 12.0 becomes 12) so we read the next 1024 bytes to make sure we catch a number.
             sample_csvfile = csvfile.read(1024)
             # Count the commas
-            n_comma_decimal = sample_csvfile.count(',')
+            n_comma_decimal = sample_csvfile.count(b',')
             # If commas are used as decimal separator, we need additional
             # converters.
             if n_comma_decimal:

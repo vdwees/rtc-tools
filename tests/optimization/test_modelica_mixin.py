@@ -1,4 +1,4 @@
-from data_path import data_path
+from .data_path import data_path
 from test_case import TestCase
 
 from rtctools.optimization.collocated_integrated_optimization_problem import CollocatedIntegratedOptimizationProblem

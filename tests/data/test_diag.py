@@ -10,7 +10,7 @@ from unittest import TestCase
 import rtctools.data.pi as pi
 
 
-from data_path import data_path
+from .data_path import data_path
 
 
 class TestDiag(TestCase):
