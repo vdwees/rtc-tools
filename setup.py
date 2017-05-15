@@ -14,6 +14,4 @@ setup(
     description = 'Toolbox for control and optimization of environmental systems',
     author = 'Jorn Baayen',
     url = 'http://www.deltares.nl/en/software/rtc-tools/',
-    include_dirs = [np.get_include()],
-    ext_modules = cythonize(['rtctools/*.pyx', 'rtctools/data/*.pyx', 'rtctools/data/interpolation/*.pyx', 'rtctools/optimization/*.pyx', 'rtctools/simulation/*.pyx'], compiler_directives={'language_level': 3}),
 )
