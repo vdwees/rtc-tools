@@ -273,7 +273,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Path constraints
         path_constraints = self.path_constraints(0)
-        path_constraint_expressions = vertcat(f_constraint for (f_constraint, lb, ub) in path_constraints)
+        path_constraint_expressions = vertcat(*[f_constraint for (f_constraint, lb, ub) in path_constraints])
 
         # Delayed feedback
         delayed_feedback = self.delayed_feedback()

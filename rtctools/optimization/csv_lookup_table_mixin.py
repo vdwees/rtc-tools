@@ -177,7 +177,6 @@ class CSVLookupTableMixin(OptimizationProblem):
                     pylab.savefig(figure_filename)
                 symbols = [SX.sym(inputs[0])]
                 function = Function('f', symbols, [BSpline1D(*tck)(symbols[0])])
-                function.init()
                 self._lookup_tables[output] = LookupTable(symbols, function)
 
             elif len(csvinput.dtype.names) == 3:
@@ -212,7 +211,6 @@ class CSVLookupTableMixin(OptimizationProblem):
                 symbols = [SX.sym(inputs[0]), SX.sym(inputs[1])]
                 function = Function('f', 
                     symbols, [BSpline2D(*tck)(symbols[0], symbols[1])])
-                function.init()
                 self._lookup_tables[output] = LookupTable(symbols, function)
 
             else:

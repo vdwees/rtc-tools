@@ -27,7 +27,7 @@ def reduce_matvec(e, v):
     This reduces the number of nodes required to represent the linear operations.
     """
     Af = Function("Af", [], [jacobian(e, v)])
-    A = Af([])[0]
+    A = Af()[0]
     return reshape(mul(A, v), e.shape)
 
 
@@ -38,7 +38,7 @@ def reduce_matvec_plus_b(e, v):
     This reduces the number of nodes required to represent the affine operations.
     """
     bf = Function("bf", [v], [e])
-    b = bf([0])[0]
+    b = bf(0)[0]
     return reduce_matvec(e, v) + b
 
 

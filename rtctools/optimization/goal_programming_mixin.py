@@ -327,14 +327,14 @@ class GoalProgrammingMixin(OptimizationProblem):
 
     def objective(self, ensemble_member):
         if len(self._subproblem_objectives) > 0:
-            acc_objective = sum1(vertcat(o(self, ensemble_member) for o in self._subproblem_objectives))
+            acc_objective = sum1(vertcat(*[o(self, ensemble_member) for o in self._subproblem_objectives]))
             return acc_objective / len(self._subproblem_objectives)
         else:
             return MX(0)
 
     def path_objective(self, ensemble_member):
         if len(self._subproblem_path_objectives) > 0:
-            acc_objective = sum1(vertcat(o(self, ensemble_member) for o in self._subproblem_path_objectives))
+            acc_objective = sum1(vertcat(*[o(self, ensemble_member) for o in self._subproblem_path_objectives]))
             return acc_objective / len(self._subproblem_path_objectives)
         else:
             return MX(0)
@@ -491,7 +491,7 @@ class GoalProgrammingMixin(OptimizationProblem):
 
                     function = Function('function', [self.solver_input], [
                                           goal.function(self, ensemble_member)])
-                    [value] = function.call([self.solver_output])
+                    [value] = function(self.solver_output)
 
                     constraint.min = value / goal.function_nominal
                     constraint.max = value / goal.function_nominal
@@ -611,7 +611,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                                 [goal.function(self, ensemble_member)], variables, values)
                             function = Function(
                                 'function', [self.solver_input], [function])
-                            [value] = function.call([self.solver_output])
+                            [value] = function(self.solver_output)
 
                             m[i] = value / goal.function_nominal
                             M[i] = value / goal.function_nominal
@@ -798,7 +798,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                         epsilon += options['constraint_relaxation']
                     else:
                         f = Function('f', [self.solver_input], [goal.function(self, ensemble_member)])
-                        epsilon = f([self.solver_output])[0]
+                        epsilon = f(self.solver_output)[0]
 
                     # Add inequality constraint
                     self._add_goal_constraint(
@@ -818,7 +818,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                         # Compute path expression
                         expr = self.map_path_expression(goal.function(self, ensemble_member), ensemble_member)
                         f = Function('f', [self.solver_input], [expr])
-                        epsilon = np.array(f([self.solver_output])[0]).ravel()
+                        epsilon = np.array(f(self.solver_output)[0]).ravel()
 
                     # Add inequality constraint
                     self._add_path_goal_constraint(
