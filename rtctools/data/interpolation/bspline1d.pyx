@@ -1,7 +1,7 @@
 # cython: embedsignature=True
 
 import numpy as np
-from casadi import if_else, logic_and, SXFunction, NlpSolver, SX, vertcat, inf, sumCols
+from casadi import if_else, logic_and, Function, nlpsol, SX, vertcat, inf, sum2
 from bspline import BSpline
 
 
@@ -97,17 +97,17 @@ class BSpline1D(BSpline):
         x_sym = SX.sym('x')
 
         # Casadi Representation of Spline Function & Derivatives
-        bspline = SXFunction('bspline', [c, x_sym], [cls(t, c, k)(x_sym)])
+        bspline = Function('bspline', [c, x_sym], [cls(t, c, k)(x_sym)])
         bspline_prime = bspline.jacobian(1)
         bspline_prime_prime = bspline_prime.jacobian(1)
 
         # Objective Function
         xpt = SX.sym('xpt')
         ypt = SX.sym('ypt')
-        sq_diff = SXFunction('sq_diff', [xpt, ypt], [
+        sq_diff = Function('sq_diff', [xpt, ypt], [
                              (ypt - bspline([c, xpt])[0])**2])
         sq_diff = sq_diff.map('sq_diff', N)
-        f = sumCols(sq_diff([SX(x), SX(y)])[0])
+        f = sum2(sq_diff([SX(x), SX(y)])[0])
 
         # Setup Curvature Constraints
         delta_c_max = np.full(num_knots - 1, inf)
@@ -125,18 +125,18 @@ class BSpline1D(BSpline):
             else:
                 min_slope_slope = np.full(num_test_points, epsilon)
         monotonicity_constraints = vertcat(
-            [c[i + 1] - c[i] for i in range(num_knots - 1)])
+            c[i + 1] - c[i] for i in range(num_knots - 1))
         x_linspace = np.linspace(x[0], x[-1], num_test_points)
         curvature_constraints = vertcat(
-            [bspline_prime_prime([c, SX(x)])[0] for x in x_linspace])
-        g = vertcat([monotonicity_constraints, curvature_constraints])
+            bspline_prime_prime([c, SX(x)])[0] for x in x_linspace)
+        g = vertcat(monotonicity_constraints, curvature_constraints)
         lbg = np.concatenate((delta_c_min, min_slope_slope))
         ubg = np.concatenate((delta_c_max, max_slope_slope))
 
         # Perform mini-optimization problem to calculate the the values of c
         nlp = {'x': c, 'f': f, 'g': g}
         my_solver = "ipopt"
-        solver = NlpSolver("solver", my_solver, nlp, {
+        solver = nlpsol("solver", my_solver, nlp, {
                            'print_time': 0, 'print_level': 0})
         sol = solver(lbg=lbg, ubg=ubg)
         stats = solver.getStats()

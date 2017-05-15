@@ -2,7 +2,6 @@
 
 from optimization_problem import OptimizationProblem
 from timeseries import Timeseries
-from casadi import vertcat, MX
 import numpy as np
 import logging
 import sys

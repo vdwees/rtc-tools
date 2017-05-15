@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, substitute, repmat, vertcat, dependsOn
+from casadi import MX, substitute, repmat, vertcat, depends_on
 from collections import OrderedDict
 import numpy as np
 import itertools
@@ -304,7 +304,7 @@ class ModelicaMixin(OptimizationProblem):
 
                     # Substitute aliases
                     [constraint_function] = substitute([constraint_function], substitutions.keys(), substitutions.values())
-                    while dependsOn(constraint_function, vertcat(substitutions.keys())):
+                    while depends_on(constraint_function, vertcat(*substitutions.keys())):
                         [constraint_function] = substitute([constraint_function], substitutions.keys(), substitutions.values())
 
                     # Add to constraints
@@ -348,15 +348,15 @@ class ModelicaMixin(OptimizationProblem):
         eliminated_algebraics_names = [sym.getName() for sym in self._eliminated_algebraics]
         self._mx['algebraics'] = [var for var in self._mx['algebraics'] if var.getName() not in eliminated_algebraics_names]
        
-        dae_residual = vertcat([eq.getLhs() - eq.getRhs() for eq in dae_eq])
+        dae_residual = vertcat(eq.getLhs() - eq.getRhs() for eq in dae_eq)
         [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
-        while dependsOn(dae_residual, vertcat(substitutions.keys())):
+        while depends_on(dae_residual, vertcat(*substitutions.keys())):
             [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
         self._dae_residual = dae_residual
 
         initial_residual = self._jm_model.getInitialResidual()
         [initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
-        while dependsOn(initial_residual, vertcat(substitutions.keys())):
+        while depends_on(initial_residual, vertcat(*substitutions.keys())):
             [initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
         self._initial_residual = initial_residual     
 

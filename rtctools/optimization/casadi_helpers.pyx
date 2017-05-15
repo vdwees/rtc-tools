@@ -1,4 +1,4 @@
-from casadi import MX, Function, jacobian, vertcat, reshape, mul, substitute, iszero
+from casadi import MX, Function, jacobian, vertcat, reshape, mul, substitute
 import numpy as np
 import logging
 
@@ -7,7 +7,7 @@ logger = logging.getLogger("rtctools")
 
 def is_affine(e, v):
     f = Function("f", [v], [jacobian(e, v)])
-    return (f.jacSparsity(0, 0).nnz() == 0)
+    return (f.sparsity_jac(0, 0).nnz() == 0)
 
 
 def nullvertcat(L):
@@ -17,7 +17,7 @@ def nullvertcat(L):
     if len(L) == 0:
         return MX(0, 1)
     else:
-        return vertcat(L)
+        return vertcat(*L)
 
 
 def reduce_matvec(e, v):
@@ -43,7 +43,7 @@ def reduce_matvec_plus_b(e, v):
 
 
 def is_equal(a, b):
-    return np.all([iszero(a_ - b_) for a_, b_ in zip(a, b)])
+    return np.all([((a_ - b_) == 0) for a_, b_ in zip(a, b)])
 
 
 def resolve_interdependencies(e, v, max_recursion_depth=10):

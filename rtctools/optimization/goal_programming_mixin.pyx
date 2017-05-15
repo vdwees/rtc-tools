@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, Function, sumRows, sumCols, vertcat, transpose, substitute, constpow, if_else
+from casadi import MX, Function, sum1, vertcat, transpose, substitute, constpow, if_else
 from abc import ABCMeta, abstractmethod
 import numpy as np
 cimport numpy as np
@@ -327,14 +327,14 @@ class GoalProgrammingMixin(OptimizationProblem):
 
     def objective(self, ensemble_member):
         if len(self._subproblem_objectives) > 0:
-            acc_objective = sumRows(vertcat([o(self, ensemble_member) for o in self._subproblem_objectives]))
+            acc_objective = sum1(vertcat(o(self, ensemble_member) for o in self._subproblem_objectives))
             return acc_objective / len(self._subproblem_objectives)
         else:
             return MX(0)
 
     def path_objective(self, ensemble_member):
         if len(self._subproblem_path_objectives) > 0:
-            acc_objective = sumRows(vertcat([o(self, ensemble_member) for o in self._subproblem_path_objectives]))
+            acc_objective = sum1(vertcat(o(self, ensemble_member) for o in self._subproblem_path_objectives))
             return acc_objective / len(self._subproblem_path_objectives)
         else:
             return MX(0)
@@ -754,7 +754,7 @@ class GoalProgrammingMixin(OptimizationProblem):
 
                 if not goal.critical:
                     if goal.has_target_bounds:
-                        self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * sumRows(
+                        self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * sum1(
                             constpow(problem.state_vector(epsilon.getName(), ensemble_member=ensemble_member), goal.order)))
                     else:
                         self._subproblem_path_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight * 

@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import Function, NlpSolver, MX, CasadiOptions, vertcat
+from casadi import Function, nlpsol, MX, CasadiOptions, vertcat
 from abc import ABCMeta, abstractmethod, abstractproperty
 import numpy as np
 cimport numpy as np
@@ -153,25 +153,16 @@ class OptimizationProblem(object):
         CasadiOptions.setOptimizedNumDir(options['optimized_num_dir'])
         del options['optimized_num_dir']
 
-        solver = NlpSolver('nlp', my_solver, nlp, options)
-
-        # Pass the bounds and initial guess
-        logger.debug("Setting bounds")
-
-        solver.setInput(lbx, 'lbx')
-        solver.setInput(ubx, 'ubx')
-        solver.setInput(vertcat(lbg), 'lbg')
-        solver.setInput(vertcat(ubg), 'ubg')
-        solver.setInput(x0, 'x0')
+        solver = nlpsol('nlp', my_solver, nlp, options)
 
         # Solve NLP
         logger.info("Calling solver")
 
-        solver.evaluate()
+        results = solver(x0 = x0, lbx = lbx, ubx = ubx, lbg = vertcat(*lbg), ubg = vertcat(*ubg))
 
         # Extract relevant stats
-        self._objective_value = float(solver.getOutput('f')[0])
-        self._solver_output = solver.getOutput('x')
+        self._objective_value = float(results['f'])
+        self._solver_output = results['x']
         self._solver_stats = solver.getStats()
 
         # Get the return status
