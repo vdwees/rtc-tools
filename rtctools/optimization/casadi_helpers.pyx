@@ -42,6 +42,10 @@ def reduce_matvec_plus_b(e, v):
     return reduce_matvec(e, v) + b
 
 
+def is_equal(a, b):
+    return np.all([iszero(a_ - b_) for a_, b_ in zip(a, b)])
+
+
 def resolve_interdependencies(e, v, max_recursion_depth=10):
     """
     Replaces occurences of the symbols in v with the expressions of e,
@@ -50,7 +54,7 @@ def resolve_interdependencies(e, v, max_recursion_depth=10):
     recursion_depth = 0
     while True:
         e_ = substitute(e, v, e)
-        if iszero(vertcat(e) - vertcat(e_)):
+        if is_equal(e, e_):
             return e_
         e = e_
         recursion_depth += 1
