@@ -8,7 +8,6 @@ from casadi import SX, Function
 import numpy as np
 import ConfigParser
 import logging
-import cython
 import glob
 import os
 import sys

@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import numpy as np
 import itertools
 import logging
-import cython
+#import cython
 
 from timeseries import Timeseries
 from alias_tools import AliasDict
