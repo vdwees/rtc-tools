@@ -9,11 +9,11 @@ import pyjmi
 import sets
 import os
 
-from timeseries import Timeseries
-from optimization_problem import OptimizationProblem, Alias
-from alias_tools import AliasRelation
-from casadi_helpers import resolve_interdependencies
-from caching import cached
+from .timeseries import Timeseries
+from .optimization_problem import OptimizationProblem, Alias
+from .alias_tools import AliasRelation
+from .casadi_helpers import resolve_interdependencies
+from .caching import cached
 
 logger = logging.getLogger("rtctools")
 

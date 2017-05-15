@@ -7,8 +7,8 @@ import itertools
 import logging
 #import cython
 
-from timeseries import Timeseries
-from alias_tools import AliasDict
+from .timeseries import Timeseries
+from .alias_tools import AliasDict
 
 logger = logging.getLogger("rtctools")
 
@@ -159,7 +159,7 @@ class OptimizationProblem(object):
         # Extract relevant stats
         self._objective_value = float(results['f'])
         self._solver_output = results['x']
-        self._solver_stats = solver.stats
+        self._solver_stats = solver.stats()
 
         # Get the return status
         if self._solver_stats['return_status'] in ['Solve_Succeeded', 'Solved_To_Acceptable_Level', 'User_Requested_Stop', 'SUCCESS']:
@@ -223,11 +223,9 @@ class OptimizationProblem(object):
             options['nlp_solver'] = 'Ipopt'
             options['nlp_log_level'] = 2
             options['linear_solver'] = 'mumps'
-            options['print_level'] = 5
         else:
             options['solver'] = 'ipopt'
             options['linear_solver'] = 'mumps'
-            options['print_level'] = 5
         return options
 
     @abstractproperty

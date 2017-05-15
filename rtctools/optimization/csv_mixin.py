@@ -8,10 +8,10 @@ import os
 import sys
 import rtctools.data.csv as csv
 
-from timeseries import Timeseries
-from optimization_problem import OptimizationProblem
-from alias_tools import AliasDict
-from caching import cached
+from .timeseries import Timeseries
+from .optimization_problem import OptimizationProblem
+from .alias_tools import AliasDict
+from .caching import cached
 
 logger = logging.getLogger("rtctools")
 

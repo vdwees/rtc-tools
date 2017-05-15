@@ -9,10 +9,10 @@ import bisect
 import rtctools.data.rtc as rtc
 import rtctools.data.pi as pi
 
-from optimization_problem import OptimizationProblem
-from timeseries import Timeseries
-from alias_tools import AliasDict
-from caching import cached
+from .optimization_problem import OptimizationProblem
+from .timeseries import Timeseries
+from .alias_tools import AliasDict
+from .caching import cached
 
 logger = logging.getLogger("rtctools")
 

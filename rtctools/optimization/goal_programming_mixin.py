@@ -9,8 +9,8 @@ import logging
 import cython
 import sys
 
-from optimization_problem import OptimizationProblem
-from timeseries import Timeseries
+from .optimization_problem import OptimizationProblem
+from .timeseries import Timeseries
 
 logger = logging.getLogger("rtctools")
 

@@ -2,7 +2,7 @@
 
 from rtctools.data.interpolation.bspline1d import BSpline1D
 from rtctools.data.interpolation.bspline2d import BSpline2D
-from optimization_problem import OptimizationProblem, LookupTable
+import rtctools.data.csv as csv
 from scipy.interpolate import splrep, bisplrep, splev, bisplev
 from casadi import SX, Function
 import numpy as np
@@ -11,7 +11,8 @@ import logging
 import glob
 import os
 import sys
-import rtctools.data.csv as csv
+
+from .optimization_problem import OptimizationProblem, LookupTable
 
 import cPickle as pickle
 

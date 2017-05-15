@@ -6,10 +6,10 @@ import numpy as np
 import itertools
 import logging
 
-from optimization_problem import OptimizationProblem
-from timeseries import Timeseries
-from casadi_helpers import *
-from alias_tools import AliasDict
+from .optimization_problem import OptimizationProblem
+from .timeseries import Timeseries
+from .casadi_helpers import *
+from .alias_tools import AliasDict
 
 logger = logging.getLogger("rtctools")
 

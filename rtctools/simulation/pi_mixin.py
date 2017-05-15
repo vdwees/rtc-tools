@@ -8,7 +8,7 @@ import bisect
 import rtctools.data.rtc as rtc
 import rtctools.data.pi as pi
 
-from simulation_problem import SimulationProblem
+from .simulation_problem import SimulationProblem
 
 logger = logging.getLogger("rtctools")
 

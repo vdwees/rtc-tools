@@ -1,10 +1,11 @@
 # cython: embedsignature=True
 
-from optimization_problem import OptimizationProblem
-from timeseries import Timeseries
 import numpy as np
 import logging
 import sys
+
+from .optimization_problem import OptimizationProblem
+from .timeseries import Timeseries
 
 logger = logging.getLogger("rtctools")
 

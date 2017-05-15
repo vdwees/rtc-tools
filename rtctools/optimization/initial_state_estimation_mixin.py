@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from rtctools.optimization.goal_programming_mixin import GoalProgrammingMixin, Goal
+from .goal_programming_mixin import GoalProgrammingMixin, Goal
 
 
 class _MeasurementGoal(Goal):
