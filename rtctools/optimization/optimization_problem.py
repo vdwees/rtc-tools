@@ -162,7 +162,7 @@ class OptimizationProblem(object):
         # Extract relevant stats
         self._objective_value = float(results['f'])
         self._solver_output = results['x']
-        self._solver_stats = solver.getStats()
+        self._solver_stats = solver.stats
 
         # Get the return status
         if self._solver_stats['return_status'] in ['Solve_Succeeded', 'Solved_To_Acceptable_Level', 'User_Requested_Stop', 'SUCCESS']:

@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, Function, rootfinder, vertcat, horzcat, jacobian, vec, substitute, sum1, sum2, interp1d, transpose, repmat, depends_on, reshape, mul
+from casadi import MX, Function, rootfinder, vertcat, horzcat, jacobian, vec, substitute, sum1, sum2, interpolant, transpose, repmat, depends_on, reshape, mul
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools
@@ -676,7 +676,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 values = self.state_vector(
                     variable, ensemble_member=ensemble_member)
                 if len(collocation_times) != len(times):
-                    interpolated = interp1d(
+                    interpolated = interpolant(
                         times, values, collocation_times, self.equidistant)
                 else:
                     interpolated = values
@@ -795,11 +795,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
                 # Set up delay constraints
                 if len(collocation_times) != len(in_times):
-                    x_in = interp1d(in_times, in_values,
+                    x_in = interpolant(in_times, in_values,
                                     collocation_times, self.equidistant)
                 else:
                     x_in = in_values
-                x_out_delayed = interp1d(
+                x_out_delayed = interpolant(
                     out_times, out_values, collocation_times - delay, self.equidistant)
 
                 nominal = 0.5 * (in_nominal + out_nominal)
@@ -1689,7 +1689,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             times = self.times()
             values = self.state_vector(state, ensemble_member)
             if len(times) != n_collocation_times:
-                accumulation_states[i] = interp1d(times, values, collocation_times)
+                accumulation_states[i] = interpolant(times, values, collocation_times)
             else:
                 accumulation_states[i] = values
             nominal = self.variable_nominal(state)
