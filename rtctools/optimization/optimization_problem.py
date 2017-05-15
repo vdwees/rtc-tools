@@ -3,7 +3,6 @@
 from casadi import Function, nlpsol, MX, CasadiOptions, vertcat
 from abc import ABCMeta, abstractmethod, abstractproperty
 import numpy as np
-cimport numpy as np
 import itertools
 import logging
 import cython
@@ -588,7 +587,7 @@ class OptimizationProblem(object):
         """
         return False
 
-    @cython.boundscheck(False)
+    #@cython.boundscheck(False)
     def interpolate(self, t, np.ndarray ts, fs, f_left=np.nan, f_right=np.nan):
         """
         Linear interpolation over time.

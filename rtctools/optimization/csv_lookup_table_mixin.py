@@ -6,7 +6,6 @@ from optimization_problem import OptimizationProblem, LookupTable
 from scipy.interpolate import splrep, bisplrep, splev, bisplev
 from casadi import SX, Function
 import numpy as np
-cimport numpy as np
 import ConfigParser
 import logging
 import cython
