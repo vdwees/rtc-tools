@@ -284,6 +284,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Establish integrator theta
         theta = self.theta
 
+        # Set CasADi function options
+        options = self.solver_options()
+        function_options = {'max_num_dir': options['optimized_num_dir']}
+
         # Update the store of all ensemble-member-specific data for all ensemble members
         # with initial states, derivatives, and path variables.
         for ensemble_member in range(self.ensemble_size):
@@ -426,7 +430,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                         1 - theta) * dae_residual_integrated_0 + theta * dae_residual_integrated_1
 
                 dae_residual_function_integrated = Function('dae_residual_function_integrated', [I, I0, ensemble_parameters, vertcat(*[C0[i] for i in range(len(collocated_variables))] + [CI0[i] for i in range(len(
-                    self.dae_variables['constant_inputs']))] + [dt_sym] + collocated_variables + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_integrated])
+                    self.dae_variables['constant_inputs']))] + [dt_sym] + collocated_variables + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_integrated], function_options)
                 dae_residual_function_integrated = dae_residual_function_integrated.expand()
 
                 options = self.integrator_options()
@@ -435,7 +439,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             # Initialize an Function for the DAE residual (collocated part)
             if len(collocated_variables) > 0:
                 self._dae_residual_function_collocated = Function('dae_residual_function_collocated', [ensemble_parameters, vertcat(*
-                    integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_collocated])
+                    integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_collocated], function_options)
                 self._dae_residual_function_collocated = self._dae_residual_function_collocated.expand()
 
         if len(integrated_variables) > 0:
@@ -452,7 +456,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                                [ensemble_parameters,
                                                 vertcat(*integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
                                                         'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
-                                               [path_objective])
+                                               [path_objective], function_options)
         path_objective_function = path_objective_function.expand()
 
         # Initialize an Function for the path constraints
@@ -461,7 +465,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                                                [ensemble_parameters,
                                                 vertcat(*integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
                                                         'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
-                                               [path_constraint_expressions])
+                                               [path_constraint_expressions], function_options)
         path_constraints_function = path_constraints_function.expand()
 
         # Set up accumulation over time (integration, and generation of
@@ -586,7 +590,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # time horizon with one symbolic operation.  This saves a lot of
         # memory.
         accumulated = Function('accumulated',
-            [accumulated_X, accumulated_U, ensemble_parameters], [vertcat(*accumulated_Y)])
+            [accumulated_X, accumulated_U, ensemble_parameters], [vertcat(*accumulated_Y)], function_options)
 
         if len(integrated_variables) > 0:
             accumulation = accumulated.mapaccum(
@@ -606,7 +610,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Add constraints for initial conditions
         if self._initial_residual_with_params_fun_map is None:
             initial_residual_with_params_fun = Function('initial_residual', [ensemble_parameters, vertcat(*self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
-                                                  'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat(*[dae_residual, initial_residual])])
+                                                  'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat(*[dae_residual, initial_residual])],
+                                                  function_options)
             initial_residual_with_params_fun = initial_residual_with_params_fun.expand()
             self._initial_residual_with_params_fun_map = initial_residual_with_params_fun.map('initial_residual_with_params_fun_map', self.ensemble_size)
         initial_residual_with_params_fun_map = self._initial_residual_with_params_fun_map

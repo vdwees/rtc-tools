@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import Function, nlpsol, MX, CasadiOptions, vertcat
+from casadi import Function, nlpsol, MX, vertcat
 from abc import ABCMeta, abstractmethod, abstractproperty
 import numpy as np
 import itertools
@@ -148,9 +148,6 @@ class OptimizationProblem(object):
 
         my_solver = options['solver']
         del options['solver']
-
-        CasadiOptions.setOptimizedNumDir(options['optimized_num_dir'])
-        del options['optimized_num_dir']
 
         solver = nlpsol('nlp', my_solver, nlp, options)
 
