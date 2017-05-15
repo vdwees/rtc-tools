@@ -141,15 +141,25 @@ class OptimizationProblem(object):
         self._mixed_integer = np.any(discrete)
         options = {}
         options.update(self.solver_options()) # Create a copy
-        if self._mixed_integer:
-            options['discrete'] = discrete
 
         logger.debug("Creating solver")
 
+        # Solver option
         my_solver = options['solver']
         del options['solver']
 
-        solver = nlpsol('nlp', my_solver, nlp, options)
+        # Expand option
+        expand = options['expand']
+        del options['expand']
+
+        # Already consumed
+        del options['optimized_num_dir']
+
+        nlpsol_options = {'expand': expand, my_solver: options}
+        if self._mixed_integer:
+            nlpsol_options['discrete'] = discrete
+
+        solver = nlpsol('nlp', my_solver, nlp, nlpsol_options)
 
         # Solve NLP
         logger.info("Calling solver")
@@ -216,7 +226,7 @@ class OptimizationProblem(object):
 
         :returns: A dictionary of CasADi :class:`NlpSolver` options.  See the CasADi, Ipopt, and Bonmin documentation for details.
         """
-        options = {'optimized_num_dir': 3, 'inputs_check': False, 'ignore_check_vec': True, 'regularity_check': False}
+        options = {'optimized_num_dir': 3}
         if self._mixed_integer:
             options['solver'] = 'bonmin'
             options['algorithm'] = 'B-BB'

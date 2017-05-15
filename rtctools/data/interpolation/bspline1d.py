@@ -136,7 +136,7 @@ class BSpline1D(BSpline):
         # Perform mini-optimization problem to calculate the the values of c
         nlp = {'x': c, 'f': f, 'g': g}
         my_solver = "ipopt"
-        solver = nlpsol("solver", my_solver, nlp, {'print_time': 0})
+        solver = nlpsol("solver", my_solver, nlp, {'print_time': 0, 'expand': True, 'ipopt': {'print_level': 0}})
         sol = solver(lbg=lbg, ubg=ubg)
         stats = solver.stats()
         return_status = stats['return_status']
