@@ -312,7 +312,7 @@ class GoalProgrammingMixin(OptimizationProblem):
         else:
             # Seed with previous results
             seed = {}
-            for key, result in self._results[ensemble_member].iteritems():
+            for key, result in self._results[ensemble_member].items():
                 seed[key] = Timeseries(self.times(key), result)
 
         # Seed epsilons

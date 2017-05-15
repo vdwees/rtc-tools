@@ -187,7 +187,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         
         # Resolve variable bounds
         bounds = self.bounds()
-        bound_keys, bound_values = zip(*bounds.iteritems())
+        bound_keys, bound_values = zip(*bounds.items())
         lb_values, ub_values = zip(*bound_values)
         lb_values = np.array(lb_values, dtype=np.object)
         ub_values = np.array(ub_values, dtype=np.object)
@@ -1141,7 +1141,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
                     offset += n_times
 
-            for k in xrange(len(self.extra_variables)):
+            for k in range(len(self.extra_variables)):
                 discrete[
                     offset + k] = self.variable_is_discrete(self.extra_variables[k].getName())
 
@@ -1196,7 +1196,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
                     offset += n_times
 
-            for k in xrange(len(self.extra_variables)):
+            for k in range(len(self.extra_variables)):
                 try:
                     bound = resolved_bounds[self.extra_variables[k].getName()]
                 except KeyError:
@@ -1238,7 +1238,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
                     offset += n_times
 
-            for k in xrange(len(self.extra_variables)):
+            for k in range(len(self.extra_variables)):
                 try:
                     x0[offset + k] = seed[self.extra_variables[k].getName()]
                 except KeyError:
@@ -1319,7 +1319,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             offset += n_collocation_times
 
         # Extract extra variables
-        for k in xrange(len(self.extra_variables)):
+        for k in range(len(self.extra_variables)):
             variable = self.extra_variables[k].getName()
             results[variable] = np.array(X[offset + k, 0]).ravel()
 
@@ -1497,7 +1497,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         for variable in self.path_variables:
             offset += n_collocation_times
 
-        for k in xrange(len(self.extra_variables)):
+        for k in range(len(self.extra_variables)):
             variable = self.extra_variables[k].getName()
             if variable == extra_variable:
                 return X[offset + k]

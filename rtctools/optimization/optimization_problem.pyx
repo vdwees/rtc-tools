@@ -420,7 +420,7 @@ class OptimizationProblem(object):
         :returns: A dictionary of variable names and historical time series (up to and including t0).
         """
         initial_state = self.initial_state(ensemble_member)
-        return AliasDict(self.alias_relation, {variable: Timeseries(np.array([self.initial_time]), np.array([state])) for variable, state in initial_state.iteritems()})
+        return AliasDict(self.alias_relation, {variable: Timeseries(np.array([self.initial_time]), np.array([state])) for variable, state in initial_state.items()})
 
     @abstractproperty
     def alias_relation(self):
@@ -479,7 +479,7 @@ class OptimizationProblem(object):
         """
         t0 = self.initial_time
         history = self.history(ensemble_member)
-        return {variable: self.interpolate(t0, timeseries.times, timeseries.values) for variable, timeseries in history.iteritems()}
+        return {variable: self.interpolate(t0, timeseries.times, timeseries.values) for variable, timeseries in history.items()}
 
     @property
     def initial_residual(self):

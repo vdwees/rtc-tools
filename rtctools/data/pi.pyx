@@ -285,13 +285,13 @@ class ParameterConfig:
                 # get Id's if present
                 el_columnIds = child.find("pi:columnIds", ns)
                 if el_columnIds != None:
-                    for key, value in el_columnIds.attrib.iteritems():
+                    for key, value in el_columnIds.attrib.items():
                         columnId[key] = value
 
                 # get Types if present
                 el_columnTypes = child.find("pi:columnTypes", ns)
                 if el_columnTypes != None:
-                    for key, value in el_columnTypes.attrib.iteritems():
+                    for key, value in el_columnTypes.attrib.items():
                         columnType[key] = self._parse_type(value)
 
                 # get table contenstart_datetime
@@ -301,7 +301,7 @@ class ParameterConfig:
 
                 i_row = 0
                 for row in el_row:
-                    for key, value in row.attrib.iteritems():
+                    for key, value in row.attrib.items():
                         table[columnId[key]][i_row] = value
                     i_row += 1
                 return table
@@ -943,7 +943,7 @@ class Timeseries:
         """
         return os.path.join(self._folder, self._basename + '.bin')
 
-    def iteritems(self, ensemble_member=0):
+    def items(self, ensemble_member=0):
         """
         Returns an iterator over all timeseries IDs and value arrays for the given
         ensemble member.

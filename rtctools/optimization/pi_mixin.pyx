@@ -125,7 +125,7 @@ class PIMixin(OptimizationProblem):
         # Stick timeseries into an AliasDict
         self._timeseries_import_dict = [AliasDict(self.alias_relation) for ensemble_member in range(self.ensemble_size)]
         for ensemble_member in range(self.ensemble_size):
-            for key, value in self._timeseries_import.iteritems(ensemble_member):
+            for key, value in self._timeseries_import.items(ensemble_member):
                 self._timeseries_import_dict[ensemble_member][key] = value
 
     @cached
@@ -267,7 +267,7 @@ class PIMixin(OptimizationProblem):
     @cached
     def initial_state(self, ensemble_member):
         history = self.history(ensemble_member)
-        return AliasDict(self.alias_relation, {variable: timeseries.values[-1] for variable, timeseries in history.iteritems()})
+        return AliasDict(self.alias_relation, {variable: timeseries.values[-1] for variable, timeseries in history.items()})
 
     @cached
     def seed(self, ensemble_member):

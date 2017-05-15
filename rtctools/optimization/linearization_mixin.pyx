@@ -18,7 +18,7 @@ class LinearizationMixin(OptimizationProblem):
     def parameters(self, ensemble_member):
         parameters = super(LinearizationMixin, self).parameters(ensemble_member)
 
-        for parameter, timeseries_id in self.linearization_parameters().iteritems():
+        for parameter, timeseries_id in self.linearization_parameters().items():
             parameters[parameter] = self.timeseries_at(timeseries_id, self.initial_time, ensemble_member)
 
         return parameters

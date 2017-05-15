@@ -170,7 +170,7 @@ class ControlTreeMixin(OptimizationProblem):
             times = self.times(control_input)
             self._control_indices[control_input] = np.zeros(
                 (self.ensemble_size, len(times)), dtype=np.int16)
-            for branch, members in branches.iteritems():
+            for branch, members in branches.items():
                 branching_time_0 = branching_times[len(branch) + 0]
                 branching_time_1 = branching_times[len(branch) + 1]
                 els = np.logical_and(

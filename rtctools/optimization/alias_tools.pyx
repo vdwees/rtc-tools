@@ -21,7 +21,7 @@ class OrderedSet(collections.MutableSet):
         # Method added by JB
         if isinstance(index, slice):
             start, stop, stride = index.indices(len(self))
-            return [self.__getitem__(i) for i in xrange(start, stop, stride)]
+            return [self.__getitem__(i) for i in range(start, stop, stride)]
         else:
             end = self.end
             curr = end[2]
@@ -217,10 +217,10 @@ class AliasDict:
         return len(self._d)
 
     def __iter__(self):
-        return self._d.iteritems()
+        return self._d.items()
 
     def update(self, other):
-        for key, value in other.iteritems():
+        for key, value in other.items():
             self[key] = value
 
     def get(self, key, default=None):
@@ -242,5 +242,5 @@ class AliasDict:
     def values(self):
         return self._d.values()
 
-    def iteritems(self):
+    def items(self):
         return self.__iter__()
