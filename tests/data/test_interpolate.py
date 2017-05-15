@@ -25,9 +25,11 @@ class TestBSpline1DFit(TestCase):
         y_list = np.empty(self.num_test_points - 1)
         tck = rtctools.data.interpolation.bspline1d.BSpline1D.fit(
             self.x, self.y, monotonicity=monotonicity, curvature=curvature)
+        x = SX.sym('x')
+        f = Function('f', [x], [rtctools.data.interpolation.bspline1d.BSpline1D(
+                *tck)(x)])
         for xi in range(self.num_test_points - 1):
-            y_list[xi] = rtctools.data.interpolation.bspline1d.BSpline1D(
-                *tck)(self.testpoints[xi])
+            y_list[xi] = f(self.testpoints[xi])[0]
         return y_list
 
     def test_monotonicity(self):
