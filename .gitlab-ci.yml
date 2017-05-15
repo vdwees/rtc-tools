@@ -17,6 +17,7 @@ build:windows:
     expire_in: 1 week
   tags:
     - windows
+    - python3
 
 test:linux:
   image: jmodelica.org
@@ -25,3 +26,4 @@ test:linux:
   script: python setup.py install && export USER=root && /opt/JModelica/bin/jm_python.sh -m nose --exe -w tests
   tags:
     - docker
+    - python3
