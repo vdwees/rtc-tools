@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, MXFunction, ImplicitFunction, nlpIn, nlpOut, vertcat, horzcat, jacobian, vec, substitute, sumRows, sumCols, interp1d, transpose, repmat, dependsOn, reshape, mul
+from casadi import MX, Function, ImplicitFunction, nlpIn, nlpOut, vertcat, horzcat, jacobian, vec, substitute, sumRows, sumCols, interp1d, transpose, repmat, dependsOn, reshape, mul
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools
@@ -425,16 +425,16 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     dae_residual_integrated = (
                         1 - theta) * dae_residual_integrated_0 + theta * dae_residual_integrated_1
 
-                dae_residual_function_integrated = MXFunction('dae_residual_function_integrated', [I, I0, ensemble_parameters, vertcat([C0[i] for i in range(len(collocated_variables))] + [CI0[i] for i in range(len(
+                dae_residual_function_integrated = Function('dae_residual_function_integrated', [I, I0, ensemble_parameters, vertcat([C0[i] for i in range(len(collocated_variables))] + [CI0[i] for i in range(len(
                     self.dae_variables['constant_inputs']))] + [dt_sym] + collocated_variables + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_integrated])
                 dae_residual_function_integrated = dae_residual_function_integrated.expand()
 
                 options = self.integrator_options()
                 self._integrator_step_function = ImplicitFunction('integrator_step_function', 'newton', dae_residual_function_integrated, options)
                 
-            # Initialize an MXFunction for the DAE residual (collocated part)
+            # Initialize an Function for the DAE residual (collocated part)
             if len(collocated_variables) > 0:
-                self._dae_residual_function_collocated = MXFunction('dae_residual_function_collocated', [ensemble_parameters, vertcat(
+                self._dae_residual_function_collocated = Function('dae_residual_function_collocated', [ensemble_parameters, vertcat(
                     integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_collocated])
                 self._dae_residual_function_collocated = self._dae_residual_function_collocated.expand()
 
@@ -446,18 +446,18 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         else:
             dae_residual_collocated_size = 0
 
-        # Initialize an MXFunction for the path objective
+        # Initialize an Function for the path objective
         # Note that we assume that the path objective expression is the same for all ensemble members
-        path_objective_function = MXFunction('path_objective',
+        path_objective_function = Function('path_objective',
                                                [ensemble_parameters,
                                                 vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
                                                         'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
                                                [path_objective])
         path_objective_function = path_objective_function.expand()
 
-        # Initialize an MXFunction for the path constraints
+        # Initialize an Function for the path constraints
         # Note that we assume that the path constraint expression is the same for all ensemble members
-        path_constraints_function = MXFunction('path_constraints',
+        path_constraints_function = Function('path_constraints',
                                                [ensemble_parameters,
                                                 vertcat(integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables[
                                                         'constant_inputs'] + self.dae_variables['time'] + self.path_variables)],
@@ -585,7 +585,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         # Use map/mapaccum to capture integration and collocation constraint generation over the entire
         # time horizon with one symbolic operation.  This saves a lot of
         # memory.
-        accumulated = MXFunction('accumulated',
+        accumulated = Function('accumulated',
             [accumulated_X, accumulated_U, ensemble_parameters], [vertcat(accumulated_Y)])
 
         if len(integrated_variables) > 0:
@@ -605,7 +605,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
         # Add constraints for initial conditions
         if self._initial_residual_with_params_fun_map is None:
-            initial_residual_with_params_fun = MXFunction('initial_residual', [ensemble_parameters, vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
+            initial_residual_with_params_fun = Function('initial_residual', [ensemble_parameters, vertcat(self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
                                                   'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat([dae_residual, initial_residual])])
             initial_residual_with_params_fun = initial_residual_with_params_fun.expand()
             self._initial_residual_with_params_fun_map = initial_residual_with_params_fun.map('initial_residual_with_params_fun_map', self.ensemble_size)
@@ -888,7 +888,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         logger.info("Creating NLP function")
 
         # , {'jit': True, 'compiler': 'shell'})
-        nlp = MXFunction('nlp', nlpIn(x=X), nlpOut(f=sumRows(vertcat(f)), g=vertcat(g)))
+        nlp = Function('nlp', nlpIn(x=X), nlpOut(f=sumRows(vertcat(f)), g=vertcat(g)))
 
         # Done
         logger.info("Done transcribing problem")
@@ -897,7 +897,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
     def clear_transcription_cache(self):
         """
-        Clears the DAE ``MXFunctions`` that were cached by ``transcribe``.
+        Clears the DAE ``Function``s that were cached by ``transcribe``.
         """
         self._dae_residual_function_collocated = None
         self._integrator_step_function = None
@@ -1264,7 +1264,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         if len(self.integrated_states) > 0:
             # Use integrators_mx to facilicate common subexpression
             # elimination.
-            f = MXFunction('f', [self.solver_input], [
+            f = Function('f', [self.solver_input], [
                            vertcat(self.integrators_mx)])
             f.setInput(X[0:])
             f.evaluate()
@@ -1673,7 +1673,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         states_and_path_variables = states + self.path_variables
         derivatives = self.dae_variables['derivatives'] + self._algebraic_and_control_derivatives
 
-        f = MXFunction('f', [vertcat(states_and_path_variables), vertcat(derivatives),
+        f = Function('f', [vertcat(states_and_path_variables), vertcat(derivatives),
             vertcat(self.dae_variables['constant_inputs']), vertcat(self.dae_variables['parameters']),
             self.dae_variables['time'][0]], [expr])
         fmap = f.map('fmap', len(self.times()))

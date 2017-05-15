@@ -5,7 +5,7 @@ from rtctools.optimization.collocated_integrated_optimization_problem import Col
 from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.control_tree_mixin import ControlTreeMixin
 from rtctools.optimization.timeseries import Timeseries
-from casadi import MX, MXFunction
+from casadi import MX
 import numpy as np
 import logging
 import time

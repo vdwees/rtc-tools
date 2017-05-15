@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, MXFunction, sumRows, sumCols, vertcat, transpose, substitute, constpow, if_else
+from casadi import MX, Function, sumRows, sumCols, vertcat, transpose, substitute, constpow, if_else
 from abc import ABCMeta, abstractmethod
 import numpy as np
 cimport numpy as np
@@ -489,7 +489,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                     # Equality constraint to optimized value
                     fix_value = True
 
-                    function = MXFunction('function', [self.solver_input], [
+                    function = Function('function', [self.solver_input], [
                                           goal.function(self, ensemble_member)])
                     [value] = function.call([self.solver_output])
 
@@ -609,7 +609,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                                 variable, t, ensemble_member=ensemble_member) for variable in variables]
                             [function] = substitute(
                                 [goal.function(self, ensemble_member)], variables, values)
-                            function = MXFunction(
+                            function = Function(
                                 'function', [self.solver_input], [function])
                             [value] = function.call([self.solver_output])
 
@@ -797,7 +797,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                         # Add a relaxation to appease the barrier method.
                         epsilon += options['constraint_relaxation']
                     else:
-                        f = MXFunction('f', [self.solver_input], [goal.function(self, ensemble_member)])
+                        f = Function('f', [self.solver_input], [goal.function(self, ensemble_member)])
                         epsilon = f([self.solver_output])[0]
 
                     # Add inequality constraint
@@ -817,7 +817,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                     else:
                         # Compute path expression
                         expr = self.map_path_expression(goal.function(self, ensemble_member), ensemble_member)
-                        f = MXFunction('f', [self.solver_input], [expr])
+                        f = Function('f', [self.solver_input], [expr])
                         epsilon = np.array(f([self.solver_output])[0]).ravel()
 
                     # Add inequality constraint

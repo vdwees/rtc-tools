@@ -4,7 +4,7 @@ from rtctools.data.interpolation.bspline1d import BSpline1D
 from rtctools.data.interpolation.bspline2d import BSpline2D
 from optimization_problem import OptimizationProblem, LookupTable
 from scipy.interpolate import splrep, bisplrep, splev, bisplev
-from casadi import SX, SXFunction
+from casadi import SX, Function
 import numpy as np
 cimport numpy as np
 import ConfigParser
@@ -177,7 +177,7 @@ class CSVLookupTableMixin(OptimizationProblem):
                     figure_filename = filename.replace('.csv', '.png')
                     pylab.savefig(figure_filename)
                 symbols = [SX.sym(inputs[0])]
-                function = SXFunction(symbols, [BSpline1D(*tck)(symbols[0])])
+                function = Function('f', symbols, [BSpline1D(*tck)(symbols[0])])
                 function.init()
                 self._lookup_tables[output] = LookupTable(symbols, function)
 
@@ -211,7 +211,7 @@ class CSVLookupTableMixin(OptimizationProblem):
                     figure_filename = filename.replace('.csv', '.png')
                     pylab.savefig(figure_filename)
                 symbols = [SX.sym(inputs[0]), SX.sym(inputs[1])]
-                function = SXFunction(
+                function = Function('f', 
                     symbols, [BSpline2D(*tck)(symbols[0], symbols[1])])
                 function.init()
                 self._lookup_tables[output] = LookupTable(symbols, function)

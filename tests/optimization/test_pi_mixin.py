@@ -4,7 +4,7 @@ from test_case import TestCase
 from rtctools.optimization.collocated_integrated_optimization_problem import CollocatedIntegratedOptimizationProblem
 from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.pi_mixin import PIMixin
-from casadi import MX, MXFunction
+from casadi import MX
 import numpy as np
 import time
 import sys

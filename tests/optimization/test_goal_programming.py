@@ -6,7 +6,7 @@ from rtctools.optimization.collocated_integrated_optimization_problem import Col
 from rtctools.optimization.goal_programming_mixin import GoalProgrammingMixin, Goal, StateGoal
 from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.timeseries import Timeseries
-from casadi import MX, MXFunction
+from casadi import MX
 import numpy as np
 import logging
 import time

@@ -1,4 +1,4 @@
-from casadi import MX, MXFunction, jacobian, vertcat, reshape, mul, substitute, iszero
+from casadi import MX, Function, jacobian, vertcat, reshape, mul, substitute, iszero
 import numpy as np
 import logging
 
@@ -6,7 +6,7 @@ logger = logging.getLogger("rtctools")
 
 
 def is_affine(e, v):
-    f = MXFunction("f", [v], [jacobian(e, v)])
+    f = Function("f", [v], [jacobian(e, v)])
     return (f.jacSparsity(0, 0).nnz() == 0)
 
 
@@ -26,7 +26,7 @@ def reduce_matvec(e, v):
 
     This reduces the number of nodes required to represent the linear operations.
     """
-    Af = MXFunction("Af", [], [jacobian(e, v)])
+    Af = Function("Af", [], [jacobian(e, v)])
     A = Af([])[0]
     return reshape(mul(A, v), e.shape)
 
@@ -37,7 +37,7 @@ def reduce_matvec_plus_b(e, v):
 
     This reduces the number of nodes required to represent the affine operations.
     """
-    bf = MXFunction("bf", [v], [e])
+    bf = Function("bf", [v], [e])
     b = bf([0])[0]
     return reduce_matvec(e, v) + b
 

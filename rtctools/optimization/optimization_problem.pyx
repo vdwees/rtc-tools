@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MXFunction, NlpSolver, MX, CasadiOptions, vertcat
+from casadi import Function, NlpSolver, MX, CasadiOptions, vertcat
 from abc import ABCMeta, abstractmethod, abstractproperty
 import numpy as np
 cimport numpy as np
@@ -59,7 +59,7 @@ class LookupTable(object):
         Create a new lookup table object.
 
         :param inputs: List of lookup table input variables.
-        :param function: Lookup table CasADi :class:`MXFunction`.
+        :param function: Lookup table CasADi :class:`Function`.
         """
         self._inputs = inputs
         self._function = function
@@ -74,7 +74,7 @@ class LookupTable(object):
     @property
     def function(self):
         """
-        Lookup table CasADi :class:`MXFunction`.
+        Lookup table CasADi :class:`Function`.
         """
         return self._function
 
