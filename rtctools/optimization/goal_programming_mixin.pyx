@@ -135,6 +135,9 @@ class Goal(object):
     #: Critical goals must always be fully satisfied.
     critical = False
 
+    #: Absolute relaxation applied to the optimized values of this goal
+    relaxation = 0.0
+
     @property
     def has_target_min(self):
         """
@@ -487,10 +490,10 @@ class GoalProgrammingMixin(OptimizationProblem):
                 if epsilon <= options['violation_tolerance']:
                     if goal.has_target_min:
                         constraint.min = (
-                            epsilon * (goal.function_range[0] - goal.target_min) + goal.target_min) / goal.function_nominal
+                            epsilon * (goal.function_range[0] - goal.target_min) + goal.target_min - goal.relaxation) / goal.function_nominal
                     if goal.has_target_max:
                         constraint.max = (
-                            epsilon * (goal.function_range[1] - goal.target_max) + goal.target_max) / goal.function_nominal
+                            epsilon * (goal.function_range[1] - goal.target_max) + goal.target_max + goal.relaxation) / goal.function_nominal
                 else:
                     # Equality constraint to optimized value
                     fix_value = True
@@ -499,14 +502,14 @@ class GoalProgrammingMixin(OptimizationProblem):
                                           goal.function(self, ensemble_member)])
                     [value] = function.call([self.solver_output])
 
-                    constraint.min = value / goal.function_nominal
-                    constraint.max = value / goal.function_nominal
+                    constraint.min = (value - goal.relaxation) / goal.function_nominal
+                    constraint.max = (value + goal.relaxation) / goal.function_nominal
             else:
                 # Epsilon encodes the position within the function range.
                 fix_value = True
 
-                constraint.min = epsilon / goal.function_nominal
-                constraint.max = epsilon / goal.function_nominal
+                constraint.min = (epsilon - goal.relaxation) / goal.function_nominal
+                constraint.max = (epsilon + goal.relaxation) / goal.function_nominal
 
             # Epsilon is fixed.  Override previous {min,max} constraints for
             # this state.
@@ -603,10 +606,10 @@ class GoalProgrammingMixin(OptimizationProblem):
                         if epsilon[i] <= options['violation_tolerance']:
                             if np.isfinite(goal_m[i]):
                                 m[i] = (epsilon[i] * (goal.function_range[0] -
-                                                      goal_m[i]) + goal_m[i]) / goal.function_nominal
+                                                      goal_m[i]) + goal_m[i] - goal.relaxation) / goal.function_nominal
                             if np.isfinite(goal_M[i]):
                                 M[i] = (epsilon[i] * (goal.function_range[1] -
-                                                      goal_M[i]) + goal_M[i]) / goal.function_nominal
+                                                      goal_M[i]) + goal_M[i] + goal.relaxation) / goal.function_nominal
                         else:
                             # Equality constraint to optimized value
                             # TODO this does not perform well.
@@ -620,17 +623,17 @@ class GoalProgrammingMixin(OptimizationProblem):
                                 'function', [self.solver_input], [function])
                             [value] = function.call([self.solver_output])
 
-                            m[i] = value / goal.function_nominal
-                            M[i] = value / goal.function_nominal
+                            m[i] = (value - goal.relaxation) / goal.function_nominal
+                            M[i] = (value + goal.relaxation) / goal.function_nominal
             else:
                 # Epsilon encodes the position within the function range.
                 fix_value = True
 
                 if options['fix_minimized_values']:
-                    m = epsilon / goal.function_nominal
+                    m = (epsilon - goal.relaxation) / goal.function_nominal
                 else:
                     m = -np.inf * np.ones(len(times))
-                M = epsilon / goal.function_nominal
+                M = (epsilon + goal.relaxation) / goal.function_nominal
 
             # TODO it all breaks down here
             constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal: goal.function(
