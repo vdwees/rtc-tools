@@ -13,8 +13,8 @@ class HomotopyMixin(OptimizationProblem):
     Adds homotopy to your optimization problem.  A homotopy is a continuous transformation between
     two optimization problems, parametrized by a single parameter :math:`\\theta \\in [0, 1]`.
 
-    Homotopy may be used to solve non-convex optimization problems, by starting with a convex 
-    approximation at :math:`\\theta = 0.0` and ending with the non-convex problem at 
+    Homotopy may be used to solve non-convex optimization problems, by starting with a convex
+    approximation at :math:`\\theta = 0.0` and ending with the non-convex problem at
     :math:`\\theta = 1.0`.
 
     .. note::
@@ -84,7 +84,8 @@ class HomotopyMixin(OptimizationProblem):
 
     def optimize(self, preprocessing=True, postprocessing=True):
         # Pre-processing
-        self.pre()
+        if preprocessing:
+            self.pre()
 
         # Homotopy loop
         self._theta = 0.0
@@ -119,6 +120,7 @@ class HomotopyMixin(OptimizationProblem):
             self._theta += delta_theta
 
         # Post-processing
-        self.post()
+        if postprocessing:
+            self.post()
 
         return success
