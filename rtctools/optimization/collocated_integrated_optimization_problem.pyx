@@ -926,8 +926,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
     def solver_options(self):
         options = super(CollocatedIntegratedOptimizationProblem,
                         self).solver_options()
-        if self.linear_collocation:
-            options['jac_c_constant'] = 'yes'
+        # Set the option in both cases, to avoid one inadvertently remaining in the cache.
+        options['jac_c_constant'] = 'yes' if self.linear_collocation else 'no'
         return options
 
     def integrator_options(self):
