@@ -654,7 +654,7 @@ class OptimizationProblem(object):
                     if t <= ts[i]:
                         # This special case is needed to avoid interpolation if
                         # not absolutely necessary.  Interpolation is
-                        # problematic if one of the interpolants in NaN.
+                        # problematic if one of the interpolants is NaN.
                         return fs[i]
                     elif t < ts[i + 1]:
                         return fs[i] + (fs[i + 1] - fs[i]) / (ts[i + 1] - ts[i]) * (t - ts[i])
