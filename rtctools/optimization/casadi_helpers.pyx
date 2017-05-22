@@ -55,7 +55,7 @@ def resolve_interdependencies(e, v, max_recursion_depth=10):
     while True:
         e_ = substitute(e, v, e)
         if is_equal(e, e_):
-            return e_
+            return [float(s) if s.isConstant() else s for s in e_]
         e = e_
         recursion_depth += 1
         if recursion_depth > max_recursion_depth:
