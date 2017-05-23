@@ -97,16 +97,16 @@ class AliasRelation:
                 pass
 
     def aliases(self, a):
-        return self._aliases.setdefault(a, OrderedSet([a]))
-
-    def canonical(self, a):
-        return self.aliases(a)[0]
+        return self._aliases.get(a, OrderedSet([a]))
 
     def canonical_signed(self, a):
         if a in self._aliases:
             return self.aliases(a)[0], 1
         else:
-            b = '-' + a
+            if a[0] == '-':
+                b = a[1:]
+            else:
+                b = '-' + a
             if b in self._aliases:
                 return self.aliases(b)[0], -1
             else:
@@ -120,49 +120,6 @@ class AliasRelation:
         return ((canonical_variable, self.aliases(canonical_variable)[1:]) for canonical_variable in self._canonical_variables)
 
 
-class AliasSet:
-    def __init__(self, relation):
-        self._relation = relation
-        self._s = set()
-
-    def add(self, a):
-        self._s.add(self._relation.canonical(a))
-
-    def remove(self, a):
-        self._s.remove(self._relation.canonical(a))
-
-    def __add__(self, other):
-        new = AliasSet(self._relation)
-        for s in [self, other]:
-            for a in s:
-                new.add(a)
-        return new
-    
-    def __sub__(self, other):
-        new = AliasSet(self._relation)
-        for a in self:
-            new.add(a)
-        for a in other:
-            new.remove(a)
-        return new
-
-    def __and__(self, other):
-        new = AliasSet(self._relation)
-        for a in self:
-            if a in other:
-                new.add(a)
-        return new
-    
-    def __or__(self, other):
-        return self.__add__(other)
-
-    def __len__(self):
-        return len(self._s)
-
-    def __iter__(self):
-        return self._s.__iter__()
-
-
 class AliasDict:
     def __init__(self, relation, other=None):
         self._relation = relation
@@ -171,47 +128,27 @@ class AliasDict:
             self.update(other)
 
     def __setitem__(self, key, val):
-        varp = self._relation.canonical(key)
-        if varp in self._d:
-            self._d[varp] = val
+        var, sign = self._relation.canonical_signed(key)
+        if isinstance(val, tuple):
+            self._d[var] = [-c if sign < 0 else c for c in val]
         else:
-            varn = self._relation.canonical('-' + key)
-            if varn in self._d:
-                if hasattr(val, '__iter__'):
-                    self._d[varn] = [-c for c in val]
-                else:
-                    self._d[varn] = -val
-            else:
-                self._d[varp] = val
+            self._d[var] = -val if sign < 0 else val
 
     def __getitem__(self, key):
-        try:
-            return self._d[self._relation.canonical(key)]
-        except KeyError:
-            try:
-                val = self._d[self._relation.canonical('-' + key)]
-            except KeyError:
-                raise KeyError(key)
-            else:
-                if hasattr(val, '__iter__'):
-                    return [-c for c in val]
-                else:
-                    return -val
+        var, sign = self._relation.canonical_signed(key)
+        val = self._d[var]
+        if isinstance(val, tuple):
+            return [-c if sign < 0 else c for c in val]
+        else:
+            return -val if sign < 0 else val
 
     def __delitem__(self, key):
-        try:
-            del self._d[self._relation.canonical(key)]
-        except KeyError:
-            del self._d[self._relation.canonical('-' + key)]
+        var, sign = self._relation.canonical_signed(key)
+        del self._d[var]
 
     def __contains__(self, key):
-        if self._relation.canonical(key) in self._d:
-            return True
-        else:
-            if self._relation.canonical('-' + key) in self._d:
-                return True
-            else:
-                return False
+        var, sign = self._relation.canonical_signed(key)
+        return var in self._d
 
     def __len__(self):
         return len(self._d)
