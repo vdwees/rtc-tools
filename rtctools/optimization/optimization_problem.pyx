@@ -307,6 +307,17 @@ class OptimizationProblem(object):
         """
         return []
 
+    @abstractmethod
+    def variable(self, variable):
+        """
+        Returns an :class:`MX` symbol for the given variable.
+
+        :param variable: Variable name.
+
+        :returns: The associated CasADi :class:`MX` symbol.
+        """
+        raise NotImplementedError
+
     @property
     def extra_variables(self):
         """
