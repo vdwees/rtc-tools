@@ -663,7 +663,7 @@ class GoalProgrammingMixin(OptimizationProblem):
             self._subproblem_path_constraints[ensemble_member][
                 goal.get_function_key(self, ensemble_member)] = [constraint]
 
-    def optimize(self, preprocessing=True, postprocessing=True):
+    def optimize(self, preprocessing=True, postprocessing=True, log_solver_failure_as_error=True):
         # Do pre-processing
         if preprocessing:
             self.pre()
@@ -781,7 +781,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                         self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * sumRows(
                             constpow(problem.state_vector(epsilon.getName(), ensemble_member=ensemble_member), goal.order)))
                     else:
-                        self._subproblem_path_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight * 
+                        self._subproblem_path_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight *
                             constpow(goal.function(problem, ensemble_member) / (goal.function_range[1] - goal.function_range[0]) / goal.function_nominal, goal.order))
 
                 if goal.has_target_bounds:
@@ -791,7 +791,7 @@ class GoalProgrammingMixin(OptimizationProblem):
 
             # Solve subproblem
             success = super(GoalProgrammingMixin, self).optimize(
-                preprocessing=False, postprocessing=False)
+                preprocessing=False, postprocessing=False, log_solver_failure_as_error=log_solver_failure_as_error)
             if not success:
                 break
 
@@ -835,7 +835,7 @@ class GoalProgrammingMixin(OptimizationProblem):
                     if goal.has_target_bounds:
                         epsilon = self._results[ensemble_member][
                             'path_eps_{}_{}'.format(i, j)]
-                    
+
                         # Add a relaxation to appease the barrier method.
                         epsilon += options['constraint_relaxation']
                     else:
