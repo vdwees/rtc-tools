@@ -11,7 +11,7 @@ import os
 
 from timeseries import Timeseries
 from optimization_problem import OptimizationProblem, Alias
-from alias_tools import AliasRelation
+from alias_tools import AliasRelation, AliasDict
 from casadi_helpers import resolve_interdependencies
 from caching import cached
 
@@ -345,8 +345,24 @@ class ModelicaMixin(OptimizationProblem):
             logger.debug("ModelicaMixin: Substituting {} with {}".format(substitutions.keys(), substitutions.values()))
 
         self._eliminated_algebraics = substitutions.keys()
-        eliminated_algebraics_names = [sym.getName() for sym in self._eliminated_algebraics]
-        self._mx['algebraics'] = [var for var in self._mx['algebraics'] if var.getName() not in eliminated_algebraics_names]
+        eliminated_algebraics_names = set([sym.getName() for sym in self._eliminated_algebraics])
+
+        # Re-establish symbols
+        # This is a bit tricky, as situations are possible such as
+        #   algebraic_1 = control_input_1
+        #   algebraic_2 = algebraic_1
+        # In which control_input_1 may end up being an alias of an algebraic
+        # variable.
+        algebraics = AliasDict(self._alias_relation)
+        for v in self._mx['algebraics']:
+            if v.getName() not in eliminated_algebraics_names:
+                algebraics[v.getName()] = v
+
+        self._mx['control_inputs'] = [algebraics.get(var.getName(), var) for var in self._mx['control_inputs']]
+        self._mx['states'] = [algebraics.get(var.getName(), var) for var in self._mx['states']]
+
+        not_algebraic = set([v.getName() for v in itertools.chain(self._mx['control_inputs'], self._mx['states'])]) | eliminated_algebraics_names
+        self._mx['algebraics'] = [var for var in self._mx['algebraics'] if var.getName() not in not_algebraic]
        
         dae_residual = vertcat([eq.getLhs() - eq.getRhs() for eq in dae_eq])
         [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
@@ -358,7 +374,7 @@ class ModelicaMixin(OptimizationProblem):
         [initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
         while dependsOn(initial_residual, vertcat(substitutions.keys())):
             [initial_residual] = substitute([initial_residual], substitutions.keys(), substitutions.values())
-        self._initial_residual = initial_residual     
+        self._initial_residual = initial_residual
 
     @cached
     def compiler_options(self):
