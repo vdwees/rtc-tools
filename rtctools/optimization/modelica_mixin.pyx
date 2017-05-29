@@ -164,7 +164,7 @@ class ModelicaMixin(OptimizationProblem):
                     logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
                         variable, self._nominals[variable]))
 
-            self._discrete[variable] = (var.getVariability() == var.DISCRETE)
+            self._discrete[variable] = (model_variable.getVariability() == var.DISCRETE)
 
         # Now condense equations
         self._condense_dae()
