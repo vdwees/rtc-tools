@@ -252,10 +252,12 @@ class ModelicaMixin(OptimizationProblem):
 
             # Look for equations of the form z = f(x), where z is a private variable.
             if lhs.isSymbolic() and lhs.getName() in private_variables:
-                substitutions[expr[rel.canonical(lhs.getName())]] = rhs
+                canonical, sign = rel.canonical_signed(lhs.getName())
+                substitutions[expr[canonical]] = sign * rhs
                 skip = True
             elif rhs.isSymbolic() and rhs.getName() in private_variables:
-                substitutions[expr[rel.canonical(rhs.getName())]] = lhs
+                canonical, sign = rel.canonical_signed(rhs.getName())
+                substitutions[expr[canonical]] = sign * lhs
                 skip = True
 
             # Add equation, if it is not to be skipped.
