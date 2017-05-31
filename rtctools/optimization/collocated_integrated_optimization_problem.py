@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, Function, rootfinder, vertcat, horzcat, jacobian, vec, substitute, sum1, sum2, interpolant, transpose, repmat, depends_on, reshape, mul
+from casadi import MX, Function, rootfinder, vertcat, horzcat, jacobian, vec, substitute, sum1, sum2, interpolant, transpose, repmat, depends_on, reshape
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools

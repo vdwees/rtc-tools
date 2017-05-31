@@ -608,7 +608,8 @@ class OptimizationProblem(metaclass = ABCMeta):
         return False
 
     #@cython.boundscheck(False)
-    def interpolate(self, t, np.ndarray ts, fs, f_left=np.nan, f_right=np.nan):
+    #np.ndarray ts
+    def interpolate(self, t, ts, fs, f_left=np.nan, f_right=np.nan):
         """
         Linear interpolation over time.
 

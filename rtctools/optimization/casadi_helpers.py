@@ -1,4 +1,4 @@
-from casadi import MX, Function, jacobian, vertcat, reshape, mul, substitute
+from casadi import MX, Function, jacobian, vertcat, reshape, mtimes, substitute
 import numpy as np
 import logging
 
@@ -28,7 +28,7 @@ def reduce_matvec(e, v):
     """
     Af = Function("Af", [], [jacobian(e, v)])
     A = Af()[0]
-    return reshape(mul(A, v), e.shape)
+    return reshape(mtimes(A, v), e.shape)
 
 
 def reduce_matvec_plus_b(e, v):
