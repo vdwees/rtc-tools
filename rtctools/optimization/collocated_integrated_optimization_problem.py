@@ -14,7 +14,7 @@ from .alias_tools import AliasDict
 logger = logging.getLogger("rtctools")
 
 
-class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
+class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = ABCMeta):
     """
     Discretizes your model using a mixed collocation/integration scheme.
 
@@ -30,8 +30,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
 
     :cvar check_collocation_linearity: If ``True``, check whether collocation constraints are linear.  Default is ``True``.
     """
-
-    __metaclass__ = ABCMeta
 
     #: Check whether the collocation constraints are linear
     check_collocation_linearity = True

@@ -4,12 +4,10 @@ from casadi import if_else, logic_and
 from abc import ABCMeta
 
 
-class BSpline(object):
+class BSpline(metaclass = ABCMeta):
     """
     B-Spline base class.
     """
-
-    __metaclass__ = ABCMeta
 
     def basis(self, t, x, k, i):
         """

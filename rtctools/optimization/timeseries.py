@@ -3,7 +3,7 @@
 import numpy as np
 
 
-class Timeseries(object):
+class Timeseries:
     """
     Time series object, bundling time stamps with values.
     """

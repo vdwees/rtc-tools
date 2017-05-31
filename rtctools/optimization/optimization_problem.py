@@ -13,7 +13,7 @@ from .alias_tools import AliasDict
 logger = logging.getLogger("rtctools")
 
 
-class Alias(object):
+class Alias:
     """
     Variable alias.
 
@@ -48,7 +48,7 @@ class Alias(object):
             return 1
 
 
-class LookupTable(object):
+class LookupTable:
     """
     Lookup table.
     """
@@ -102,12 +102,10 @@ class LookupTable(object):
                 return float(self.function(args)[0])
 
 
-class OptimizationProblem(object):
+class OptimizationProblem(metaclass = ABCMeta):
     """
     Base class for all optimization problems.
     """
-
-    __metaclass__ = ABCMeta
 
     def optimize(self, preprocessing=True, postprocessing=True, log_solver_failure_as_error=True):
         """

@@ -14,7 +14,7 @@ from .timeseries import Timeseries
 logger = logging.getLogger("rtctools")
 
 
-class Goal(object):
+class Goal(metaclass = ABCMeta):
     """
     Base class for lexicographic goal programming goals.
 
@@ -96,8 +96,6 @@ class Goal(object):
     applied to all times and all ensemble members simultaneously.
 
     """
-
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def function(self, optimization_problem, ensemble_member):
@@ -190,7 +188,7 @@ class Goal(object):
         return '{}(priority={}, target_min={}, target_max={})'.format(self.__class__, self.priority, self.target_min, self.target_max)
 
 
-class StateGoal(Goal):
+class StateGoal(Goal, metaclass = ABCMeta):
     """
     Base class for lexicographic goal programming path goals that act on a single model state.
 
@@ -261,12 +259,10 @@ class StateGoal(Goal):
         return '{}(priority={}, state={}, target_min={}, target_max={})'.format(self.__class__, self.priority, self.state, self.target_min, self.target_max)
 
 
-class GoalProgrammingMixin(OptimizationProblem):
+class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
     """
     Adds lexicographic goal programming to your optimization problem.
     """
-
-    __metaclass__ = ABCMeta
 
     class _GoalConstraint:
 

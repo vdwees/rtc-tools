@@ -10,7 +10,7 @@ from pymodelica.compiler_exceptions import *
 logger = logging.getLogger("rtctools")
 
 
-class SimulationProblem(object):
+class SimulationProblem:
     """
     `FMU <https://fmi-standard.org/>`_ simulation runner.
     
