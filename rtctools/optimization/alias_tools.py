@@ -92,7 +92,7 @@ class AliasRelation:
         self._canonical_variables.add(aliases[0])
         for v in aliases[1:]:
             try:
-                self._canonical_variables.remove(b)
+                self._canonical_variables.remove(v)
             except KeyError:
                 pass
 
