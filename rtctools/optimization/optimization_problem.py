@@ -109,7 +109,7 @@ class OptimizationProblem(object):
 
     __metaclass__ = ABCMeta
 
-    def optimize(self, preprocessing=True, postprocessing=True):
+    def optimize(self, preprocessing=True, postprocessing=True, log_solver_failure_as_error=True):
         """
         Perform one initialize-transcribe-solve-finalize cycle.
 
@@ -183,8 +183,14 @@ class OptimizationProblem(object):
 
             success = False
         else:
-            logger.error("Solver failed with status {}".format(
-                self._solver_stats['return_status']))
+            if log_solver_failure_as_error:
+                logger.error("Solver failed with status {}".format(
+                    self._solver_stats['return_status']))
+            else:
+                # In this case we expect some higher level process to deal
+                # with the solver failure, so we only log it as info here.
+                logger.info("Solver failed with status {}".format(
+                    self._solver_stats['return_status']))
 
             success = False
 
@@ -208,7 +214,7 @@ class OptimizationProblem(object):
             variable = variable.getName()
             if variable not in bounds:
                 logger.warning(
-                    "OptimizationProblem: control input {} has no bounds.".format(variable))                
+                    "OptimizationProblem: control input {} has no bounds.".format(variable))
 
     @abstractmethod
     def transcribe(self):
@@ -301,6 +307,17 @@ class OptimizationProblem(object):
         List of additional, time-dependent optimization variables, not covered by the DAE model.
         """
         return []
+
+    @abstractmethod
+    def variable(self, variable):
+        """
+        Returns an :class:`MX` symbol for the given variable.
+
+        :param variable: Variable name.
+
+        :returns: The associated CasADi :class:`MX` symbol.
+        """
+        raise NotImplementedError
 
     @property
     def extra_variables(self):
@@ -649,7 +666,7 @@ class OptimizationProblem(object):
                     if t <= ts[i]:
                         # This special case is needed to avoid interpolation if
                         # not absolutely necessary.  Interpolation is
-                        # problematic if one of the interpolants in NaN.
+                        # problematic if one of the interpolants is NaN.
                         return fs[i]
                     elif t < ts[i + 1]:
                         return fs[i] + (fs[i + 1] - fs[i]) / (ts[i + 1] - ts[i]) * (t - ts[i])

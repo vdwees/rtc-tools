@@ -218,7 +218,7 @@ class CSVLookupTableMixin(OptimizationProblem):
                     "CSVLookupTableMixin: {}-dimensional lookup tables not implemented yet.".format(len(csvinput.dtype.names)))
 
             if not valid_cache:
-                pickle.dump(tck, open(filename.replace('.csv', '.tck'), 'wb'))
+                pickle.dump(tck, open(filename.replace('.csv', '.tck'), 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
 
     def lookup_tables(self, ensemble_member):
         # Call parent class first for default values.

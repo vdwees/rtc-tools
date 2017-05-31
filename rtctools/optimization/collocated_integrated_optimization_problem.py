@@ -929,8 +929,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
     def solver_options(self):
         options = super(CollocatedIntegratedOptimizationProblem,
                         self).solver_options()
-        if self.linear_collocation:
-            options['jac_c_constant'] = 'yes'
+        # Set the option in both cases, to avoid one inadvertently remaining in the cache.
+        options['jac_c_constant'] = 'yes' if self.linear_collocation else 'no'
         return options
 
     def integrator_options(self):
@@ -1472,13 +1472,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             return sym
 
     def variable(self, variable):
-        """
-        Returns an :class:`MX` symbol for the given variable.
-
-        :param variable: Variable name.
-
-        :returns: The associated CasADi :class:`MX` symbol.
-        """
         return self._variables[variable]
 
     def extra_variable(self, extra_variable, ensemble_member=0):

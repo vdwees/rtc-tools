@@ -14,8 +14,8 @@ class HomotopyMixin(OptimizationProblem):
     Adds homotopy to your optimization problem.  A homotopy is a continuous transformation between
     two optimization problems, parametrized by a single parameter :math:`\\theta \\in [0, 1]`.
 
-    Homotopy may be used to solve non-convex optimization problems, by starting with a convex 
-    approximation at :math:`\\theta = 0.0` and ending with the non-convex problem at 
+    Homotopy may be used to solve non-convex optimization problems, by starting with a convex
+    approximation at :math:`\\theta = 0.0` and ending with the non-convex problem at
     :math:`\\theta = 1.0`.
 
     .. note::
@@ -83,9 +83,10 @@ class HomotopyMixin(OptimizationProblem):
                 'delta_theta_min'   : 0.01,
                 'homotopy_parameter': 'theta'}
 
-    def optimize(self, preprocessing=True, postprocessing=True):
+    def optimize(self, preprocessing=True, postprocessing=True, log_solver_failure_as_error=True):
         # Pre-processing
-        self.pre()
+        if preprocessing:
+            self.pre()
 
         # Homotopy loop
         self._theta = 0.0
@@ -96,7 +97,7 @@ class HomotopyMixin(OptimizationProblem):
         while self._theta <= 1.0:
             logger.info("Solving with homotopy parameter theta = {}.".format(self._theta))
 
-            success = super(HomotopyMixin, self).optimize(preprocessing=False, postprocessing=False)
+            success = super(HomotopyMixin, self).optimize(preprocessing=False, postprocessing=False, log_solver_failure_as_error=False)
             if success:
                 self._results = [self.extract_results(ensemble_member) for ensemble_member in range(self.ensemble_size)]
 
@@ -115,11 +116,18 @@ class HomotopyMixin(OptimizationProblem):
                 delta_theta /= 2
 
                 if delta_theta < options['delta_theta_min']:
+                    if log_solver_failure_as_error:
+                        logger.error("Solver failed with homotopy parameter theta = {}. Theta cannot be decreased further, as that would violate the minimum delta theta of {}.".format(self._theta, options['delta_theta_min']))
+                    else:
+                        # In this case we expect some higher level process to deal
+                        # with the solver failure, so we only log it as info here.
+                        logger.info("Solver failed with homotopy parameter theta = {}. Theta cannot be decreased further, as that would violate the minimum delta theta of {}.".format(self._theta, options['delta_theta_min']))
                     break
 
             self._theta += delta_theta
 
         # Post-processing
-        self.post()
+        if postprocessing:
+            self.post()
 
         return success

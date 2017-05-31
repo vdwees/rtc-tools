@@ -230,3 +230,21 @@ class PIMixin(SimulationProblem):
             return [self._timeseries_import.forecast_datetime + timedelta(seconds=t) for t in s]
         else:
             return self._timeseries_import.forecast_datetime + timedelta(seconds=s)
+
+    def timeseries_at(self, variable, t):
+        """
+        Return the value of a time series at the given time.
+
+        :param variable: Variable name.
+        :param t: Time.
+
+        :returns: The interpolated value of the time series.
+
+        :raises: KeyError
+        """
+        values = self._timeseries_import.get(variable)
+        t_idx = bisect.bisect_left(self._timeseries_import_times, t)
+        if self._timeseries_import_times[t_idx] == t:
+            return values[t_idx]
+        else:
+            return np.interp1d(t, self._timeseries_import_times, values)
