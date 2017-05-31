@@ -139,7 +139,6 @@ class PIMixin(OptimizationProblem):
         else:
             return False
 
-    @cached
     def solver_options(self):
         # Call parent
         options = super(PIMixin, self).solver_options()
