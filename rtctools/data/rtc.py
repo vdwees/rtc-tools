@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-import xml.etree.cElementTree as ET
+import xml.etree.ElementTree as ET
 import numpy as np
 import logging
 import datetime

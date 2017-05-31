@@ -8,13 +8,12 @@ from casadi import SX, Function
 import numpy as np
 import ConfigParser
 import logging
+import pickle
 import glob
 import os
 import sys
 
 from .optimization_problem import OptimizationProblem, LookupTable
-
-import cPickle as pickle
 
 logger = logging.getLogger("rtctools")
 

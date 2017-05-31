@@ -3,7 +3,6 @@
 from casadi import MX, Function, sum1, vertcat, transpose, substitute, constpow, if_else
 from abc import ABCMeta, abstractmethod
 import numpy as np
-cimport numpy as np
 import itertools
 import logging
 import cython
