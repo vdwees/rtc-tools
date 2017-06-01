@@ -20,5 +20,5 @@ except ImportError:
 
 	warnings.warn("CasADi not found.  Please ensure that casadi can be imported before running RTC-Tools.")
 
-	MOCK_MODULES = ['casadi', 'pyfmi', 'pyfmi.fmi', 'pymodelica', 'pymodelica.compiler', 'pymodelica.compiler_exceptions', 'pyjmi', 'pylab', 'scipy', 'scipy.interpolate']
+	MOCK_MODULES = ['casadi', 'pymola', 'pylab', 'scipy', 'scipy.interpolate']
 	sys.modules.update((mod_name, MagicMock()) for mod_name in MOCK_MODULES)

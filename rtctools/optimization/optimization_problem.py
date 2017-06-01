@@ -13,41 +13,6 @@ from .alias_tools import AliasDict
 logger = logging.getLogger("rtctools")
 
 
-class Alias:
-    """
-    Variable alias.
-
-    .. deprecated:: 2.0.0-beta6
-    """
-
-    def __init__(self, name, negated):
-        """
-        Create a new alias object.
-
-        :param name:    Alias name.
-        :param negated: ``True`` if the alias has the opposite sign of the original variable.
-        """
-        self._name = name
-        self._negated = negated
-
-    @property
-    def name(self):
-        """
-        The name of the alias.
-        """
-        return self._name
-
-    @property
-    def sign(self):
-        """
-        The sign of the alias, such that the alias variable is sign times the original variable.
-        """
-        if self._negated:
-            return -1
-        else:
-            return 1
-
-
 class LookupTable:
     """
     Lookup table.
@@ -445,19 +410,6 @@ class OptimizationProblem(metaclass = ABCMeta):
         :returns: ``True`` if variable is discrete (integer).
         """
         return False
-
-    def variable_aliases(self, variable):
-        """
-        Returns a list of aliases for the given variable.
-
-        .. deprecated:: 2.0.0-beta6
-           Use :func:`alias_relation.aliases` instead.
-
-        :param variable: Variable name.
-
-        :returns: A list of variable aliases.
-        """
-        return [Alias(variable, False)]
 
     def variable_nominal(self, variable):
         """
