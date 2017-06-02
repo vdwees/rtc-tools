@@ -1681,7 +1681,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         accumulation_states = [None] * len(states_and_path_variables)
         for i, state in enumerate(states_and_path_variables):
             state = state.getName()
-            times = self.times()
+            times = self.times(state)
             values = self.state_vector(state, ensemble_member)
             if len(times) != n_collocation_times:
                 accumulation_states[i] = interp1d(times, values, collocation_times)
