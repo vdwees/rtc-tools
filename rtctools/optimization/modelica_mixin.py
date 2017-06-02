@@ -1,7 +1,7 @@
 # cython: embedsignature=True
 
-from pymola import gen_casadi
 from casadi import MX, substitute, repmat, vertcat, depends_on
+from pymola.backends.casadi.api import transfer_model
 from collections import OrderedDict
 import numpy as np
 import itertools
@@ -42,10 +42,10 @@ class ModelicaMixin(OptimizationProblem):
             else:
                 model_name = self.__class__.__name__
 
-        self._pymola_model = pymola.gen_casadi.load_model(model_name,
-                                              [os.path.join(kwargs['model_folder'], f) for f in os.listdir(
-                                                  kwargs['model_folder']) if f.endswith('.mo')],
-                                              compiler_options=self.compiler_options())
+        self._pymola_model = transfer_model(model_name,
+                                            [os.path.join(kwargs['model_folder'], f) for f in os.listdir(
+                                                kwargs['model_folder']) if f.endswith('.mo')],
+                                             compiler_options=self.compiler_options())
 
         if logger.getEffectiveLevel() == logging.DEBUG:
             logger.debug("\n" + repr(self._pymola_model))
@@ -137,6 +137,9 @@ class ModelicaMixin(OptimizationProblem):
 
         # Default options
         compiler_options = {}
+
+        # Where imported model libraries are located.
+        compiler_options['library_folders'] = [self.modelica_library_folder]
 
         # Eliminate constant symbols from model, replacing them with the values
         # specified in the model.
