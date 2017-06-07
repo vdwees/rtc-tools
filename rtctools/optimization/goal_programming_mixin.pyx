@@ -385,7 +385,7 @@ class GoalProgrammingMixin(OptimizationProblem):
         +---------------------------+-----------+---------------+
         | ``mu_reinit``             | ``bool``  | ``True``      |
         +---------------------------+-----------+---------------+
-        | ``fix_minimized_values``  | ``bool``  | ``False``     |
+        | ``fix_minimized_values``  | ``bool``  | ``True``      |
         +---------------------------+-----------+---------------+
         | ``check_monotonicity``    | ``bool``  | ``True``      |
         +---------------------------+-----------+---------------+
@@ -419,7 +419,7 @@ class GoalProgrammingMixin(OptimizationProblem):
         options['mu_reinit'] = True
         options['constraint_relaxation'] = 0.0  # Disable by default
         options['violation_tolerance'] = np.inf # Disable by default
-        options['fix_minimized_values'] = False
+        options['fix_minimized_values'] = True
         options['check_monotonicity'] = True
         options['equality_threshold'] = 1e-8
 
