@@ -1,4 +1,4 @@
-from casadi import MX, MXFunction, jacobian, vertcat, reshape, mul, substitute, iszero
+from casadi import MX, MXFunction, jacobian, vertcat, reshape, mul, substitute, iszero, interp1d, transpose, repmat
 import numpy as np
 import logging
 
@@ -61,3 +61,22 @@ def resolve_interdependencies(e, v, max_recursion_depth=10):
         if recursion_depth > max_recursion_depth:
             raise Exception(
                 "Interdependency resolution:  Maximum recursion depth exceeded")
+
+
+def interpolant(ts, xs, t, equidistant, mode=0):
+    if mode == 0:
+        return interp1d(ts, xs, t, equidistant)
+    else:
+        if mode == 1:
+            xs = xs[:-1] # block-forward
+        else:
+            xs = xs[1:] # block-backward
+        t = MX(t)
+        if t.size1() > 1:
+            t_ = MX.sym('t')
+            xs_ = MX.sym('xs', xs.size1())
+            f = MXFunction('interpolant', [t_, xs_], [mul(transpose((t_ >= ts[:-1]) * (t_ < ts[1:])), xs_)])
+            f = f.map('interpolant_map', t.size1())
+            return transpose(f([transpose(t), repmat(xs, 1, t.size1())])[0])
+        else:
+            return mul(transpose((t >= ts[:-1]) * (t < ts[1:])), xs)
