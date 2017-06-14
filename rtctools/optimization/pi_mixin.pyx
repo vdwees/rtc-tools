@@ -324,7 +324,7 @@ class PIMixin(OptimizationProblem):
                     values = results[variable]
                     if len(values) != len(times):
                         values = self.interpolate(
-                            times, self.times(variable), values)
+                            times, self.times(variable), values, self.interpolation_method(variable))
                 except KeyError:
                     try:
                         ts = self.get_timeseries(variable, ensemble_member)

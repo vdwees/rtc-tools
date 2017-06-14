@@ -73,10 +73,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         """
         pass
 
-    INTERPOLATION_LINEAR = 0
-    INTERPOLATION_PIECEWISE_CONSTANT_FORWARD = 1
-    INTERPOLATION_PIECEWISE_CONSTANT_BACKWARD = 2
-
     def interpolation_method(self, variable=None):
         """
         Interpolation method for variable.
@@ -698,7 +694,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 values = self.state_vector(
                     variable, ensemble_member=ensemble_member)
                 if len(collocation_times) != len(times):
-                    interpolated = interpolate(
+                    interpolated = interpolant(
                         times, values, collocation_times, self.equidistant, interpolation_method)
                 else:
                     interpolated = values
@@ -819,12 +815,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                 # Set up delay constraints
                 if len(collocation_times) != len(in_times):
                     interpolation_method = self.interpolation_method(in_canonical)
-                    x_in = interpolate(in_times, in_values,
+                    x_in = interpolant(in_times, in_values,
                                     collocation_times, self.equidistant, interpolation_method)
                 else:
                     x_in = in_values
                 interpolation_method = self.interpolation_method(out_canonical)
-                x_out_delayed = interpolate(
+                x_out_delayed = interpolant(
                     out_times, out_values, collocation_times - delay, self.equidistant, interpolation_method)
 
                 nominal = 0.5 * (in_nominal + out_nominal)
@@ -1709,7 +1705,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             interpolation_method = self.interpolation_method(state)
             values = self.state_vector(state, ensemble_member)
             if len(times) != n_collocation_times:
-                accumulation_states[i] = interpolate(times, values, collocation_times, interpolation_method)
+                accumulation_states[i] = interpolant(times, values, collocation_times, interpolation_method)
             else:
                 accumulation_states[i] = values
             nominal = self.variable_nominal(state)

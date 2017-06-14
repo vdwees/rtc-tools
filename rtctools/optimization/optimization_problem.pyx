@@ -614,8 +614,12 @@ class OptimizationProblem(object):
         """
         return False
 
+    INTERPOLATION_LINEAR = 0
+    INTERPOLATION_PIECEWISE_CONSTANT_FORWARD = 1
+    INTERPOLATION_PIECEWISE_CONSTANT_BACKWARD = 2
+
     @cython.boundscheck(False)
-    def interpolate(self, t, np.ndarray ts, fs, f_left=np.nan, f_right=np.nan):
+    def interpolate(self, t, np.ndarray ts, fs, f_left=np.nan, f_right=np.nan, mode=INTERPOLATION_LINEAR):
         """
         Linear interpolation over time.
 
@@ -626,6 +630,7 @@ class OptimizationProblem(object):
         :param fs:      Function values at time stamps ts.
         :param f_left:  Function value left of leftmost time stamp.
         :param f_right: Function value right of rightmost time stamp.
+        :param mode:    Interpolation mode.
 
         :returns: The interpolated value.
         """
@@ -660,7 +665,14 @@ class OptimizationProblem(object):
                 k = int(k)
 
                 if r != 0:
-                    return fs[k] + r * (fs[k + 1] - fs[k]) / dt
+                    if mode == self.INTERPOLATION_LINEAR:
+                        return fs[k] + r * (fs[k + 1] - fs[k]) / dt
+                    elif mode == self.INTERPOLATION_PIECEWISE_CONSTANT_FORWARD:
+                        return fs[k]
+                    elif mode == self.INTERPOLATION_PIECEWISE_CONSTANT_BACKWARD:
+                        return fs[k + 1]
+                    else:
+                        raise NotImplementedError
                 else:
                     return fs[k]
             else:
@@ -674,7 +686,14 @@ class OptimizationProblem(object):
                         # problematic if one of the interpolants is NaN.
                         return fs[i]
                     elif t < ts[i + 1]:
-                        return fs[i] + (fs[i + 1] - fs[i]) / (ts[i + 1] - ts[i]) * (t - ts[i])
+                        if mode == self.INTERPOLATION_LINEAR:
+                            return fs[i] + (fs[i + 1] - fs[i]) / (ts[i + 1] - ts[i]) * (t - ts[i])
+                        elif mode == self.INTERPOLATION_PIECEWISE_CONSTANT_FORWARD:
+                            return fs[i]
+                        elif mode == self.INTERPOLATION_PIECEWISE_CONSTANT_BACKWARD:
+                            return fs[i + 1]
+                        else:
+                            raise NotImplementedError
             if t == ts[-1]:
                 return fs[-1]
 
