@@ -138,6 +138,12 @@ class Goal(object):
     #: Absolute relaxation applied to the optimized values of this goal
     relaxation = 0.0
 
+    #: Timeseries ID for function value data (optional)
+    function_value_timeseries_id = None
+
+    #: Timeseries ID for goal violation data (optional)
+    violation_timeseries_id = None
+
     @property
     def has_target_min(self):
         """
@@ -411,6 +417,9 @@ class GoalProgrammingMixin(OptimizationProblem):
         The option ``equality_threshold`` controls when a two-sided inequality constraint is folded into
         an equality constraint.
 
+        The option ``interior_distance`` controls the distance from the scaled target bounds, starting
+        from which the function value is considered to lie in the interior of the target space.
+
         :returns: A dictionary of goal programming options.
         """
 
@@ -422,6 +431,7 @@ class GoalProgrammingMixin(OptimizationProblem):
         options['fix_minimized_values'] = True
         options['check_monotonicity'] = True
         options['equality_threshold'] = 1e-8
+        options['interior_distance'] = 1e-6
 
         return options
 
@@ -695,6 +705,8 @@ class GoalProgrammingMixin(OptimizationProblem):
 
         success = False
 
+        times = self.times()
+
         options = self.goal_programming_options()
 
         self._subproblem_constraints = [{} for ensemble_member in range(self.ensemble_size)]
@@ -814,15 +826,33 @@ class GoalProgrammingMixin(OptimizationProblem):
                     if goal.critical:
                         continue
 
+                    if not goal.has_target_bounds or goal.violation_timeseries_id is not None or goal.function_value_timeseries_id is not None:
+                        f = MXFunction('f', [self.solver_input], [goal.function(self, ensemble_member)])
+                        function_value = float(f([self.solver_output])[0])
+
+                        # Store results
+                        if goal.function_value_timeseries_id is not None:
+                            self.set_timeseries(goal.function_value_timeseries_id, np.full_like(times, function_value), ensemble_member)
+
                     if goal.has_target_bounds:
                         epsilon = self._results[ensemble_member][
                             'eps_{}_{}'.format(i, j)]
 
+                        # Store results
+                        # TODO tolerance
+                        if goal.violation_timeseries_id is not None:
+                            epsilon_active = epsilon
+                            w = True
+                            w &= (not goal.has_target_min or function_value / goal.function_nominal > goal.target_min / goal.function_nominal + options['interior_distance'])
+                            w &= (not goal.has_target_max or function_value / goal.function_nominal < goal.target_max / goal.function_nominal - options['interior_distance'])
+                            if w:
+                                epsilon_active = np.nan
+                            self.set_timeseries(goal.violation_timeseries_id, np.full_like(times, epsilon_active), ensemble_member)
+
                         # Add a relaxation to appease the barrier method.
                         epsilon += options['constraint_relaxation']
                     else:
-                        f = MXFunction('f', [self.solver_input], [goal.function(self, ensemble_member)])
-                        epsilon = f([self.solver_output])[0]
+                        epsilon = function_value
 
                     # Add inequality constraint
                     self._add_goal_constraint(
@@ -832,17 +862,39 @@ class GoalProgrammingMixin(OptimizationProblem):
                     if goal.critical:
                         continue
 
+                    if not goal.has_target_bounds or goal.violation_timeseries_id is not None or goal.function_value_timeseries_id is not None:
+                        # Compute path expression
+                        expr = self.map_path_expression(goal.function(self, ensemble_member), ensemble_member)
+                        f = MXFunction('f', [self.solver_input], [expr])
+                        function_value = np.array(f([self.solver_output])[0]).ravel()
+
+                        # Store results
+                        if goal.function_value_timeseries_id is not None:
+                            self.set_timeseries(goal.function_value_timeseries_id, function_value, ensemble_member)
+
                     if goal.has_target_bounds:
                         epsilon = self._results[ensemble_member][
                             'path_eps_{}_{}'.format(i, j)]
 
+                        # Store results
+                        if goal.violation_timeseries_id is not None:
+                            epsilon_active = np.copy(epsilon)
+                            m = goal.target_min
+                            if isinstance(m, Timeseries):
+                                m = self.interpolate(times, goal.target_min.times, goal.target_min.values)
+                            M = goal.target_max
+                            if isinstance(M, Timeseries):
+                                M = self.interpolate(times, goal.target_max.times, goal.target_max.values)
+                            w = np.ones_like(times)
+                            w = np.logical_and(w, np.logical_or(np.logical_not(np.isfinite(m)), function_value / goal.function_nominal > m / goal.function_nominal + options['interior_distance']))
+                            w = np.logical_and(w, np.logical_or(np.logical_not(np.isfinite(M)), function_value / goal.function_nominal < M / goal.function_nominal - options['interior_distance']))
+                            epsilon_active[w] = np.nan
+                            self.set_timeseries(goal.violation_timeseries_id, epsilon_active, ensemble_member)
+
                         # Add a relaxation to appease the barrier method.
                         epsilon += options['constraint_relaxation']
                     else:
-                        # Compute path expression
-                        expr = self.map_path_expression(goal.function(self, ensemble_member), ensemble_member)
-                        f = MXFunction('f', [self.solver_input], [expr])
-                        epsilon = np.array(f([self.solver_output])[0]).ravel()
+                        epsilon = function_value
 
                     # Add inequality constraint
                     self._add_path_goal_constraint(

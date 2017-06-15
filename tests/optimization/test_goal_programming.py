@@ -43,6 +43,10 @@ class TestProblem(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptim
     def goals(self):
         return [TestGoal1(), TestGoal2(), TestGoal3()]
 
+    def set_timeseries(self, timeseries_id, timeseries, ensemble_member, **kwargs):
+        # Do nothing
+        pass
+
 
 class TestGoal1(Goal):
 
@@ -52,6 +56,8 @@ class TestGoal1(Goal):
     function_range = (-1e1, 1e1)
     priority = 2
     target_min = 0.0
+    violation_timeseries_id = 'violation'
+    function_value_timeseries_id = 'function_value'
 
 
 class TestGoal2(Goal):
@@ -448,6 +454,8 @@ class StateGoal1(StateGoal):
     state = 'x'
     priority = 1
     target_min = 0.0
+    violation_timeseries_id = 'violation2'
+    function_value_timeseries_id = 'function_value2'
 
 
 class StateGoal2(StateGoal):
@@ -489,6 +497,10 @@ class TestProblemStateGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedInteg
 
     def path_goals(self):
         return [StateGoal1(self), StateGoal2(self), StateGoal3(self)]
+
+    def set_timeseries(self, timeseries_id, timeseries, ensemble_member, **kwargs):
+        # Do nothing
+        pass
 
 
 class TestGoalProgrammingStateGoals(TestCase):
