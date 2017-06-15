@@ -112,7 +112,7 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
         raise
 
 
-def run_simulation_problem(simulation_problem_class, base_folder=None, log_level=logging.INFO):
+def run_simulation_problem(simulation_problem_class, base_folder='..', log_level=logging.INFO):
     """
     Sets up and runs a simulation problem.
 
