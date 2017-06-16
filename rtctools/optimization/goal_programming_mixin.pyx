@@ -11,6 +11,7 @@ import sys
 
 from optimization_problem import OptimizationProblem
 from timeseries import Timeseries
+from alias_tools import AliasDict
 
 logger = logging.getLogger("rtctools")
 
@@ -320,7 +321,7 @@ class GoalProgrammingMixin(OptimizationProblem):
             seed = super(GoalProgrammingMixin, self).seed(ensemble_member)
         else:
             # Seed with previous results
-            seed = {}
+            seed = AliasDict(self.alias_relation)
             for key, result in self._results[ensemble_member].iteritems():
                 times = self.times(key)
                 if len(result) == len(times):
