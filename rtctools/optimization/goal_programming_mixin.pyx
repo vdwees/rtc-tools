@@ -322,6 +322,12 @@ class GoalProgrammingMixin(OptimizationProblem):
             # Seed with previous results
             seed = {}
             for key, result in self._results[ensemble_member].iteritems():
+                times = self.times(key)
+                if len(result) < len(times):
+                    padded_result = np.zeros_like(times)
+                    padded_result[0:len(result)] = result
+                    padded_result[len(result):] = result[-1]
+                    result = padded_result
                 seed[key] = Timeseries(self.times(key), result)
 
         # Seed epsilons
