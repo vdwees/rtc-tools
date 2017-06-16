@@ -323,12 +323,10 @@ class GoalProgrammingMixin(OptimizationProblem):
             seed = {}
             for key, result in self._results[ensemble_member].iteritems():
                 times = self.times(key)
-                if len(result) < len(times):
-                    padded_result = np.zeros_like(times)
-                    padded_result[0:len(result)] = result
-                    padded_result[len(result):] = result[-1]
-                    result = padded_result
-                seed[key] = Timeseries(self.times(key), result)
+                if len(result) == len(times):
+                    # Only include seed timeseries which are consistent
+                    # with the specified time stamps.
+                    seed[key] = Timeseries(times, result)
 
         # Seed epsilons
         for epsilon in self._subproblem_epsilons:
