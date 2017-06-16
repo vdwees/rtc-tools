@@ -28,10 +28,10 @@ class HomotopyMixin(OptimizationProblem):
         seed = super(HomotopyMixin, self).seed(ensemble_member)
         if self._theta > 0:
             # Add previous results to seed
-            # Do not override any previously seeded non-state values, such as goal programming epsilons.
-            for key in itertools.chain(self.differentiated_states, self.algebraic_states, self.controls):
-                seed[key] = Timeseries(self.times(key), self._results[
-                                       ensemble_member][key])
+            # Do not override any previously seeded values, such as goal programming results.
+            for key, value in self._results[ensemble_member].iteritems():
+                if key not in seed:
+                    seed[key] = Timeseries(self.times(key), value)
         return seed
 
     def parameters(self, ensemble_member):
