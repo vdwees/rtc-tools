@@ -315,7 +315,7 @@ class CSVMixin(OptimizationProblem):
                     values = results[output_variable]
                     if len(values) != len(times):
                         values = self.interpolate(
-                            times, self.times(output_variable), values)
+                            times, self.times(output_variable), values, self.interpolation_method(output_variable))
                 except KeyError:
                     try:
                         ts = self.get_timeseries(

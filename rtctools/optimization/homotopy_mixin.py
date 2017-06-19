@@ -29,10 +29,13 @@ class HomotopyMixin(OptimizationProblem):
         seed = super(HomotopyMixin, self).seed(ensemble_member)
         if self._theta > 0:
             # Add previous results to seed
-            # Do not override any previously seeded non-state values, such as goal programming epsilons.
-            for key in itertools.chain(self.differentiated_states, self.algebraic_states, self.controls):
-                seed[key] = Timeseries(self.times(key), self._results[
-                                       ensemble_member][key])
+            # Do not override any previously seeded values, such as goal programming results.
+            for key, result in self._results[ensemble_member].iteritems():
+                times = self.times(key)
+                if key not in seed and len(result) == len(times):
+                    # Only include seed timeseries which are consistent
+                    # with the specified time stamps.
+                    seed[key] = Timeseries(times, result)
         return seed
 
     def parameters(self, ensemble_member):

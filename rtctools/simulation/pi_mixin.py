@@ -161,8 +161,6 @@ class PIMixin(SimulationProblem):
         # Get current time index
         t_idx = bisect.bisect_left(self._timeseries_import_times, t + dt)
 
-        logger.warning("{} {} {}".format(t, t_idx, len(self._timeseries_import_times)))  
-
         # Set input values
         for variable, timeseries in self._timeseries_import.iteritems():
             if variable in self._input_variables:

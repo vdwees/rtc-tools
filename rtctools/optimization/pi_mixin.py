@@ -324,7 +324,7 @@ class PIMixin(OptimizationProblem):
                     values = results[variable]
                     if len(values) != len(times):
                         values = self.interpolate(
-                            times, self.times(variable), values)
+                            times, self.times(variable), values, self.interpolation_method(variable))
                 except KeyError:
                     try:
                         ts = self.get_timeseries(variable, ensemble_member)
@@ -366,7 +366,7 @@ class PIMixin(OptimizationProblem):
             return self._timeseries_import.forecast_datetime + timedelta(seconds=s)
 
     def get_timeseries(self, variable, ensemble_member=0):
-        return Timeseries(self._timeseries_import_times, self._timeseries_import.get(variable, ensemble_member=ensemble_member))
+        return Timeseries(self._timeseries_import_times, self._timeseries_import_dict[ensemble_member][variable])
 
     def set_timeseries(self, variable, timeseries, ensemble_member=0, output=True, check_consistency=True, unit=None):
 
@@ -418,12 +418,13 @@ class PIMixin(OptimizationProblem):
             unit = self._timeseries_import._get_unit(variable, ensemble_member=ensemble_member)
         self._timeseries_import.set(
             variable, timeseries.values, ensemble_member=ensemble_member, unit=unit)
+        self._timeseries_import_dict[ensemble_member][variable] = timeseries.values
 
     def get_forecast_index(self):
         return self._timeseries_import.forecast_index
 
     def timeseries_at(self, variable, t, ensemble_member=0):
-        return self.interpolate(t, self._timeseries_import_times, self._timeseries_import.get(variable, ensemble_member=ensemble_member))
+        return self.interpolate(t, self._timeseries_import_times, self._timeseries_import_dict[ensemble_member][variable])
 
     @property
     def ensemble_size(self):

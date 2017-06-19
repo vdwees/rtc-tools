@@ -15,6 +15,7 @@ import pstats
 import cProfile
 
 from data import pi
+from optimization.alias_tools import OrderedSet
 from optimization.pi_mixin import PIMixin
 from . import __version__
 
@@ -69,6 +70,14 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
     logger.info(
         "Using RTC-Tools {}, released as open source software under the GNU General Public License.".format(__version__))
 
+    # Check for some common mistakes in inheritance order
+    suggested_order = OrderedSet(['HomotopyMixin', 'GoalProgrammingMixin', 'PIMixin', 'CSVMixin', 'ModelicaMixin', 'CollocatedIntegratedOptimizationProblem', 'OptimizationProblem'])
+    base_names = OrderedSet([b.__name__ for b in optimization_problem_class.__bases__])
+    if suggested_order & base_names != base_names & suggested_order:
+        msg = 'Please inherit from base classes in the following order: {}'.format(list(base_names & suggested_order))
+        logger.error(msg)
+        raise Exception(msg)
+
     # Run
     try:
         prob = optimization_problem_class(
@@ -112,7 +121,7 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
         raise
 
 
-def run_simulation_problem(simulation_problem_class, base_folder=None, log_level=logging.INFO):
+def run_simulation_problem(simulation_problem_class, base_folder='..', log_level=logging.INFO):
     """
     Sets up and runs a simulation problem.
 
