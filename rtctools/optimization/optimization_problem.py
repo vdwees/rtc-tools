@@ -174,7 +174,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         bounds = self.bounds()
 
         for variable in self.dae_variables['control_inputs']:
-            variable = variable.getName()
+            variable = variable.name()
             if variable not in bounds:
                 logger.warning(
                     "OptimizationProblem: control input {} has no bounds.".format(variable))

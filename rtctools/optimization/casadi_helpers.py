@@ -1,4 +1,4 @@
-from casadi import MX, Function, jacobian, vertcat, reshape, mtimes, substitute
+from casadi import MX, Function, jacobian, vertcat, reshape, mtimes, substitute, interpolant
 import numpy as np
 import logging
 
@@ -42,5 +42,20 @@ def reduce_matvec_plus_b(e, v):
     return reduce_matvec(e, v) + b
 
 
-def is_equal(a, b):
-    return np.all([((a_ - b_) == 0) for a_, b_ in zip(a, b)])
+def interpolate(ts, xs, t, equidistant, mode=0):
+    if mode == 0:
+        return interpolant(ts, xs, t, equidistant)
+    else:
+        if mode == 1:
+            xs = xs[:-1] # block-forward
+        else:
+            xs = xs[1:] # block-backward
+        t = MX(t)
+        if t.size1() > 1:
+            t_ = MX.sym('t')
+            xs_ = MX.sym('xs', xs.size1())
+            f = Function('interpolant', [t_, xs_], [mul(transpose((t_ >= ts[:-1]) * (t_ < ts[1:])), xs_)])
+            f = f.map('interpolant_map', t.size1())
+            return transpose(f([transpose(t), repmat(xs, 1, t.size1())])[0])
+        else:
+            return mul(transpose((t >= ts[:-1]) * (t < ts[1:])), xs)
