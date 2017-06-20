@@ -1,4 +1,4 @@
-from casadi import MX, Function, jacobian, vertcat, reshape, mtimes, substitute, interpolant
+from casadi import MX, Function, jacobian, vertcat, reshape, mtimes, substitute, interpolant, transpose, repmat
 import numpy as np
 import logging
 
@@ -10,7 +10,7 @@ def is_affine(e, v):
     return (f.sparsity_jac(0, 0).nnz() == 0)
 
 
-def nullvertcat(L):
+def nullvertcat(*L):
     """
     Like vertcat, but creates an MX with consistent dimensions even if L is empty.
     """
@@ -26,8 +26,8 @@ def reduce_matvec(e, v):
 
     This reduces the number of nodes required to represent the linear operations.
     """
-    Af = Function("Af", [], [jacobian(e, v)])
-    A = Af()[0]
+    Af = Function("Af", [MX()], [jacobian(e, v)])
+    A = Af(MX())
     return reshape(mtimes(A, v), e.shape)
 
 
@@ -43,8 +43,10 @@ def reduce_matvec_plus_b(e, v):
 
 
 def interpolate(ts, xs, t, equidistant, mode=0):
-    if mode == 0:
-        return interpolant(ts, xs, t, equidistant)
+    if False: # TODO mode == 0:
+        print(ts)
+        print(xs)
+        return interpolant('interpolant', 'linear', [ts], xs, {'lookup_mode': 'exact'})(t)
     else:
         if mode == 1:
             xs = xs[:-1] # block-forward
@@ -54,8 +56,8 @@ def interpolate(ts, xs, t, equidistant, mode=0):
         if t.size1() > 1:
             t_ = MX.sym('t')
             xs_ = MX.sym('xs', xs.size1())
-            f = Function('interpolant', [t_, xs_], [mul(transpose((t_ >= ts[:-1]) * (t_ < ts[1:])), xs_)])
-            f = f.map('interpolant_map', t.size1())
-            return transpose(f([transpose(t), repmat(xs, 1, t.size1())])[0])
+            f = Function('interpolant', [t_, xs_], [mtimes(transpose((t_ >= ts[:-1]) * (t_ < ts[1:])), xs_)])
+            f = f.map(t.size1(), 'serial')
+            return transpose(f(transpose(t), repmat(xs, 1, t.size1())))
         else:
-            return mul(transpose((t >= ts[:-1]) * (t < ts[1:])), xs)
+            return mtimes(transpose((t >= ts[:-1]) * (t < ts[1:])), xs)

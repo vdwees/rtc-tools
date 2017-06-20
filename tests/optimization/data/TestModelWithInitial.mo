@@ -12,7 +12,7 @@ model TestModelWithInitial
 
 	output Real z;
 
-	input Real x_delayed(fixed=true);
+	input Real x_delayed(fixed=false);
 
 	output Real switched;
 

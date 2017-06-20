@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, substitute, repmat, vertcat, depends_on
+from casadi import MX, substitute, repmat, vertcat, depends_on, veccat
 from pymola.backends.casadi.api import transfer_model
 from collections import OrderedDict
 import numpy as np
@@ -72,7 +72,7 @@ class ModelicaMixin(OptimizationProblem):
             else:
                 if v.symbol.name() in kwargs.get('lookup_tables', []):
                     self._mx['lookup_tables'].append(v.symbol)
-                elif v.fixed == False:
+                elif v.fixed == True:
                     self._mx['constant_inputs'].append(v.symbol)
                 else:
                     self._mx['control_inputs'].append(v.symbol)
@@ -106,18 +106,32 @@ class ModelicaMixin(OptimizationProblem):
                         v.symbol.name(), alias))
 
         # Initialize nominals and types
+        # TODO needs initialized metadata
         self._nominals = {}
         self._discrete = {}
         for v in itertools.chain(self._pymola_model.states, self._pymola_model.alg_states, self._pymola_model.inputs):
             sym_name = v.symbol.name()  
             if v.nominal != 0 and v.nominal != 1:
-                self._nominals[sym_name] = abs(float(nominal))
+                self._nominals[sym_name] = abs(float(v.nominal))
 
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
                         sym_name, self._nominals[sym_name]))
 
             self._discrete[sym_name] = v.python_type != float
+
+        # Initialize dae and initial residuals
+        inputs = [v.symbol for v in self._pymola_model.inputs]
+
+        self._dae_residual = self._pymola_model.dae_residual_function(self._mx['time'][0],
+            veccat(*self._mx['states']), veccat(*self._mx['derivatives']), veccat(*self._mx['algebraics']), veccat(*inputs), MX(), veccat(*self._mx['parameters']))
+        if self._dae_residual is None:
+            self._dae_residual = MX()
+            
+        self._initial_residual = self._pymola_model.initial_residual_function(self._mx['time'][0],
+            veccat(*self._mx['states']), veccat(*self._mx['derivatives']), veccat(*self._mx['algebraics']), veccat(*inputs), MX(), veccat(*self._mx['parameters']))
+        if self._initial_residual is None:
+            self._initial_residual = MX()
 
         # Call parent class first for default behaviour.
         super(ModelicaMixin, self).__init__(**kwargs)
@@ -138,10 +152,10 @@ class ModelicaMixin(OptimizationProblem):
 
         # Eliminate constant symbols from model, replacing them with the values
         # specified in the model.
-        compiler_options['replace_constants'] = True
+        compiler_options['replace_constant_values'] = True
 
         # Replace any parameter expressions into the model.
-        compiler_options['replace_parameter_expressions'] = 'True'
+        compiler_options['replace_parameter_expressions'] = True
 
         # Eliminate variables starting with underscores.
         compiler_options['eliminable_variable_expression'] = r'_\w+'
@@ -150,8 +164,7 @@ class ModelicaMixin(OptimizationProblem):
         compiler_options['detect_aliases'] = True
 
         # Cache the model on disk
-        # TODO set to False to runt into unset attributes
-        compiler_options['cache'] = False
+        compiler_options['cache'] = True
 
         # Done
         return compiler_options
@@ -211,7 +224,7 @@ class ModelicaMixin(OptimizationProblem):
         # Initial conditions obtained from start attributes.
         for v in self._pymola_model.states:
             # TODO nan values
-            initial_state[sym.name()] = sym.start
+            initial_state[v.symbol.name()] = v.start
 
         return initial_state
 
@@ -238,7 +251,7 @@ class ModelicaMixin(OptimizationProblem):
                 if M is None:
                     M = 1
 
-            m_ = v.min
+            m_ = MX(v.min)
             if not m_.is_constant():
                 [m] = substitute([m_], self._mx['parameters'], parameter_values)
                 if m.is_constant():
@@ -248,7 +261,7 @@ class ModelicaMixin(OptimizationProblem):
                 if np.isfinite(m_): # TODO vector values
                     m = m_
 
-            M_ = v.max
+            M_ = MX(v.max)
             if not M_.is_constant():
                 [M] = substitute([M_], self._mx['parameters'], parameter_values)
                 if M.is_constant():

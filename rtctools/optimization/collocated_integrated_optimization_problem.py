@@ -60,6 +60,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         for var in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.dae_variables['control_inputs'], self.dae_variables['constant_inputs'], self.dae_variables['parameters'], self.dae_variables['time']):
             self._variables[var.name()] = var
 
+        # Call super
+        super().__init__(**kwargs)
+
     @abstractmethod
     def times(self, variable=None):
         """
@@ -354,14 +357,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
         # Aggregate ensemble data
         ensemble_aggregate = {}
-        ensemble_aggregate["parameters"] = horzcat(nullvertcat(*l) for l in ensemble_parameter_values)
-        ensemble_aggregate["initial_constant_inputs"] = horzcat(nullvertcat(*[float(d["constant_inputs"][variable.name()][0])
-            for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store)
-        ensemble_aggregate["initial_state"] = horzcat(d["initial_state"] for d in ensemble_store)
+        ensemble_aggregate["parameters"] = horzcat(*[nullvertcat(*l) for l in ensemble_parameter_values])
+        ensemble_aggregate["initial_constant_inputs"] = horzcat(*[nullvertcat(*[float(d["constant_inputs"][variable.name()][0])
+            for variable in self.dae_variables['constant_inputs']]) for d in ensemble_store])
+        ensemble_aggregate["initial_state"] = horzcat(*[d["initial_state"] for d in ensemble_store])
         ensemble_aggregate["initial_state"] = reduce_matvec(ensemble_aggregate["initial_state"], self.solver_input)
-        ensemble_aggregate["initial_derivatives"] = horzcat(d["initial_derivatives"] for d in ensemble_store)
+        ensemble_aggregate["initial_derivatives"] = horzcat(*[d["initial_derivatives"] for d in ensemble_store])
         ensemble_aggregate["initial_derivatives"] = reduce_matvec(ensemble_aggregate["initial_derivatives"], self.solver_input)
-        ensemble_aggregate["initial_path_variables"] = horzcat(d["initial_path_variables"] for d in ensemble_store)
+        ensemble_aggregate["initial_path_variables"] = horzcat(*[d["initial_path_variables"] for d in ensemble_store])
         ensemble_aggregate["initial_path_variables"] = reduce_matvec(ensemble_aggregate["initial_path_variables"], self.solver_input)
 
         if (self._dae_residual_function_collocated is None) and (self._integrator_step_function is None):
@@ -411,7 +414,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             dae_residual_collocated = vertcat(*dae_residual_collocated)
 
             # Check linearity of collocated part
-            if self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
+            if False: #TODO self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
                 # Check linearity of collocation constraints, which is a necessary condition for the optimization problem to be convex
                 self.linear_collocation = True
                 if not is_affine(dae_residual_collocated, vertcat(*
@@ -446,7 +449,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
                 dae_residual_function_integrated = Function('dae_residual_function_integrated', [I, I0, ensemble_parameters, vertcat(*[C0[i] for i in range(len(collocated_variables))] + [CI0[i] for i in range(len(
                     self.dae_variables['constant_inputs']))] + [dt_sym] + collocated_variables + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_integrated], function_options)
-                dae_residual_function_integrated = dae_residual_function_integrated.expand()
 
                 options = self.integrator_options()
                 self._integrator_step_function = rootfinder('integrator_step_function', 'newton', dae_residual_function_integrated, options)
@@ -455,13 +457,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             if len(collocated_variables) > 0:
                 self._dae_residual_function_collocated = Function('dae_residual_function_collocated', [ensemble_parameters, vertcat(*
                     integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_collocated], function_options)
-                self._dae_residual_function_collocated = self._dae_residual_function_collocated.expand()
 
         if len(integrated_variables) > 0:
             integrator_step_function = self._integrator_step_function
         if len(collocated_variables) > 0:
             dae_residual_function_collocated = self._dae_residual_function_collocated
-            dae_residual_collocated_size = dae_residual_function_collocated.outputExpr(0).size1()
+            dae_residual_collocated_size = dae_residual_function_collocated.mx_out(0).size1()
         else:
             dae_residual_collocated_size = 0
 
@@ -555,7 +556,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         if len(collocated_variables) > 0:
             if theta < 1:
                 # Obtain state vector
-                [dae_residual_0] = dae_residual_function_collocated([ensemble_parameters,
+                [dae_residual_0] = dae_residual_function_collocated.call([ensemble_parameters,
                                                                      vertcat(integrated_states_0,
                                                                               collocated_states_0,
                                                                               integrated_finite_differences,
@@ -565,7 +566,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                                                                     False, True)
             if theta > 0:
                 # Obtain state vector
-                [dae_residual_1] = dae_residual_function_collocated([ensemble_parameters,
+                [dae_residual_1] = dae_residual_function_collocated.call([ensemble_parameters,
                                                                      vertcat(integrated_states_1,
                                                                               collocated_states_1,
                                                                               integrated_finite_differences,
@@ -581,7 +582,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 accumulated_Y.append(
                     (1 - theta) * dae_residual_0 + theta * dae_residual_1)
 
-        accumulated_Y.extend(path_objective_function([ensemble_parameters,
+        accumulated_Y.extend(path_objective_function.call([ensemble_parameters,
                                                       vertcat(integrated_states_1,
                                                                collocated_states_1,
                                                                integrated_finite_differences,
@@ -591,7 +592,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                                                                path_variables_1)],
                                                        False, True))
 
-        accumulated_Y.extend(path_constraints_function([ensemble_parameters,
+        accumulated_Y.extend(path_constraints_function.call([ensemble_parameters,
                                                         vertcat(integrated_states_1,
                                                                  collocated_states_1,
                                                                  integrated_finite_differences,
@@ -608,13 +609,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             [accumulated_X, accumulated_U, ensemble_parameters], [vertcat(*accumulated_Y)], function_options)
 
         if len(integrated_variables) > 0:
-            accumulation = accumulated.mapaccum(
-                'accumulation', n_collocation_times - 1)
+            accumulation = accumulated.mapsum(n_collocation_times - 1)
         else:
             # Fully collocated problem.  Use map(), so that we can use
             # parallelization along the time axis.
-            accumulation = accumulated.map(
-                'accumulation', n_collocation_times - 1, {'parallelization': 'openmp'})
+            accumulation = accumulated.map(n_collocation_times - 1, 'openmp')
 
         # Start collecting constraints
         f = []
@@ -627,10 +626,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             initial_residual_with_params_fun = Function('initial_residual', [ensemble_parameters, vertcat(*self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
                                                   'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat(*[dae_residual, initial_residual])],
                                                   function_options)
-            initial_residual_with_params_fun = initial_residual_with_params_fun.expand()
-            self._initial_residual_with_params_fun_map = initial_residual_with_params_fun.map('initial_residual_with_params_fun_map', self.ensemble_size)
+            self._initial_residual_with_params_fun_map = initial_residual_with_params_fun.map(self.ensemble_size)
         initial_residual_with_params_fun_map = self._initial_residual_with_params_fun_map
-        [res] = initial_residual_with_params_fun_map([ensemble_aggregate["parameters"], vertcat(*[ensemble_aggregate["initial_state"], ensemble_aggregate["initial_derivatives"], ensemble_aggregate["initial_constant_inputs"], repmat([0.0], 1, self.ensemble_size)])], False, True)
+        [res] = initial_residual_with_params_fun_map.call([ensemble_aggregate["parameters"], vertcat(*[ensemble_aggregate["initial_state"], ensemble_aggregate["initial_derivatives"], ensemble_aggregate["initial_constant_inputs"], repmat([0.0], 1, self.ensemble_size)])], False, True)
 
         res = vec(res)
         g.append(res)
@@ -746,8 +744,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             # Map to all time steps
             logger.info("Mapping")
 
-            [integrators_and_collocation_and_path_constraints] = accumulation(
-                [accumulation_X0, accumulation_U, repmat(parameters, 1, n_collocation_times - 1)])
+            integrators_and_collocation_and_path_constraints = accumulation(
+                accumulation_X0, accumulation_U, repmat(parameters, 1, n_collocation_times - 1))
             if integrators_and_collocation_and_path_constraints.size2() > 0:
                 integrators = integrators_and_collocation_and_path_constraints[:len(integrated_variables), :]
                 collocation_constraints = vec(integrators_and_collocation_and_path_constraints[len(integrated_variables):len(
@@ -776,8 +774,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
             # Add collocation constraints
             if collocation_constraints.size1() > 0:
-                #if self._affine_collocation_constraints:
-                #    collocation_constraints = reduce_matvec_plus_b(collocation_constraints, self.solver_input)
                 g.append(collocation_constraints)
                 zeros = np.zeros(collocation_constraints.size1())
                 lbg.extend(zeros)
@@ -835,7 +831,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             # Objective
             f_member = self.objective(ensemble_member)
             if path_objective.size1() > 0:
-                initial_path_objective = path_objective_function([parameters,
+                initial_path_objective = path_objective_function.call([parameters,
                                                                   vertcat(initial_state
                                                                               , initial_derivatives
                                                                               , initial_constant_inputs,
@@ -869,7 +865,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             path_constraints = self.path_constraints(ensemble_member)
             if len(path_constraints) > 0:
                 # We need to evaluate the path constraints at t0, as the initial time is not included in the accumulation.
-                [initial_path_constraints] = path_constraints_function([parameters,
+                [initial_path_constraints] = path_constraints_function.call([parameters,
                                                                       vertcat(initial_state
                                                                               , initial_derivatives
                                                                               , initial_constant_inputs,
@@ -1274,7 +1270,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
         # Discretization parameters
         control_size = self._control_size
-        ensemble_member_size = self._state_size / self.ensemble_size
+        ensemble_member_size = int(self._state_size / self.ensemble_size)
 
         # Extract control inputs
         results = {}
@@ -1354,7 +1350,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         # Look up transcribe_problem() state.
         X = self.solver_input
         control_size = self._control_size
-        ensemble_member_size = self._state_size / self.ensemble_size
+        ensemble_member_size = int(self._state_size / self.ensemble_size)
 
         # Find state vector
         vector = None
@@ -1395,7 +1391,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             t0 = self.initial_time
             X = self.solver_input
             control_size = self._control_size
-            ensemble_member_size = self._state_size / self.ensemble_size
+            ensemble_member_size = int(self._state_size / self.ensemble_size)
 
             # Fetch appropriate symbol, or value.
             canonical, sign = self.alias_relation.canonical_signed(variable)
@@ -1496,7 +1492,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         # Look up transcribe_problem() state.
         X = self.solver_input
         control_size = self._control_size
-        ensemble_member_size = self._state_size / self.ensemble_size
+        ensemble_member_size = int(self._state_size / self.ensemble_size)
 
         # Compute position in state vector
         offset = control_size + ensemble_member * ensemble_member_size
@@ -1637,7 +1633,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             # We have a special symbol for t0 derivatives
             X = self.solver_input
             control_size = self._control_size
-            ensemble_member_size = self._state_size / self.ensemble_size
+            ensemble_member_size = int(self._state_size / self.ensemble_size)
 
             canonical, sign = self.alias_relation.canonical_signed(variable)
             try:
@@ -1690,7 +1686,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         f = Function('f', [vertcat(*states_and_path_variables), vertcat(*derivatives),
             vertcat(*self.dae_variables['constant_inputs']), vertcat(*self.dae_variables['parameters']),
             self.dae_variables['time'][0]], [expr])
-        fmap = f.map('fmap', len(self.times()))
+        fmap = f.map(len(self.times()))
 
         # Discretization settings
         collocation_times = self.times()

@@ -72,6 +72,9 @@ class OptimizationProblem(metaclass = ABCMeta):
     Base class for all optimization problems.
     """
 
+    def __init__(self, **kwargs):
+        self._mixed_integer = False
+
     def optimize(self, preprocessing=True, postprocessing=True, log_solver_failure_as_error=True):
         """
         Perform one initialize-transcribe-solve-finalize cycle.
@@ -111,14 +114,10 @@ class OptimizationProblem(metaclass = ABCMeta):
         my_solver = options['solver']
         del options['solver']
 
-        # Expand option
-        expand = options['expand']
-        del options['expand']
-
         # Already consumed
         del options['optimized_num_dir']
 
-        nlpsol_options = {'expand': expand, my_solver: options}
+        nlpsol_options = {my_solver: options}
         if self._mixed_integer:
             nlpsol_options['discrete'] = discrete
 
