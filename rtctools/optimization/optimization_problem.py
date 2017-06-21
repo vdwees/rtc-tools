@@ -61,10 +61,10 @@ class LookupTable:
         else:
             if hasattr(args[0], '__iter__'):
                 evaluator = np.vectorize(
-                    lambda v: float(self.function([v])[0]))
+                    lambda v: float(self.function(v)))
                 return evaluator(args[0])
             else:
-                return float(self.function(args)[0])
+                return float(self.function(*args))
 
 
 class OptimizationProblem(metaclass = ABCMeta):

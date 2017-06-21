@@ -92,7 +92,7 @@ class TestCSVMixin(TestCase):
 
     def test_interpolate(self):
         for v in ['x', 'y', 'u']:
-            for i in [0, len(self.problem.times()) / 2, -1]:
+            for i in [0, int(len(self.problem.times()) / 2), -1]:
                 a = self.problem.interpolate(
                     self.problem.times()[i], self.problem.times(), self.results[v], 0.0, 0.0)
                 b = self.results[v][i]

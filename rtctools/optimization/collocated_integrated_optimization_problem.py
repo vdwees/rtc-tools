@@ -382,7 +382,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 else:
                     input_syms = [self.variable(input_sym.name()) for input_sym in lookup_table.inputs]
 
-                    [value] = lookup_table.function(input_syms)
+                    value = lookup_table.function(*input_syms)
                     [dae_residual] = substitute(
                         [dae_residual], [sym], [value])
 

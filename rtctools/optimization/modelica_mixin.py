@@ -208,8 +208,8 @@ class ModelicaMixin(OptimizationProblem):
         constant_input_names = set(sym.name() for sym in self._mx['constant_inputs'])
         for v in self._pymola_model.inputs:
             if v.symbol.name() in constant_input_names:
-                constant_inputs[sym.name()] = Timeseries(
-                    times, repmat(sym.value, len(times)))
+                constant_inputs[v.symbol.name()] = Timeseries(
+                    times, np.full_like(times, v.value))
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("Read constant input {} = {} from Modelica model".format(
                         sym.name(), sym.value))

@@ -106,7 +106,7 @@ class BSpline1D(BSpline):
         ypt = SX.sym('ypt')
         sq_diff = Function('sq_diff', [xpt, ypt], [
                              (ypt - bspline(c, xpt)[0])**2])
-        sq_diff = sq_diff.map('sq_diff', 'serial', N)
+        sq_diff = sq_diff.map(N, 'serial')
         f = sum2(sq_diff(SX(x), SX(y))[0])
 
         # Setup Curvature Constraints

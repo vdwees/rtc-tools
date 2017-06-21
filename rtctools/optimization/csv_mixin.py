@@ -81,7 +81,7 @@ class CSVMixin(OptimizationProblem):
         self._initial_state = []
         if self.csv_ensemble_mode:
             self._ensemble = np.genfromtxt(os.path.join(
-                self._input_folder, 'ensemble.csv'), delimiter=",", deletechars='', dtype=None, names=True)
+                self._input_folder, 'ensemble.csv'), delimiter=",", deletechars='', dtype=None, names=True, converters={0: str})
             logger.debug("CSVMixin: Read ensemble description")
 
             for ensemble_member_name in self._ensemble['name']:
@@ -182,7 +182,7 @@ class CSVMixin(OptimizationProblem):
 
         # Load parameters from parameter config
         for parameter in self.dae_variables['parameters']:
-            parameter = parameter.getName()
+            parameter = parameter.name()
             try:
                 parameters[parameter] = self._parameters[ensemble_member][parameter]
             except KeyError:
@@ -200,7 +200,7 @@ class CSVMixin(OptimizationProblem):
 
         # Load bounds from timeseries
         for variable in self.dae_variables['constant_inputs']:
-            variable = variable.getName()
+            variable = variable.name()
             try:
                 constant_inputs[variable] = Timeseries(
                     self._timeseries_times_sec, self._timeseries[ensemble_member][variable])
@@ -219,7 +219,7 @@ class CSVMixin(OptimizationProblem):
 
         # Load bounds from timeseries
         for variable in self.dae_variables['free_variables']:
-            variable = variable.getName()
+            variable = variable.name()
 
             m, M = None, None
 
@@ -265,7 +265,7 @@ class CSVMixin(OptimizationProblem):
 
         # Load parameters from parameter config
         for variable in self.dae_variables['free_variables']:
-            variable = variable.getName()
+            variable = variable.name()
             try:
                 initial_state[variable] = self._initial_state[ensemble_member][variable]
             except (KeyError, ValueError):
@@ -282,7 +282,7 @@ class CSVMixin(OptimizationProblem):
 
         # Load seed values from CSV
         for variable in self.dae_variables['free_variables']:
-            variable = variable.getName()
+            variable = variable.name()
             try:
                 s = Timeseries(self._timeseries_times_sec, self._timeseries[ensemble_member][variable])
             except (KeyError, ValueError):
@@ -304,13 +304,13 @@ class CSVMixin(OptimizationProblem):
 
         def write_output(ensemble_member, folder):
             results = self.extract_results(ensemble_member)
-            names = ['time'] + sorted(set([sym.getName() for sym in self.output_variables]))
+            names = ['time'] + sorted(set([sym.name() for sym in self.output_variables]))
             formats = ['O'] + (len(names) - 1) * ['f8']
             dtype = dict(names=names, formats=formats)
             data = np.zeros(len(self._timeseries_times), dtype=dtype)
             data['time'] = self._timeseries_times
             for i, output_variable in enumerate(self.output_variables):
-                output_variable = output_variable.getName()
+                output_variable = output_variable.name()
                 try:
                     values = results[output_variable]
                     if len(values) != len(times):

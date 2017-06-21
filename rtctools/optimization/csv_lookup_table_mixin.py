@@ -6,7 +6,7 @@ import rtctools.data.csv as csv
 from scipy.interpolate import splrep, bisplrep, splev, bisplev
 from casadi import SX, Function
 import numpy as np
-import ConfigParser
+import configparser
 import logging
 import pickle
 import glob
@@ -78,7 +78,7 @@ class CSVLookupTableMixin(OptimizationProblem):
         ini_path = os.path.join(
             self._lookup_table_folder, 'curvefit_options.ini')
         try:
-            ini_config = ConfigParser.RawConfigParser()
+            ini_config = configparser.RawConfigParser()
             ini_config.readfp(open(ini_path))
             no_curvefit_options = False
         except IOError:
@@ -95,9 +95,9 @@ class CSVLookupTableMixin(OptimizationProblem):
             def get_property(prop_name):
                 try:
                     prop = int(ini_config.get(curve_name, prop_name))
-                except ConfigParser.NoSectionError:
+                except configparser.NoSectionError:
                     prop = 0
-                except ConfigParser.NoOptionError:
+                except configparser.NoOptionError:
                     prop = 0
                 except ValueError:
                     raise Exception(
