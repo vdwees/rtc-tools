@@ -660,14 +660,15 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 except KeyError:
                     pass
                 else:
-                    sym = self.state_vector(variable, ensemble_member=ensemble_member)[0]
-                    g.append(sym)
-
                     val = self.interpolate(
                         t0, history_timeseries.times, history_timeseries.values, np.nan, np.nan)
-                    val /= self.variable_nominal(variable)
-                    lbg.append(val)
-                    ubg.append(val)
+                    if np.isfinite(val):
+                        val /= self.variable_nominal(variable)
+                        lbg.append(val)
+                        ubg.append(val)
+
+                        sym = self.state_vector(variable, ensemble_member=ensemble_member)[0]
+                        g.append(sym)
 
             # Initial conditions for integrator
             accumulation_X0 = []
