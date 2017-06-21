@@ -4,7 +4,7 @@ from test_case import TestCase
 from rtctools.optimization.collocated_integrated_optimization_problem import CollocatedIntegratedOptimizationProblem
 from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.timeseries import Timeseries
-from casadi import MX
+from casadi import MX, vertcat
 from unittest import expectedFailure
 import numpy as np
 import logging
@@ -77,10 +77,10 @@ class TestProblemNonConvex(TestProblem):
     @property
     def initial_residual(self):
         # Set the initial state for 'x' to the neutral point.
-        residual = MX()
+        residual = []
         for state in self.dae_variables['states']:
             residual.append(state)
-        return residual
+        return vertcat(*residual)
 
     def seed(self, ensemble_member):
         # Seed the controls.
@@ -211,6 +211,8 @@ class TestModelicaMixin(TestCase):
             abs(self.problem.objective_value), 0.0, objective_value_tol)
 
     def test_ifelse(self):
+        print(self.results['switched'])
+        print(self.results['x'])
         self.assertEqual(self.results['switched'][0], 1.0)
         self.assertEqual(self.results['switched'][-1], 2.0)
 

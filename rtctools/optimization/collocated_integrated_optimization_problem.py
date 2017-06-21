@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, Function, rootfinder, vertcat, horzcat, jacobian, vec, substitute, sum1, sum2, transpose, repmat, depends_on, reshape, vertsplit
+from casadi import MX, Function, rootfinder, vertcat, horzcat, jacobian, vec, substitute, sum1, sum2, transpose, repmat, depends_on, reshape, veccat
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools
@@ -623,8 +623,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
         # Add constraints for initial conditions
         if self._initial_residual_with_params_fun_map is None:
-            initial_residual_with_params_fun = Function('initial_residual', [ensemble_parameters, vertcat(*self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
-                                                  'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [vertcat(*[dae_residual, initial_residual])],
+            initial_residual_with_params_fun = Function('initial_residual_total', [ensemble_parameters, vertcat(*self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
+                                                  'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [veccat(dae_residual, initial_residual)],
                                                   function_options)
             self._initial_residual_with_params_fun_map = initial_residual_with_params_fun.map(self.ensemble_size)
         initial_residual_with_params_fun_map = self._initial_residual_with_params_fun_map
@@ -667,15 +667,15 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                     sym = self.state_vector(variable, ensemble_member=ensemble_member)[0]
                     initial_state_constraints.append(sym - val)
 
-            # TODO two parameter varieties
-            initial_state_constraints = substitute_in_external(initial_state_constraints, self.dae_variables['parameters'], vertsplit(parameters))
-            initial_state_constraints = [initial_state_constraint for initial_state_constraint in initial_state_constraints if initial_state_constraint.is_regular()]
-            initial_state_constraints = veccat(*initial_state_constraints)
-            g.append(initial_state_constraints)
+            # Call the external metadata function in one go, rather than two
+            if len(initial_state_constraints) > 0:
+                initial_state_constraints = substitute_in_external(initial_state_constraints, constant_parameters + [ensemble_parameters], constant_parameter_values + [parameters])
+                initial_state_constraints = veccat(*initial_state_constraints)
+                g.append(initial_state_constraints)
 
-            zeros = repmat(0, *initial_state_constraints.size())
-            lbg.append(zeros)
-            ubg.append(zeros)
+                zeros = repmat(0, *initial_state_constraints.size())
+                lbg.append(zeros)
+                ubg.append(zeros)
 
             # Initial conditions for integrator
             accumulation_X0 = []
