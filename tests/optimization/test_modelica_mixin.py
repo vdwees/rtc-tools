@@ -25,6 +25,11 @@ class TestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
         # Collocation points
         return np.linspace(0.0, 1.0, 21)
 
+    def parameters(self, ensemble_member):
+        parameters = super().parameters(ensemble_member)
+        parameters['u_max'] = 2.0
+        return parameters
+
     def pre(self):
         # Do nothing
         pass

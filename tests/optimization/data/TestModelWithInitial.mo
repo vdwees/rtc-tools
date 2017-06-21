@@ -5,7 +5,7 @@ model TestModelWithInitial
 
 	parameter Real k = 1.0;
 
-	parameter Real u_max = 2;
+	parameter Real u_max;
 	input Real u(fixed=false, min = -2, max = u_max);
 
 	output Real y;
