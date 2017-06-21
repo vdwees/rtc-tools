@@ -27,6 +27,11 @@ class TestProblem(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptim
         # Collocation points
         return np.linspace(0.0, 1.0, 21)
 
+    def parameters(self, ensemble_member):
+        parameters = super().parameters(ensemble_member)
+        parameters['u_max'] = 2.0
+        return parameters
+
     def delayed_feedback(self):
         # Delayed feedback
         return [('x', 'x_delayed', 0.1)]
@@ -248,6 +253,11 @@ class TestProblemPathGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegr
         # Collocation points
         return np.linspace(0.0, 1.0, 21)
 
+    def parameters(self, ensemble_member):
+        parameters = super().parameters(ensemble_member)
+        parameters['u_max'] = 2.0
+        return parameters
+
     def delayed_feedback(self):
         # Delayed feedback
         return [('x', 'x_delayed', 0.1)]
@@ -418,6 +428,11 @@ class TestProblemPathGoalsSmoothing(GoalProgrammingMixin, ModelicaMixin, Colloca
         # Collocation points
         return np.linspace(0.0, 1.0, 21)
 
+    def parameters(self, ensemble_member):
+        parameters = super().parameters(ensemble_member)
+        parameters['u_max'] = 2.0
+        return parameters
+
     def delayed_feedback(self):
         # Delayed feedback
         return [('x', 'x_delayed', 0.1)]
@@ -480,6 +495,11 @@ class TestProblemStateGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedInteg
     def times(self, variable=None):
         # Collocation points
         return np.linspace(0.0, 1.0, 21)
+
+    def parameters(self, ensemble_member):
+        parameters = super().parameters(ensemble_member)
+        parameters['u_max'] = 2.0
+        return parameters
 
     def delayed_feedback(self):
         # Delayed feedback
