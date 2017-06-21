@@ -11,6 +11,7 @@ import os
 from .timeseries import Timeseries
 from .optimization_problem import OptimizationProblem
 from .alias_tools import AliasRelation, AliasDict
+from .casadi_helpers import substitute_in_external
 from .caching import cached
 
 logger = logging.getLogger("rtctools")
@@ -106,7 +107,6 @@ class ModelicaMixin(OptimizationProblem):
                         v.symbol.name(), alias))
 
         # Initialize nominals and types
-        # TODO needs initialized metadata
         self._nominals = {}
         self._discrete = {}
         for v in itertools.chain(self._pymola_model.states, self._pymola_model.alg_states, self._pymola_model.inputs):
@@ -176,7 +176,6 @@ class ModelicaMixin(OptimizationProblem):
 
     @property
     def dae_residual(self):
-        # TODO turn into function
         return self._dae_residual
 
     @property
@@ -264,7 +263,7 @@ class ModelicaMixin(OptimizationProblem):
 
             m_ = MX(v.min)
             if not m_.is_constant():
-                [m] = substitute([m_], self._mx['parameters'], parameter_values)
+                [m] = substitute_in_external([m_], self._mx['parameters'], parameter_values)
                 if m.is_constant():
                     m = float(m)
             else:
@@ -274,7 +273,7 @@ class ModelicaMixin(OptimizationProblem):
 
             M_ = MX(v.max)
             if not M_.is_constant():
-                [M] = substitute([M_], self._mx['parameters'], parameter_values)
+                [M] = substitute_in_external([M_], self._mx['parameters'], parameter_values)
                 if M.is_constant():
                     M = float(M)
             else:

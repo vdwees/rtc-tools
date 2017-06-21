@@ -175,8 +175,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                     if jac[i, :].nnz() > 0:
                         dynamic_parameter_names.add(symbol.name())
 
-            if np.any([isinstance(value, MX) and not value.isConstant() for value in parameter_values]):
-                parameter_values = substitute(parameter_values, self.dae_variables['parameters'], parameter_values)
+            if np.any([isinstance(value, MX) and not value.is_constant() for value in parameter_values]):
+                parameter_values = substitute_in_external(parameter_values, self.dae_variables['parameters'], parameter_values)
 
             if ensemble_member == 0:
                 # Store parameter values of member 0, as variable bounds may depend on these.
@@ -194,10 +194,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                     raise Exception("No values found for constant input {}".format(variable))
                 else:
                     values = constant_input.values
-                    if isinstance(values, MX) and not values.isConstant():
-                        [values] = substitute([values], self.dae_variables['parameters'], parameter_values)
-                    elif np.any([isinstance(value, MX) and not value.isConstant() for value in values]):
-                        values = substitute(values, self.dae_variables['parameters'], parameter_values)
+                    if isinstance(values, MX) and not values.is_constant():
+                        [values] = substitute_in_external([values], self.dae_variables['parameters'], parameter_values)
+                    elif np.any([isinstance(value, MX) and not value.is_constant() for value in values]):
+                        values = substitute_in_external(values, self.dae_variables['parameters'], parameter_values)
                     constant_inputs_interpolated[variable] = self.interpolate(
                         collocation_times, constant_input.times, values, 0.0, 0.0)
                 
@@ -209,12 +209,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         lb_values, ub_values = zip(*bound_values)
         lb_values = np.array(lb_values, dtype=np.object)
         ub_values = np.array(ub_values, dtype=np.object)
-        lb_mx_indices = np.where([isinstance(v, MX) and not v.isConstant() for v in lb_values])
-        ub_mx_indices = np.where([isinstance(v, MX) and not v.isConstant() for v in ub_values])
+        lb_mx_indices = np.where([isinstance(v, MX) and not v.is_constant() for v in lb_values])
+        ub_mx_indices = np.where([isinstance(v, MX) and not v.is_constant() for v in ub_values])
         if len(lb_mx_indices[0]) > 0:
-            lb_values[lb_mx_indices] = substitute(list(lb_values[lb_mx_indices]), self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+            lb_values[lb_mx_indices] = substitute_in_external(list(lb_values[lb_mx_indices]), self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
         if len(ub_mx_indices[0]) > 0:
-            ub_values[ub_mx_indices] = substitute(list(ub_values[ub_mx_indices]), self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+            ub_values[ub_mx_indices] = substitute_in_external(list(ub_values[ub_mx_indices]), self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
         resolved_bounds = AliasDict(self.alias_relation)
         for i, key in enumerate(bound_keys):
             lb, ub = lb_values[i], ub_values[i]
@@ -885,14 +885,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                             "Adding path constraint {}, {}, {}".format(*path_constraint))
 
                     lb = path_constraint[1]
-                    if isinstance(lb, MX) and not lb.isConstant():
+                    if isinstance(lb, MX) and not lb.is_constant():
                         [lb] = substitute([lb], self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
                     elif isinstance(lb, Timeseries):
                         lb = self.interpolate(
                             collocation_times, lb.times, lb.values, -np.inf, -np.inf)
 
                     ub = path_constraint[2]
-                    if isinstance(ub, MX) and not ub.isConstant():
+                    if isinstance(ub, MX) and not ub.is_constant():
                         [ub] = substitute([ub], self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
                     elif isinstance(ub, Timeseries):
                         ub = self.interpolate(
@@ -1729,10 +1729,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 raise Exception("No data specified for constant input {}".format(variable.name()))
             else:
                 values = constant_input.values
-                if isinstance(values, MX) and not values.isConstant():
-                    [values] = substitute([values], self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
-                elif np.any([isinstance(value, MX) and not value.isConstant() for value in values]):
-                    values = substitute(values, self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+                if isinstance(values, MX) and not values.is_constant():
+                    [values] = substitute_in_external([values], self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+                elif np.any([isinstance(value, MX) and not value.is_constant() for value in values]):
+                    values = substitute_in_external(values, self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
                 accumulation_constant_inputs[i] = self.interpolate(
                     collocation_times, constant_input.times, values, 0.0, 0.0)
                 
