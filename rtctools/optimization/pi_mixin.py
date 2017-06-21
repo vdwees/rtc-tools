@@ -183,7 +183,7 @@ class PIMixin(OptimizationProblem):
 
         # Load bounds from timeseries
         for variable in self.dae_variables['constant_inputs']:
-            variable = variable.getName()
+            variable = variable.name()
             try:
                 timeseries = Timeseries(
                     self._timeseries_import_times, self._timeseries_import_dict[ensemble_member][variable])
@@ -204,7 +204,7 @@ class PIMixin(OptimizationProblem):
 
         # Load bounds from timeseries
         for variable in self.dae_variables['free_variables']:
-            variable = variable.getName()
+            variable = variable.name()
 
             m, M = None, None
 
@@ -248,7 +248,7 @@ class PIMixin(OptimizationProblem):
         # Load history
         history = AliasDict(self.alias_relation)
         for variable in self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs'] + self.dae_variables['constant_inputs']:
-            variable = variable.getName()
+            variable = variable.name()
             try:
                 history[variable] = Timeseries(self._timeseries_import_times[:self._timeseries_import.forecast_index + 1],
                                                         self._timeseries_import_dict[ensemble_member][variable][:self._timeseries_import.forecast_index + 1])
@@ -275,7 +275,7 @@ class PIMixin(OptimizationProblem):
 
         # Load seeds
         for variable in self.dae_variables['free_variables']:
-            variable = variable.getName()
+            variable = variable.name()
             try:
                 s = Timeseries(self._timeseries_import_times, self._timeseries_import_dict[ensemble_member][variable])
             except KeyError:
@@ -319,7 +319,7 @@ class PIMixin(OptimizationProblem):
 
             # For all variables that are output variables the values are
             # extracted from the results.
-            for variable in [sym.getName() for sym in self.output_variables]:
+            for variable in [sym.name() for sym in self.output_variables]:
                 try:
                     values = results[variable]
                     if len(values) != len(times):
