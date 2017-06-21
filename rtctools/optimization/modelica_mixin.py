@@ -127,7 +127,7 @@ class ModelicaMixin(OptimizationProblem):
             veccat(*self._mx['states']), veccat(*self._mx['derivatives']), veccat(*self._mx['algebraics']), veccat(*inputs), MX(), veccat(*self._mx['parameters']))
         if self._dae_residual is None:
             self._dae_residual = MX()
-            
+
         self._initial_residual = self._pymola_model.initial_residual_function(self._mx['time'][0],
             veccat(*self._mx['states']), veccat(*self._mx['derivatives']), veccat(*self._mx['algebraics']), veccat(*inputs), MX(), veccat(*self._mx['parameters']))
         if self._initial_residual is None:
@@ -218,12 +218,21 @@ class ModelicaMixin(OptimizationProblem):
         return constant_inputs
 
     @cached
+    def history(self, ensemble_member):
+        history = AliasDict(self._alias_relation)
+
+        # Initial conditions obtained from start attributes.
+        for v in self._pymola_model.states:
+            history[v.symbol.name()] = Timeseries(np.array([self.initial_time]), np.array([v.start]))
+
+        return history
+
+    @cached
     def initial_state(self, ensemble_member):
         initial_state = AliasDict(self._alias_relation)
 
         # Initial conditions obtained from start attributes.
         for v in self._pymola_model.states:
-            # TODO nan values
             initial_state[v.symbol.name()] = v.start
 
         return initial_state
