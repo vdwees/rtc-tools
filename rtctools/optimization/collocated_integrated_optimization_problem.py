@@ -1,6 +1,6 @@
 # cython: embedsignature=True
 
-from casadi import MX, Function, rootfinder, vertcat, horzcat, jacobian, vec, substitute, sum1, sum2, transpose, repmat, depends_on, reshape
+from casadi import MX, Function, rootfinder, vertcat, horzcat, jacobian, vec, substitute, sum1, sum2, transpose, repmat, depends_on, reshape, vertsplit
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools
@@ -654,6 +654,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
             # Initial conditions specified in history timeseries
             history = self.history(ensemble_member)
+            initial_state_constraints = []
             for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.controls):
                 try:
                     history_timeseries = history[variable]
@@ -662,13 +663,19 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 else:
                     val = self.interpolate(
                         t0, history_timeseries.times, history_timeseries.values, np.nan, np.nan)
-                    if np.isfinite(val):
-                        val /= self.variable_nominal(variable)
-                        lbg.append(val)
-                        ubg.append(val)
+                    val /= self.variable_nominal(variable)
+                    sym = self.state_vector(variable, ensemble_member=ensemble_member)[0]
+                    initial_state_constraints.append(sym - val)
 
-                        sym = self.state_vector(variable, ensemble_member=ensemble_member)[0]
-                        g.append(sym)
+            # TODO two parameter varieties
+            initial_state_constraints = substitute_in_external(initial_state_constraints, self.dae_variables['parameters'], vertsplit(parameters))
+            initial_state_constraints = [initial_state_constraint for initial_state_constraint in initial_state_constraints if initial_state_constraint.is_regular()]
+            initial_state_constraints = veccat(*initial_state_constraints)
+            g.append(initial_state_constraints)
+
+            zeros = repmat(0, *initial_state_constraints.size())
+            lbg.append(zeros)
+            ubg.append(zeros)
 
             # Initial conditions for integrator
             accumulation_X0 = []
