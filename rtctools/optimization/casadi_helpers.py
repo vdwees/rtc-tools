@@ -6,8 +6,8 @@ logger = logging.getLogger("rtctools")
 
 
 def is_affine(e, v):
-    f = Function("f", [v], [jacobian(e, v)])
-    return (f.sparsity_jac(0, 0).nnz() == 0)
+    Af = Function('f', [v], [jacobian(e, v)])
+    return (Af.sparsity_jac(0, 0).nnz() == 0)
 
 
 def nullvertcat(*L):
@@ -26,7 +26,7 @@ def reduce_matvec(e, v):
 
     This reduces the number of nodes required to represent the linear operations.
     """
-    Af = Function("Af", [MX()], [jacobian(e, v)])
+    Af = Function('Af', [MX()], [jacobian(e, v)])
     A = Af(MX())
     return reshape(mtimes(A, v), e.shape)
 
@@ -37,9 +37,14 @@ def reduce_matvec_plus_b(e, v):
 
     This reduces the number of nodes required to represent the affine operations.
     """
-    bf = Function("bf", [v], [e])
+    bf = Function('bf', [v], [e])
     b = bf(0)[0]
     return reduce_matvec(e, v) + b
+
+
+def substitute_in_external(expr, symbols, values):
+    f = Function('f', symbols, expr)
+    return f.call(values, True, False)
 
 
 def interpolate(ts, xs, t, equidistant, mode=0):
