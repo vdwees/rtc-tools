@@ -528,7 +528,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             # CasADi shares subexpressions that are bundled into the same Function.
             # The first argument is the guess for the new value of
             # integrated_states.
-            [integrated_states_1] = integrator_step_function([integrated_states_0,
+            [integrated_states_1] = integrator_step_function.call([integrated_states_0,
                                                               integrated_states_0,
                                                               ensemble_parameters,
                                                               vertcat(collocated_states_0,
@@ -609,7 +609,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             [accumulated_X, accumulated_U, ensemble_parameters], [vertcat(*accumulated_Y)], function_options)
 
         if len(integrated_variables) > 0:
-            accumulation = accumulated.mapsum(n_collocation_times - 1)
+            accumulation = accumulated.mapaccum('accumulation', n_collocation_times - 1)
         else:
             # Fully collocated problem.  Use map(), so that we can use
             # parallelization along the time axis.
@@ -961,7 +961,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
         :returns: A dictionary of CasADi :class:`rootfinder` options.  See the CasADi documentation for details.
         """
-        return {'linear_solver': 'csparse'}
+        return {}
 
     @property
     def controls(self):
