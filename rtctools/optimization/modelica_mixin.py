@@ -223,7 +223,8 @@ class ModelicaMixin(OptimizationProblem):
 
         # Initial conditions obtained from start attributes.
         for v in self._pymola_model.states:
-            history[v.symbol.name()] = Timeseries(np.array([self.initial_time]), np.array([v.start]))
+            if v.fixed == True:
+                history[v.symbol.name()] = Timeseries(np.array([self.initial_time]), np.array([v.start]))
 
         return history
 
@@ -233,7 +234,8 @@ class ModelicaMixin(OptimizationProblem):
 
         # Initial conditions obtained from start attributes.
         for v in self._pymola_model.states:
-            initial_state[v.symbol.name()] = v.start
+            if v.fixed == True:
+                initial_state[v.symbol.name()] = v.start
 
         return initial_state
 
