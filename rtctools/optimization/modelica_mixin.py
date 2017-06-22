@@ -121,15 +121,14 @@ class ModelicaMixin(OptimizationProblem):
             self._discrete[sym_name] = v.python_type != float
 
         # Initialize dae and initial residuals
-        inputs = [v.symbol for v in self._pymola_model.inputs]
+        variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
+        function_arguments = [self._pymola_model.time] + [veccat(*[v.symbol for v in getattr(self._pymola_model, variable_list)]) for variable_list in variable_lists]
 
-        self._dae_residual = self._pymola_model.dae_residual_function(self._mx['time'][0],
-            veccat(*self._mx['states']), veccat(*self._mx['derivatives']), veccat(*self._mx['algebraics']), veccat(*inputs), MX(), veccat(*self._mx['parameters']))
+        self._dae_residual = self._pymola_model.dae_residual_function(*function_arguments)
         if self._dae_residual is None:
             self._dae_residual = MX()
 
-        self._initial_residual = self._pymola_model.initial_residual_function(self._mx['time'][0],
-            veccat(*self._mx['states']), veccat(*self._mx['derivatives']), veccat(*self._mx['algebraics']), veccat(*inputs), MX(), veccat(*self._mx['parameters']))
+        self._initial_residual = self._pymola_model.initial_residual_function(*function_arguments)
         if self._initial_residual is None:
             self._initial_residual = MX()
 
