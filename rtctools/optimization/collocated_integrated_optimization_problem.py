@@ -393,7 +393,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             dae_residual_collocated = vertcat(*dae_residual_collocated)
 
             # Check linearity of collocated part
-            if False: #TODO self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
+            if self.check_collocation_linearity and dae_residual_collocated.size1() > 0:
                 # Check linearity of collocation constraints, which is a necessary condition for the optimization problem to be convex
                 self.linear_collocation = True
                 if not is_affine(dae_residual_collocated, vertcat(*
@@ -766,8 +766,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 ubg.extend(zeros)
 
             # Delayed feedback
-            # TODO implement for integrated states too, but first wait for
-            # delay() support in JModelica.
             for (out_variable_name, in_variable_name, delay) in delayed_feedback:
                 # Resolve aliases
                 in_canonical, in_sign = self.alias_relation.canonical_signed(in_variable_name)
