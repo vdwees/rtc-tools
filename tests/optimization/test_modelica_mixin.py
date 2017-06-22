@@ -13,6 +13,8 @@ import sys
 import os
 
 logger = logging.getLogger("rtctools")
+logger.setLevel(logging.DEBUG)
+
 
 
 class TestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
@@ -33,10 +35,6 @@ class TestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
     def pre(self):
         # Do nothing
         pass
-
-    def delayed_feedback(self):
-        # Delayed feedback
-        return [('x', 'x_delayed', 0.1)]
 
     def constant_inputs(self, ensemble_member):
         # Constant inputs

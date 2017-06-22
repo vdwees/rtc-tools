@@ -32,10 +32,6 @@ class TestProblem(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptim
         parameters['u_max'] = 2.0
         return parameters
 
-    def delayed_feedback(self):
-        # Delayed feedback
-        return [('x', 'x_delayed', 0.1)]
-
     def constant_inputs(self, ensemble_member):
         # Constant inputs
         return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
@@ -258,10 +254,6 @@ class TestProblemPathGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegr
         parameters['u_max'] = 2.0
         return parameters
 
-    def delayed_feedback(self):
-        # Delayed feedback
-        return [('x', 'x_delayed', 0.1)]
-
     def constant_inputs(self, ensemble_member):
         # Constant inputs
         return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
@@ -433,10 +425,6 @@ class TestProblemPathGoalsSmoothing(GoalProgrammingMixin, ModelicaMixin, Colloca
         parameters['u_max'] = 2.0
         return parameters
 
-    def delayed_feedback(self):
-        # Delayed feedback
-        return [('x', 'x_delayed', 0.1)]
-
     def constant_inputs(self, ensemble_member):
         # Constant inputs
         return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
@@ -500,10 +488,6 @@ class TestProblemStateGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedInteg
         parameters = super().parameters(ensemble_member)
         parameters['u_max'] = 2.0
         return parameters
-
-    def delayed_feedback(self):
-        # Delayed feedback
-        return [('x', 'x_delayed', 0.1)]
 
     def constant_inputs(self, ensemble_member):
         # Constant inputs

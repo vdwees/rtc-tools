@@ -12,7 +12,7 @@ model TestModelWithInitial
 
 	output Real z;
 
-	input Real x_delayed(fixed=false);
+	Real x_delayed;
 
 	output Real switched;
 
@@ -25,6 +25,8 @@ initial equation
 equation
 	der(x) = k * x + u;
 	der(w) = x;
+
+	x_delayed = delay(x, 0.1);
 
 	alias = x;
 

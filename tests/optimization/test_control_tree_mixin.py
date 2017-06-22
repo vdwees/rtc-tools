@@ -36,10 +36,6 @@ class TestProblem(ControlTreeMixin, ModelicaMixin, CollocatedIntegratedOptimizat
         # Do nothing
         pass
 
-    def delayed_feedback(self):
-        # Delayed feedback
-        return [('x', 'x_delayed', 0.1)]
-
     @property
     def ensemble_size(self):
         return 3
@@ -144,10 +140,6 @@ class TestProblemDijkverruiming(ControlTreeMixin, ModelicaMixin, CollocatedInteg
     def pre(self):
         # Do nothing
         pass
-
-    def delayed_feedback(self):
-        # Delayed feedback
-        return [('x', 'x_delayed', 0.1)]
 
     @property
     def ensemble_size(self):
