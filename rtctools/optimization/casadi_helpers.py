@@ -31,17 +31,6 @@ def reduce_matvec(e, v):
     return reshape(mtimes(A, v), e.shape)
 
 
-def reduce_matvec_plus_b(e, v):
-    """
-    Reduces the MX graph e of linear operations on p into a matrix-vector product plus a constant term.
-
-    This reduces the number of nodes required to represent the affine operations.
-    """
-    bf = Function('bf', [v], [e])
-    b = bf(0)[0]
-    return reduce_matvec(e, v) + b
-
-
 def substitute_in_external(expr, symbols, values):
     f = Function('f', symbols, expr)
     return f.call(values, True, False)
