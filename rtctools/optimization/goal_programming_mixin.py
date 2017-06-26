@@ -689,7 +689,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         for goal in itertools.chain(goals, path_goals):
             m, M = MX(goal.function_range[0]), MX(goal.function_range[1])
 
-            if not m.isRegular() or not M.isRegular():
+            if not m.is_regular() or not M.is_regular():
                 raise Exception("No function range specified for goal {}".format(goal))
 
             if m >= M:
