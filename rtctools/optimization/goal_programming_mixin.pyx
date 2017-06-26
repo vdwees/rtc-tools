@@ -690,9 +690,13 @@ class GoalProgrammingMixin(OptimizationProblem):
 
         # Validate goal definitions
         for goal in itertools.chain(goals, path_goals):
-            if not (isinstance(goal.function_range[0], MX) or np.isfinite(goal.function_range[0])) \
-            or not (isinstance(goal.function_range[1], MX) or np.isfinite(goal.function_range[1])):
+            m, M = MX(goal.function_range[0]), MX(goal.function_range[1])
+
+            if not m.isRegular() or not M.isRegular():
                 raise Exception("No function range specified for goal {}".format(goal))
+
+            if m >= M:
+                raise Exception("Invalid function range for goal {}.".format(goal))
 
             if goal.function_nominal <= 0:
                 raise Exception("Nonpositive nominal value specified for goal {}".format(goal))
