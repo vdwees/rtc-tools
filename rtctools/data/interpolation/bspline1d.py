@@ -1,5 +1,3 @@
-# cython: embedsignature=True
-
 import numpy as np
 from casadi import if_else, logic_and, Function, nlpsol, SX, vertcat, inf, sum2
 from .bspline import BSpline

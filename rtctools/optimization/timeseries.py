@@ -1,5 +1,3 @@
-# cython: embedsignature=True
-
 import numpy as np
 
 

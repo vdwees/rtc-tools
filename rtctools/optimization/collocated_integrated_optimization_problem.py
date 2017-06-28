@@ -1,5 +1,3 @@
-# cython: embedsignature=True
-
 from casadi import MX, Function, rootfinder, vertcat, horzcat, jacobian, vec, substitute, sum1, sum2, transpose, repmat, depends_on, reshape, veccat
 from abc import ABCMeta, abstractmethod
 import numpy as np

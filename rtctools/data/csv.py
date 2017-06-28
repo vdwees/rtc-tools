@@ -1,5 +1,3 @@
-# cython: embedsignature=True
-
 import sys
 import numpy as np
 from datetime import datetime

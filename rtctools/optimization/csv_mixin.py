@@ -1,5 +1,3 @@
-# cython: embedsignature=True
-
 from datetime import datetime, timedelta
 from casadi import MX
 import numpy as np

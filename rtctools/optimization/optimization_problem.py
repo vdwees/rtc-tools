@@ -1,11 +1,9 @@
-# cython: embedsignature=True
-
 from casadi import Function, nlpsol, MX, vertcat
 from abc import ABCMeta, abstractmethod, abstractproperty
+from numba import jit
 import numpy as np
 import itertools
 import logging
-#import cython
 
 from .timeseries import Timeseries
 from .alias_tools import AliasDict
@@ -562,8 +560,6 @@ class OptimizationProblem(metaclass = ABCMeta):
     INTERPOLATION_PIECEWISE_CONSTANT_FORWARD = 1
     INTERPOLATION_PIECEWISE_CONSTANT_BACKWARD = 2
 
-    #@cython.boundscheck(False)
-    #np.ndarray ts
     def interpolate(self, t, ts, fs, f_left=np.nan, f_right=np.nan, mode=INTERPOLATION_LINEAR):
         """
         Linear interpolation over time.
@@ -580,9 +576,28 @@ class OptimizationProblem(metaclass = ABCMeta):
         :returns: The interpolated value.
         """
         if hasattr(t, '__iter__'):
-            f = np.vectorize(lambda t_: self.interpolate(
+            f = np.vectorize(lambda t_: self._interpolate(
                 t_, ts, fs, f_left, f_right))
             return f(t)
+        else:
+            return self._interpolate(t, ts, fs, f_left, f_right, mode)
+
+    @jit
+    def _interpolate(self, t, ts, fs, f_left=np.nan, f_right=np.nan, mode=INTERPOLATION_LINEAR):
+        """
+        Linear interpolation over time.
+
+        :param t:       Time at which to evaluate the interpolant.
+        :type t:        float or vector of floats
+        :param ts:      Time stamps.
+        :type ts:       numpy array
+        :param fs:      Function values at time stamps ts.
+        :param f_left:  Function value left of leftmost time stamp.
+        :param f_right: Function value right of rightmost time stamp.
+        :param mode:    Interpolation mode.
+
+        :returns: The interpolated value.
+        """
 
         if t < ts[0]:
             if f_left != None:

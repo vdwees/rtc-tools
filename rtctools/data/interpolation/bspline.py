@@ -1,5 +1,3 @@
-# cython: embedsignature=True
-
 from casadi import if_else, logic_and
 from abc import ABCMeta
 

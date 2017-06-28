@@ -1,5 +1,3 @@
-# cython: embedsignature=True
-
 import logging
 
 from .optimization_problem import OptimizationProblem

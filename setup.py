@@ -1,11 +1,9 @@
 from setuptools import setup
-from Cython.Build import cythonize
-import numpy as np
 import rtctools
 import sys
 
-if sys.version_info[0] == 2 and sys.version_info[1] < 7:
-    sys.exit("Sorry, Python 2.7 or newer is required.")
+if sys.version_info[0] == 3 and sys.version_info[1] < 6:
+    sys.exit("Sorry, Python 3.6 or newer is required.")
 
 setup(
     name = 'rtctools',

@@ -1,5 +1,3 @@
-# cython: embedsignature=True
-
 from rtctools.data.interpolation.bspline1d import BSpline1D
 from rtctools.data.interpolation.bspline2d import BSpline2D
 import rtctools.data.csv as csv

@@ -1,4 +1,3 @@
-# cython: embedsignature=True
 """
 Commonly used utility functions.
 

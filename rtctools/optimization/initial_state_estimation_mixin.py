@@ -1,5 +1,3 @@
-# cython: embedsignature=True
-
 from .goal_programming_mixin import GoalProgrammingMixin, Goal
 
 

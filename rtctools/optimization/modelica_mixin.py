@@ -1,5 +1,3 @@
-# cython: embedsignature=True
-
 from casadi import MX, substitute, repmat, vertcat, depends_on, veccat
 from pymola.backends.casadi.api import transfer_model
 from collections import OrderedDict

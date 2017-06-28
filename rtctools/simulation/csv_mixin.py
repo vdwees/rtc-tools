@@ -1,5 +1,3 @@
-# cython: embedsignature=True
-
 from datetime import timedelta
 import numpy as np
 import logging
