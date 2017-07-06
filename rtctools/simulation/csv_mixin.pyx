@@ -118,17 +118,16 @@ class CSVMixin(SimulationProblem):
 
                 self.set_var(parameter, value)
 
+        # Set initial state parameters
+        for parameter, value in self._initial_state.iteritems():
+            if parameter in self._parameter_variables:
+                self.set_var(parameter, value)
+                logger.debug("Setting input parameter {} = {}".format(parameter, value))
+            else:
+                logger.warning("Entry {} in initial_state.csv is not a parameter.".format(parameter))
+
         # Load input variable names
         self._input_variables = set(self.get_input_variables().keys())
-
-        # Set initial states
-        for variable, value in self._initial_state.iteritems():
-            if variable in self._input_variables:
-                if variable in self._timeseries:
-                    logger.warning("Entry {} in initial_state.csv was also found in timeseries_import.csv.".format(variable))
-                self.set_var(variable, value)
-            else:
-                logger.warning("Entry {} in initial_state.csv is not an input variable.".format(variable))
 
         logger.debug("Model inputs are {}".format(self._input_variables))
 
