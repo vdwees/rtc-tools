@@ -74,10 +74,11 @@ class CSVMixin(SimulationProblem):
             self._parameters = {}
 
         try:
-            self._initial_state = csv.load(os.path.join(
+            _initial_state = csv.load(os.path.join(
                 self._input_folder, 'initial_state.csv'), delimiter=self.csv_delimiter)
             logger.debug("CSVMixin: Read initial state.")
-            check_initial_state_array(self._initial_state)
+            check_initial_state_array(_initial_state)
+            self._initial_state = {key: float(_initial_state[key]) for key in _initial_state.dtype.names}
         except IOError:
             self._initial_state = {}
 
@@ -117,6 +118,15 @@ class CSVMixin(SimulationProblem):
 
         # Load input variable names
         self._input_variables = set(self.get_input_variables().keys())
+
+        # Set initial states
+        for variable, value in self._initial_state.iteritems():
+            if variable in self._input_variables:
+                if variable in self._timeseries:
+                    logger.warning("Entry {} in initial_state.csv was also found in timeseries_import.csv.".format(variable))
+                self.set_var(variable, value)
+            else:
+                logger.warning("Entry {} in initial_state.csv is not an input variable.".format(variable))
 
         logger.debug("Model inputs are {}".format(self._input_variables))
 

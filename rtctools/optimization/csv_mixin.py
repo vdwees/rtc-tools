@@ -94,9 +94,10 @@ class CSVMixin(OptimizationProblem):
                 try:
                     _parameters = csv.load(os.path.join(
                         self._input_folder, ensemble_member_name, 'parameters.csv'), delimiter=self.csv_delimiter)
+                    _parameters = {key: float(_parameters[key]) for key in _parameters.dtype.names}
                 except IOError:
                     _parameters = {}
-                self._parameters.append(_parameters)
+                self._parameters.append(AliasDict(self.alias_relation, _parameters))
             logger.debug("CSVMixin: Read parameters.")
 
             for ensemble_member_name in self._ensemble['name']:
@@ -104,9 +105,10 @@ class CSVMixin(OptimizationProblem):
                     _initial_state = csv.load(os.path.join(
                         self._input_folder, ensemble_member_name, 'initial_state.csv'), delimiter=self.csv_delimiter)
                     check_initial_state_array(_initial_state)
+                    _initial_state = {key: float(_initial_state[key]) for key in _initial_state.dtype.names}
                 except IOError:
                     _initial_state = {}
-                self._initial_state.append(_initial_state)
+                self._initial_state.append(AliasDict(self.alias_relation, _initial_state))
             logger.debug("CSVMixin: Read initial state.")
         else:
             _timeseries = csv.load(os.path.join(
@@ -120,18 +122,20 @@ class CSVMixin(OptimizationProblem):
                 _parameters = csv.load(os.path.join(
                     self._input_folder, 'parameters.csv'), delimiter=self.csv_delimiter)
                 logger.debug("CSVMixin: Read parameters.")
+                _parameters = {key: float(_parameters[key]) for key in _parameters.dtype.names}
             except IOError:
                 _parameters = {}
-            self._parameters.append(_parameters)
+            self._parameters.append(AliasDict(self.alias_relation, _parameters))
 
             try:
                 _initial_state = csv.load(os.path.join(
                     self._input_folder, 'initial_state.csv'), delimiter=self.csv_delimiter)
                 logger.debug("CSVMixin: Read initial state.")
                 check_initial_state_array(_initial_state)
+                _initial_state = {key: float(_initial_state[key]) for key in _initial_state.dtype.names}
             except IOError:
                 _initial_state = {}
-            self._initial_state.append(_initial_state)
+            self._initial_state.append(AliasDict(self.alias_relation, _initial_state))
 
         self._timeseries_times_sec = self._datetime_to_sec(
             self._timeseries_times)
