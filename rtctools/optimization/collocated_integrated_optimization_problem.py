@@ -148,10 +148,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         collocation_times = self.times()
         n_collocation_times = len(collocation_times)
 
-        # Dynamic parameters
-        dynamic_parameters = self.dynamic_parameters()
-        dynamic_parameter_names = set()
-
         # Create a store of all ensemble-member-specific data for all ensemble members
         ensemble_store = [{} for i in range(self.ensemble_size)] # N.B. Don't use n * [{}], as it creates n refs to the same dict.
         for ensemble_member in range(self.ensemble_size):
@@ -166,12 +162,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                     parameter_values[i] = parameters[variable]
                 except KeyError:
                     raise Exception("No value specified for parameter {}".format(variable))
-
-            if len(dynamic_parameters) > 0:
-                jac = jacobian(vertcat(*parameter_values), vertcat(*dynamic_parameters))
-                for i, symbol in enumerate(self.dae_variables['parameters']):
-                    if jac[i, :].nnz() > 0:
-                        dynamic_parameter_names.add(symbol.name())
 
             if np.any([isinstance(value, MX) and not value.is_constant() for value in parameter_values]):
                 parameter_values = substitute_in_external(parameter_values, self.dae_variables['parameters'], parameter_values)

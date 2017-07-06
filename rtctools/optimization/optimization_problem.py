@@ -339,15 +339,6 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return AliasDict(self.alias_relation)
 
-    def dynamic_parameters(self):
-        """
-        Returns a list of parameter symbols that may vary from run to run.  The values
-        of these parameters are not cached.
-
-        :returns: A list of parameter symbols.
-        """
-        return []
-
     def constant_inputs(self, ensemble_member):
         """
         Returns a dictionary of constant inputs.

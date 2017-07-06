@@ -44,17 +44,6 @@ class HomotopyMixin(OptimizationProblem):
 
         return parameters
 
-    def dynamic_parameters(self):
-        dynamic_parameters = super(HomotopyMixin, self).dynamic_parameters()
-
-        if self._theta > 0:
-            # For theta = 0, we don't mark the homotopy parameter as being dynamic,
-            # so that the correct sparsity structure is obtained for the linear model.
-            options = self.homotopy_options()
-            dynamic_parameters.append(self.variable(options['homotopy_parameter']))
-
-        return dynamic_parameters
-
     def homotopy_options(self):
         """
         Returns a dictionary of options controlling the homotopy process.
