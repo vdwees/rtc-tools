@@ -17,7 +17,7 @@ class Example(CSVMixin, SimulationProblem):
     A basic example for introducing users to RTC-Tools 2 Simulation
     """
 
-    # Discrete stages that the storage is capable of
+    # Discrete stages that the storage is capable of releasing
     release_stages = [0., 1., 2., 4., 8.]
 
     # Here is an example of overriding the update() method to show how control
