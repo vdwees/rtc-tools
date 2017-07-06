@@ -69,9 +69,10 @@ class CSVMixin(SimulationProblem):
         logger.debug("CSVMixin: Read timeseries.")
 
         try:
-            self._parameters = csv.load(os.path.join(
+            _parameters = csv.load(os.path.join(
                 self._input_folder, 'parameters.csv'), delimiter=self.csv_delimiter)
             logger.debug("CSVMixin: Read parameters.")
+            self._parameters = {key: float(_parameters[key]) for key in _parameters.dtype.names}
         except IOError:
             self._parameters = {}
 
