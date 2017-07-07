@@ -18,7 +18,7 @@ class Example(CSVMixin, SimulationProblem):
     """
 
     # Discrete stages that the storage is capable of releasing
-    release_stages = [0., 1., 2., 4., 8.]
+    release_stages = [0., 1., 2., 4., 8.] # m^3/s
 
     # Here is an example of overriding the update() method to show how control
     # can be build into the python script

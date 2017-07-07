@@ -11,3 +11,4 @@ This section provides examples demonstrating key features of RTC-Tools.
    examples/goal_programming
    examples/lookup_table
    examples/ensemble
+   examples/simulation
