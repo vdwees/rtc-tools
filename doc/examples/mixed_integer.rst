@@ -1,6 +1,11 @@
 Mixed Integer Optimization: Pumps and Orifices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. image:: ../images/Woudagemaal.jpg
+
+.. :href: https://commons.wikimedia.org/wiki/File:Woudagemaal.jpg
+.. content is released under a CC0 Public Domain licence - no attribution needed
+
 .. note::
 
     This example focuses on how to incorporate mixed integer components into a

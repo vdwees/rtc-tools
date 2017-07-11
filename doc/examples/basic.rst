@@ -1,8 +1,11 @@
 Filling a Reservoir
 ~~~~~~~~~~~~~~~~~~~
 
-.. insert image here? e.g.
-   https://commons.wikimedia.org/wiki/File:Badgernet_Clywedog_reservoir_3.JPG
+.. image:: ../images/graig-coch-2117306_640.jpg
+
+.. :href: https://pixabay.com/en/graig-coch-dam-wales-reservoir-uk-2117306/
+.. pixabay content is released under a CC0 Public Domain licence - no attribution needed
+
 
 Overview
 --------
