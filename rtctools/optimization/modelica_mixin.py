@@ -147,9 +147,15 @@ class ModelicaMixin(OptimizationProblem):
         # Where imported model libraries are located.
         compiler_options['library_folders'] = [self.modelica_library_folder]
 
+        # Eliminate equations of the type 'var = const'.
+        compiler_options['eliminate_constant_assignments'] = True
+
         # Eliminate constant symbols from model, replacing them with the values
         # specified in the model.
         compiler_options['replace_constant_values'] = True
+
+        # Replace any constant expressions into the model.
+        compiler_options['replace_constant_expressions'] = True
 
         # Replace any parameter expressions into the model.
         compiler_options['replace_parameter_expressions'] = True
