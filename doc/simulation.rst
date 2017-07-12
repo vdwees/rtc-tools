@@ -1,6 +1,10 @@
 Simulation
 ==========
 
+.. note::
+	
+	For a simulation example, see :doc:`examples/simulation`
+
 Contents:
 
 .. toctree::
