@@ -7,11 +7,6 @@ import numpy as np
 import logging
 logger = logging.getLogger("rtctools")
 
-# A helper function for finding the closest value in an array
-def find_nearest(array, value):
-    idx = (np.abs(array - value)).argmin()
-    return array[idx]
-
 class Example(CSVMixin, SimulationProblem):
     """
     A basic example for introducing users to RTC-Tools 2 Simulation
