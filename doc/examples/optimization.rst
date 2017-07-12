@@ -6,8 +6,8 @@ This section provides examples demonstrating key features of RTC-Tools optimizat
 .. toctree::
    :maxdepth: 2
 
-   examples/optimization/basic
-   examples/optimization/mixed_integer
-   examples/optimization/goal_programming
-   examples/optimization/lookup_table
-   examples/optimization/ensemble
+   optimization/basic
+   optimization/mixed_integer
+   optimization/goal_programming
+   optimization/lookup_table
+   optimization/ensemble

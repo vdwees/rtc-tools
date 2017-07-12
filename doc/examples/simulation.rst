@@ -6,4 +6,4 @@ This section provides examples demonstrating key features of RTC-Tools simulatio
 .. toctree::
    :maxdepth: 2
 
-   examples/simulation/setpoint
+   simulation/setpoint
