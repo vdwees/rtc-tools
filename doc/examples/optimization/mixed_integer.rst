@@ -1,7 +1,7 @@
 Mixed Integer Optimization: Pumps and Orifices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. image:: ../images/Woudagemaal.jpg
+.. image:: ../../images/Woudagemaal.jpg
 
 .. :href: https://commons.wikimedia.org/wiki/File:Woudagemaal.jpg
 .. content is released under a CC0 Public Domain licence - no attribution needed
@@ -48,7 +48,7 @@ represents a simple water system with the following elements:
 * an orifice
   ``Deltares.ChannelFlow.Hydraulic.Structures.BooleanSubmergedOrifice``
 
-.. image:: ../images/orifice_vs_pump_openmodelica.png
+.. image:: ../../images/orifice_vs_pump_openmodelica.png
 
 In text mode, the Modelica model looks as follows (with annotation statements
 removed):

@@ -47,7 +47,7 @@ weir). If the sea water level is higher than in the canal, water must be pumped.
 
 In OpenModelica Connection Editor, the model looks like this:
 
-.. image:: ../images/orifice_vs_pump_openmodelica.png
+.. image:: ../../images/orifice_vs_pump_openmodelica.png
 
 In text mode, the Modelica model looks as follows (with annotation statements
 removed):

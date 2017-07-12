@@ -24,7 +24,7 @@ The Model
 
 In OpenModelica Connection Editor, the model looks like this:
 
-.. image:: ../images/simple_storage_openmodelica.png
+.. image:: ../../images/simple_storage_openmodelica.png
 
 In text mode, the Modelica model is as follows (with annotation statements
 removed):

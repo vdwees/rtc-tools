@@ -1,7 +1,7 @@
 Tracking a Setpoint
 ~~~~~~~~~~~~~~~~~~~
 
-.. image:: ../images/graig-coch-2117306_640.jpg
+.. image:: ../../images/graig-coch-2117306_640.jpg
 
 .. :href: https://pixabay.com/en/graig-coch-dam-wales-reservoir-uk-2117306/
 .. pixabay content is released under a CC0 Public Domain licence - no attribution needed
@@ -58,7 +58,7 @@ Make sure to load the Deltares library before loading the example:
 Once loaded, we have an OpenModelica Connection Editor window that looks like
 this:
 
-.. image:: ../images/simple_storage_openmodelica.png
+.. image:: ../../images/simple_storage_openmodelica.png
 
 
 The model ``Example.mo`` represents a simple system with the following
