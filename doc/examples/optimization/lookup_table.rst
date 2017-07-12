@@ -29,7 +29,7 @@ In OpenModelica Connection Editor, the model looks like this:
 In text mode, the Modelica model is as follows (with annotation statements
 removed):
 
-.. literalinclude:: ../_build/mo/lookup_table.mo
+.. literalinclude:: ../../_build/mo/lookup_table.mo
   :language: modelica
   :lineno-match:
 
@@ -56,7 +56,7 @@ Importing Packages
 
 For this example, the import block is as follows:
 
-.. literalinclude:: ../../examples/lookup_table/src/example.py
+.. literalinclude:: ../../../examples/lookup_table/src/example.py
   :language: python
   :lines: 1-9
   :lineno-match:
@@ -79,7 +79,7 @@ problem class, so we define the ``__init__()`` method so we can pass the
 values of the goals in later. We call the ``super()`` method to avoid
 overwriting the ``__init__()`` method of the parent class.
 
-.. literalinclude:: ../../examples/lookup_table/src/example.py
+.. literalinclude:: ../../../examples/lookup_table/src/example.py
   :language: python
   :pyobject: WaterVolumeRangeGoal
   :lineno-match:
@@ -87,7 +87,7 @@ overwriting the ``__init__()`` method of the parent class.
 We also want to save energy, so we define a goal to minimize ``Q_release``. This
 goal has a lower priority.
 
-.. literalinclude:: ../../examples/lookup_table/src/example.py
+.. literalinclude:: ../../../examples/lookup_table/src/example.py
   :language: python
   :pyobject: MinimizeQreleaseGoal
   :lineno-match:
@@ -98,7 +98,7 @@ Optimization Problem
 Next, we construct the class by declaring it and inheriting the desired parent
 classes.
 
-.. literalinclude:: ../../examples/lookup_table/src/example.py
+.. literalinclude:: ../../../examples/lookup_table/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
@@ -117,7 +117,7 @@ relation using the ``lookup_table()`` method. We cache the functions for
 convenience. The ``lookup_storage_V()`` method can convert timeseries objects,
 and we save the water volume goal bounds as timeseries.
 
-.. literalinclude:: ../../examples/lookup_table/src/example.py
+.. literalinclude:: ../../../examples/lookup_table/src/example.py
   :language: python
   :pyobject: Example.pre
   :lineno-match:
@@ -133,7 +133,7 @@ use the ``path_goals()`` method. This is a method that returns a list of the
 goals we defined above. The ``WaterVolumeRangeGoal`` needs to be instantiated
 with the new water volume timeseries we just defined.
 
-.. literalinclude:: ../../examples/lookup_table/src/example.py
+.. literalinclude:: ../../../examples/lookup_table/src/example.py
   :language: python
   :pyobject: Example.path_goals
   :lineno-match:
@@ -147,7 +147,7 @@ We define the ``priority_completed()`` method to inspect and summerize the
 results. These are appended to our intermediate results variable after each
 priority is completed.
 
-.. literalinclude:: ../../examples/lookup_table/src/example.py
+.. literalinclude:: ../../../examples/lookup_table/src/example.py
   :language: python
   :pyobject: Example.priority_completed
   :lineno-match:
@@ -155,7 +155,7 @@ priority is completed.
 We output our intermediate results using the ``post()`` method. Again, we nedd
 to call the ``super()`` method to avoid overwiting the internal method.
 
-.. literalinclude:: ../../examples/lookup_table/src/example.py
+.. literalinclude:: ../../../examples/lookup_table/src/example.py
   :language: python
   :pyobject: Example.post
   :lineno-match:
@@ -163,7 +163,7 @@ to call the ``super()`` method to avoid overwiting the internal method.
 Finally, we want to apply some additional configuration, reducing the amount of
 information the solver outputs:
 
-.. literalinclude:: ../../examples/lookup_table/src/example.py
+.. literalinclude:: ../../../examples/lookup_table/src/example.py
   :language: python
   :pyobject: Example.solver_options
   :lineno-match:
@@ -175,7 +175,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_optimization_problem()`` method we imported on the optimization
 problem class we just created.
 
-.. literalinclude:: ../../examples/lookup_table/src/example.py
+.. literalinclude:: ../../../examples/lookup_table/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -185,7 +185,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../../examples/lookup_table/src/example.py
+.. literalinclude:: ../../../examples/lookup_table/src/example.py
   :language: python
   :lineno-match:
 

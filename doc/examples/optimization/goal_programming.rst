@@ -52,7 +52,7 @@ In OpenModelica Connection Editor, the model looks like this:
 In text mode, the Modelica model looks as follows (with annotation statements
 removed):
 
-.. literalinclude:: ../_build/mo/goal_programming.mo
+.. literalinclude:: ../../_build/mo/goal_programming.mo
   :language: modelica
   :lineno-match:
 
@@ -80,7 +80,7 @@ Importing Packages
 
 For this example, the import block is as follows:
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :lines: 1-8
   :lineno-match:
@@ -99,7 +99,7 @@ maximum. Since we are applying this goal to a specific state (model variable) in
 our model at every time step, we can inherit a special helper class to define
 this goal, called a ``StateGoal``:
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: WaterLevelRangeGoal
   :lineno-match:
@@ -109,7 +109,7 @@ We also want to save energy, so we define a goal to minimize the integral of
 non-path goals, the function range must be large enough to enclose the integral
 of the variable over all the timesteps. This goal does not use a helper class:
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: MinimizeQpumpGoal
   :lineno-match:
@@ -122,7 +122,7 @@ The order of this goal must be 2, so that it penalizes both positive and
 negative derivatives. Order of 2 is the default, but we include it here
 explicitly for the sake of clarity.
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: MinimizeChangeInQpumpGoal
   :lineno-match:
@@ -133,7 +133,7 @@ Optimization Problem
 Next, we construct the class by declaring it and inheriting the desired parent
 classes.
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
@@ -149,7 +149,7 @@ implemented below in the ``path_constraints()`` method. Other parent classes
 also declare this method, so we call the ``super()`` method so that we don't
 overwrite their behaviour.
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.path_constraints
   :lineno-match:
@@ -163,7 +163,7 @@ Non-path goals are more general goals that are not iteratively applied at every
 timestep. We use the ``goals()`` method to pass a list of these goals to the
 optimizer.
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.goals
   :lineno-match:
@@ -176,7 +176,7 @@ affect our desire to satisfy the goal at time step B. Goals that inherit
 ``StateGoal`` are always path goals and must always be initialized with the
 parameter ``self``.
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.path_goals
   :lineno-match:
@@ -192,7 +192,7 @@ we declare a new ``pre()`` method, call ``super(Example, self).pre()`` to ensure
 that the original method runs unmodified, and add in a variable declaration to
 store our list of intermediate results:
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.pre
   :lineno-match:
@@ -201,7 +201,7 @@ Next, we define the ``priority_completed()`` method to inspect and summarize the
 results. These are appended to our intermediate results variable after each
 priority is completed.
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.priority_completed
   :lineno-match:
@@ -210,7 +210,7 @@ We want some way to output our intermediate results. This is accomplished using
 the ``post()`` method. Again, we nedd to call the ``super()`` method to avoid
 overwiting the internal method.
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.post
   :lineno-match:
@@ -218,7 +218,7 @@ overwiting the internal method.
 Finally, we want to apply some additional configuration, reducing the amount of
 information the solver outputs:
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :pyobject: Example.solver_options
   :lineno-match:
@@ -230,7 +230,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_optimization_problem()`` method we imported on the optimization
 problem class we just created.
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -240,7 +240,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../../examples/goal_programming/src/example.py
+.. literalinclude:: ../../../examples/goal_programming/src/example.py
   :language: python
   :lineno-match:
 

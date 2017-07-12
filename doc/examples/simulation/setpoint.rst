@@ -81,7 +81,7 @@ and drag between the ports on the elements.
 In text mode, the Modelica model looks as follows (with
 annotation statements removed):
 
-.. literalinclude:: ../_build/mo/simulation.mo
+.. literalinclude:: ../../_build/mo/simulation.mo
   :language: modelica
   :lineno-match:
 
@@ -132,7 +132,7 @@ package ``run_simulation_problem`` form the ``rtctools.util`` package, and
 any extra packages we want to use. For this example, the import block looks
 like:
 
-.. literalinclude:: ../../examples/simulation/src/example.py
+.. literalinclude:: ../../../examples/simulation/src/example.py
   :language: python
   :lines: 1-8
   :lineno-match:
@@ -146,7 +146,7 @@ parent classes each perform different tasks related to importing and exporting
 data and running the simulation problem. Each imported class makes a set of
 methods available to the our simulation class.
 
-.. literalinclude:: ../../examples/simulation/src/example.py
+.. literalinclude:: ../../../examples/simulation/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
@@ -158,7 +158,7 @@ controller. In its simplest form, we load the current values of the volume and
 target volume variables, calculate their difference, and set ``P_control`` to be
 as close as possible to eliminating that difference during the upcoming timestep.
 
-.. literalinclude:: ../../examples/simulation/src/example.py
+.. literalinclude:: ../../../examples/simulation/src/example.py
   :language: python
   :pyobject: Example.update
   :lineno-match:
@@ -170,7 +170,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_simulation_problem()`` method we imported on the simulation
 problem class we just created.
 
-.. literalinclude:: ../../examples/simulation/src/example.py
+.. literalinclude:: ../../../examples/simulation/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -180,7 +180,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../../examples/simulation/src/example.py
+.. literalinclude:: ../../../examples/simulation/src/example.py
   :language: python
   :lineno-match:
 
