@@ -209,5 +209,3 @@ the bounds over the entire time horizon. They may need to increase the
 controller timestep, use a more complete PID controller, or use model
 predictive control such as the RTC-Tools optimization library to get the
 results they want.
-
-Feel free to experiment with this example. See what happens if you change the ``release_stages`` list in the python script, or the target water volumes in timeseries_import 
