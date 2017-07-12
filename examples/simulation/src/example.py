@@ -17,8 +17,8 @@ class Example(CSVMixin, SimulationProblem):
     A basic example for introducing users to RTC-Tools 2 Simulation
     """
 
-    # Discrete stages that the storage is capable of releasing
-    release_stages = [0., 1., 2., 4., 8.] # m^3/s
+    # Min and Max flow rate that the storage is capable of releasing
+    min_release, max_release = 0., 8. # m^3/s
 
     # Here is an example of overriding the update() method to show how control
     # can be build into the python script
@@ -39,10 +39,10 @@ class Example(CSVMixin, SimulationProblem):
         control = -error / dt
 
         # Get the closest feasible setting. 
-        discrete_control = find_nearest(self.release_stages, control)
+        bounded_control = min(max(control, self.min_release), self.max_release)
 
         # Set the control variable as the control for the next step of the simulation
-        self.set_var('P_control', discrete_control)
+        self.set_var('P_control', bounded_control)
 
         # Call the super class so that everything else continues as normal
     	super(Example, self).update(dt)
