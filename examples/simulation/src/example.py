@@ -2,8 +2,6 @@ from rtctools.simulation.simulation_problem import SimulationProblem
 from rtctools.simulation.csv_mixin import CSVMixin
 from rtctools.util import run_simulation_problem
 
-import numpy as np
-
 import logging
 logger = logging.getLogger("rtctools")
 
