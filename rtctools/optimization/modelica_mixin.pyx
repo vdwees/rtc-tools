@@ -360,11 +360,12 @@ class ModelicaMixin(OptimizationProblem):
             if v.getName() not in eliminated_algebraics_names:
                 algebraics[v.getName()] = v
 
-        self._mx['control_inputs'] = [algebraics.get(var.getName(), var) for var in self._mx['control_inputs']]
-        self._mx['states'] = [algebraics.get(var.getName(), var) for var in self._mx['states']]
+        not_algebraic = set()
+        for l in ['lookup_tables', 'constant_inputs', 'control_inputs', 'states', 'derivatives', 'parameters']:
+            self._mx[l] = [algebraics.get(var.getName(), var) for var in self._mx[l]]
+            not_algebraic |= set([var.getName() for var in self._mx[l]])
 
-        not_algebraic = set([v.getName() for v in itertools.chain(self._mx['control_inputs'], self._mx['states'])]) | eliminated_algebraics_names
-        self._mx['algebraics'] = [var for var in self._mx['algebraics'] if var.getName() not in not_algebraic]
+        self._mx['algebraics'] = [var for var in algebraics.values() if var.getName() not in not_algebraic]
        
         dae_residual = vertcat([eq.getLhs() - eq.getRhs() for eq in dae_eq])
         [dae_residual] = substitute([dae_residual], substitutions.keys(), substitutions.values())
