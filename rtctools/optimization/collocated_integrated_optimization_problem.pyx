@@ -1321,7 +1321,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             except KeyError:
                 pass
             else:
-                result = np.interp(self.times(alias), constant_input.times, constant_input.values)
+                result = np.interp(self.times(variable), constant_input.times, constant_input.values)
                 for alias in self.alias_relation.aliases(variable):
                     if alias == variable:
                         continue
