@@ -931,7 +931,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
         state_results = self.extract_states(ensemble_member)
 
         # Merge dictionaries
-        results = control_results
+        results = AliasDict(self.alias_relation)
+        results.update(control_results)
         results.update(state_results)
 
         logger.info("Done extracting results")
@@ -1034,11 +1035,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             results[variable] = np.array(self.variable_nominal(
                 variable) * X[offset:offset + n_times, 0]).ravel()
             offset += n_times
-
-            for alias in self.alias_relation.aliases(variable):
-                if alias == variable:
-                    continue
-                results[alias] = results[variable]
 
         # Done
         return results
@@ -1307,11 +1303,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
                     variable) * X[offset:offset + n_times, 0]).ravel()
                 offset += n_times
 
-                for alias in self.alias_relation.aliases(variable):
-                    if alias == variable:
-                        continue
-                    results[alias] = results[variable]
-
         # Extract constant input aliases
         constant_inputs = self.constant_inputs(ensemble_member)
         for variable in self.dae_variables['constant_inputs']:
@@ -1321,14 +1312,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem):
             except KeyError:
                 pass
             else:
-                result = np.interp(self.times(variable), constant_input.times, constant_input.values)
-                for alias in self.alias_relation.aliases(variable):
-                    if alias == variable:
-                        continue
-                    if alias[0] == '-':
-                        results[alias[1:]] = -result
-                    else:
-                        results[alias] = result
+                results[variable] = np.interp(self.times(variable), constant_input.times, constant_input.values)
 
         # Extract path variables
         n_collocation_times = len(self.times())
