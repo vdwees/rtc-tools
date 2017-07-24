@@ -477,19 +477,17 @@ class ModelicaMixin(OptimizationProblem):
         times = self.times()
         for variable in self._mx['constant_inputs']:
             variable = variable.getName()
-            var = self._jm_model.getVariable(variable)
-            if var.hasAttributeSet('bindingExpression'):
-                value = var.getAttribute('bindingExpression')
-                if not value.isConstant():
-                    [value] = substitute([value], self._mx['parameters'], parameter_values)
-                constant_inputs[variable] = Timeseries(
-                    times, repmat([value], len(times)))
-                if logger.getEffectiveLevel() == logging.DEBUG:
-                    logger.debug("Read constant input {} from Modelica model".format(
-                        variable))
-            else:
-                # Value will be provided by a subclass.
-                pass
+            for alias in self._alias_relation.aliases(variable):
+                var = self._jm_model.getVariable(alias)
+                if var.hasAttributeSet('bindingExpression'):
+                    value = var.getAttribute('bindingExpression')
+                    if not value.isConstant():
+                        [value] = substitute([value], self._mx['parameters'], parameter_values)
+                    constant_inputs[alias] = Timeseries(
+                        times, repmat([value], len(times)))
+                    if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("Read constant input {} from Modelica model".format(
+                            alias))
 
         return constant_inputs
 
