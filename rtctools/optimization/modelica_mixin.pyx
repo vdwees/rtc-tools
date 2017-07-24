@@ -512,31 +512,35 @@ class ModelicaMixin(OptimizationProblem):
         for variable in itertools.chain(self._mx['states'], self._mx['algebraics'], self._mx['control_inputs'], self._eliminated_algebraics):
             variable = variable.getName()
             var = self._jm_model.getVariable(variable)
-            (m, M) = bounds.get(variable, (None, None))
+            (m, M) = bounds.get(variable, (-np.inf, np.inf))
             if var.getType() == var.BOOLEAN:
-                if m is None:
+                if not np.isfinite(m):
                     m = 0
-                if M is None:
+                if not np.isfinite(M):
                     M = 1
             if var.hasAttributeSet('min'):
                 m_ = var.getAttribute('min')
                 if not m_.isConstant():
-                    [m] = substitute([m_], self._mx['parameters'], parameter_values)
-                    if m.isConstant():
-                        m = float(m)
+                    [m_] = substitute([m_], self._mx['parameters'], parameter_values)
+                    if m_.isConstant():
+                        m_ = float(m_)
+                        if m_ > m:
+                            m = m_
                 else:
                     m_ = float(m_)
-                    if np.isfinite(m_):
+                    if np.isfinite(m_) and m_ > m:
                         m = m_
             if var.hasAttributeSet('max'):
                 M_ = var.getAttribute('max')
                 if not M_.isConstant():
-                    [M] = substitute([M_], self._mx['parameters'], parameter_values)
-                    if M.isConstant():
-                        M = float(M)
+                    [M_] = substitute([M_], self._mx['parameters'], parameter_values)
+                    if M_.isConstant():
+                        M_ = float(M_)
+                        if M_ < M:
+                            M = M_
                 else:
                     M_ = float(M_)
-                    if np.isfinite(M_):
+                    if np.isfinite(M_) and M_ < M:
                         M = M_
             bounds[variable] = (m, M)
 
