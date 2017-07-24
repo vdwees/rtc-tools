@@ -149,25 +149,29 @@ class ModelicaMixin(OptimizationProblem):
 
             self._alias_relation.add(model_var.getName(), sign + var.getName())
 
+        # Now condense equations
+        self._condense_dae()
+
         # Initialize nominals and types
-        self._nominals = {}
-        self._discrete = {}
-        for variable in self._mx['states'] + self._mx['algebraics'] + self._mx['control_inputs']:
+        self._nominals = AliasDict(self._alias_relation, signed_values=False)
+        self._discrete = AliasDict(self._alias_relation, signed_values=False)
+        for variable in self._mx['states'] + self._mx['algebraics'] + self._mx['control_inputs'] + self._eliminated_algebraics:
             variable = variable.getName()
             model_variable = self._jm_model.getVariable(variable)
 
             nominal = model_variable.getNominal()
             if nominal and nominal != 0:
-                self._nominals[variable] = abs(float(nominal))
+                nominal1 = abs(float(nominal))
+                nominal2 = self._nominals.get(variable, 0)
+                self._nominals[variable] = max(nominal1, nominal2)
 
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
                         variable, self._nominals[variable]))
 
-            self._discrete[variable] = (model_variable.getVariability() == var.DISCRETE)
-
-        # Now condense equations
-        self._condense_dae()
+            discrete1 = (model_variable.getVariability() == var.DISCRETE)
+            discrete2 = self._discrete.get(variable, False)
+            self._discrete[variable] = discrete1 or discrete2
 
         # Call parent class first for default behaviour.
         super(ModelicaMixin, self).__init__(**kwargs)
