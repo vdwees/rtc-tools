@@ -479,7 +479,7 @@ class ModelicaMixin(OptimizationProblem):
             variable = variable.getName()
             for alias in self._alias_relation.aliases(variable):
                 var = self._jm_model.getVariable(alias)
-                if var.hasAttributeSet('bindingExpression'):
+                if var is not None and var.hasAttributeSet('bindingExpression'):
                     value = var.getAttribute('bindingExpression')
                     if not value.isConstant():
                         [value] = substitute([value], self._mx['parameters'], parameter_values)
