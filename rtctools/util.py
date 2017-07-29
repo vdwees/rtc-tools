@@ -5,7 +5,6 @@ Author:  Jorn Baayen
 Date  :  March 16, 2016
 """
 
-from casadi import CasadiOptions
 import logging
 import sys
 import os
@@ -19,7 +18,7 @@ from .optimization.pi_mixin import PIMixin
 from . import __version__
 
 
-def run_optimization_problem(optimization_problem_class, base_folder='..', log_level=logging.INFO, profile=False, profile_casadi=False):
+def run_optimization_problem(optimization_problem_class, base_folder='..', log_level=logging.INFO, profile=False):
     """
     Sets up and solves an optimization problem.
 
@@ -34,7 +33,6 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
     :param base_folder:                Base folder.
     :param log_level:                  The log level to use.
     :param profile:                    Whether or not to enable profiling.
-    :param profile_casadi:             Whether or not to enable CasADi profiling.
     """
 
 
@@ -81,13 +79,6 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
     try:
         prob = optimization_problem_class(
             model_folder=model_folder, input_folder=input_folder, output_folder=output_folder)
-        if profile_casadi:
-            # Use CasADi "profilereport" to process these results.
-            filename = os.path.join(base_folder, 'profile_casadi.log')
-            logger.info(
-                "Logging CasADi profiling output to {}.  Use 'profilereport' to analyze the results.".format(filename))
-
-            CasadiOptions.startProfiling(filename)
         if profile:
             filename = os.path.join(base_folder, "profile.prof")
 
