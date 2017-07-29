@@ -89,10 +89,6 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
 
             CasadiOptions.startProfiling(filename)
         if profile:
-            # Must prepend set Cython compiler option "profile=True".
-            logger.warning(
-                "To profile effectively, compile RTC-Tools with the Cython compiler option 'profile=True'")
-
             filename = os.path.join(base_folder, "profile.prof")
 
             cProfile.runctx("prob.optimize()", globals(), locals(), filename)
