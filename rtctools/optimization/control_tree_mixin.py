@@ -202,14 +202,14 @@ class ControlTreeMixin(OptimizationProblem):
                     pass
                 else:
                     nominal = self.variable_nominal(variable)
-                    if bound[0] != None:
+                    if bound[0] is not None:
                         if isinstance(bound[0], Timeseries):
                             lbx[self._control_indices[variable][ensemble_member, :]] = self.interpolate(
                                 times, bound[0].times, bound[0].values, -sys.float_info.max, -sys.float_info.max) / nominal
                         else:
                             lbx[self._control_indices[variable][
                                 ensemble_member, :]] = bound[0] / nominal
-                    if bound[1] != None:
+                    if bound[1] is not None:
                         if isinstance(bound[1], Timeseries):
                             ubx[self._control_indices[variable][ensemble_member, :]] = self.interpolate(
                                 times, bound[1].times, bound[1].values, +sys.float_info.max, +sys.float_info.max) / nominal

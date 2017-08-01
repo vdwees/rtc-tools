@@ -178,12 +178,12 @@ class ParameterConfig:
             "pi:group[@id='{}']".format(group_id), ns)
         for group in groups:
             el = group.find("pi:locationId", ns)
-            if location_id != None and el != None:
+            if location_id is not None and el is not None:
                 if location_id != el.text:
                     continue
 
             el = group.find("pi:model", ns)
-            if model != None and el != None:
+            if model is not None and el is not None:
                 if model != el.text:
                     continue
 
@@ -209,12 +209,12 @@ class ParameterConfig:
             "pi:group[@id='{}']".format(group_id), ns)
         for group in groups:
             el = group.find("pi:locationId", ns)
-            if location_id != None and el != None:
+            if location_id is not None and el is not None:
                 if location_id != el.text:
                     continue
 
             el = group.find("pi:model", ns)
-            if model != None and el != None:
+            if model is not None and el is not None:
                 if model != el.text:
                     continue
 
@@ -282,13 +282,13 @@ class ParameterConfig:
 
                 # get Id's if present
                 el_columnIds = child.find("pi:columnIds", ns)
-                if el_columnIds != None:
+                if el_columnIds is not None:
                     for key, value in el_columnIds.attrib.items():
                         columnId[key] = value
 
                 # get Types if present
                 el_columnTypes = child.find("pi:columnTypes", ns)
-                if el_columnTypes != None:
+                if el_columnTypes is not None:
                     for key, value in el_columnTypes.attrib.items():
                         columnType[key] = self._parse_type(value)
 
@@ -383,7 +383,7 @@ class Timeseries:
 
             # Read timezone
             timezone = self._xml_root.find('pi:timeZone', ns)
-            if timezone != None:
+            if timezone is not None:
                 self._timezone = float(timezone.text)
             else:
                 self._timezone = None
@@ -435,7 +435,7 @@ class Timeseries:
                         variable, os.path.join(self._folder, basename + '.xml')))
 
                 el = header.find('pi:forecastDate', ns)
-                if el != None:
+                if el is not None:
                     forecast_datetime = _parse_date_time(el)
                 else:
                     # the timeseries has no forecastDate, so the forecastDate
@@ -444,12 +444,12 @@ class Timeseries:
                 if self._forecast_datetime is None:
                     self._forecast_datetime = forecast_datetime
                 else:
-                    if el != None and forecast_datetime != self._forecast_datetime:
+                    if el is not None and forecast_datetime != self._forecast_datetime:
                         raise Exception(
                             'PI: Not all timeseries share the same forecastDate.')
 
                 el = header.find('pi:ensembleMemberIndex', ns)
-                if el != None:
+                if el is not None:
                     contains_ensemble = True
                     if int(el.text) > self._ensemble_size - 1: # Assume zero-based
                         self._ensemble_size = int(el.text) + 1
@@ -485,7 +485,7 @@ class Timeseries:
                     if not set(self._times).issuperset(set(times)):
                         raise Exception('PI: Not all timeseries share the same time step spacing. Make sure the time steps of all series are a subset of the global time steps.')
 
-            if self._forecast_datetime != None:
+            if self._forecast_datetime is not None:
                 if self._dt:
                     self._forecast_datetime = _floor_date_time(
                         dt=self._forecast_datetime, tdel=self._dt)
@@ -510,7 +510,7 @@ class Timeseries:
 
                 make_virtual_ensemble = False
                 el = header.find('pi:ensembleMemberIndex', ns)
-                if el != None:
+                if el is not None:
                     ensemble_member = int(el.text)
                     while ensemble_member >= len(self._values):
                         self._values.append({})
@@ -533,7 +533,7 @@ class Timeseries:
                     n_values = bisect.bisect_left(self._times, end_datetime) - bisect.bisect_left(self._times, start_datetime) + 1
 
                 if self._binary:
-                    if f != None:
+                    if f is not None:
                         self._values[ensemble_member][variable] = np.fromstring(
                             f.read(self._pi_dtype(0).itemsize * n_values), dtype=self._pi_dtype)
                     else:
@@ -598,7 +598,7 @@ class Timeseries:
                 # times automatically from global start/end datetime.
                 self._times = self._times[bisect.bisect_left(self._times, self._start_datetime) : bisect.bisect_left(self._times, self._end_datetime)+1]
 
-            if f != None and self._binary:
+            if f is not None and self._binary:
                 f.close()
 
     def _add_header(self, variable, location_parameter_id, ensemble_member=0, miss_val=-999, unit='unit_unknown'):
@@ -667,7 +667,7 @@ class Timeseries:
         if self._binary:
             f = io.open(self.binary_path, 'wb')
 
-        if self.timezone != None:
+        if self.timezone is not None:
             timezone = self._xml_root.find('pi:timeZone', ns)
             if timezone is None:
                 timezone = ET.Element('{%s}' % (ns['pi'], ) + 'timeZone')
@@ -688,7 +688,7 @@ class Timeseries:
 
                 # First check ensembleMemberIndex, to see if it is the correct one.
                 el = header.find('pi:ensembleMemberIndex', ns)
-                if el != None:
+                if el is not None:
                     if ensemble_member != int(el.text):
                         # Skip over this series, wrong index.
                         continue

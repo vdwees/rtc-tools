@@ -244,15 +244,15 @@ class CSVMixin(OptimizationProblem):
                     logger.debug("CSVMixin: Read upper bound for variable {}".format(variable))
 
             # Replace NaN with +/- inf, and create Timeseries objects
-            if m != None:
+            if m is not None:
                 m[np.isnan(m)] = np.finfo(m.dtype).min
                 m = Timeseries(self._timeseries_times_sec, m)
-            if M != None:
+            if M is not None:
                 M[np.isnan(M)] = np.finfo(M.dtype).max
                 M = Timeseries(self._timeseries_times_sec, M)
 
             # Store
-            if m != None or M != None:
+            if m is not None or M is not None:
                 bounds[variable] = (m, M)
         return bounds
 

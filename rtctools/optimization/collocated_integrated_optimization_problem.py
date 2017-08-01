@@ -966,13 +966,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 pass
             else:
                 nominal = self.variable_nominal(variable)
-                if bound[0] != None:
+                if bound[0] is not None:
                     if isinstance(bound[0], Timeseries):
                         lbx[offset:offset + n_times] = self.interpolate(
                             times, bound[0].times, bound[0].values, -np.inf, -np.inf) / nominal
                     else:
                         lbx[offset:offset + n_times] = bound[0] / nominal
-                if bound[1] != None:
+                if bound[1] is not None:
                     if isinstance(bound[1], Timeseries):
                         ubx[offset:offset + n_times] = self.interpolate(
                             times, bound[1].times, bound[1].values, +np.inf, +np.inf) / nominal
@@ -1145,13 +1145,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                         pass
                     else:
                         nominal = self.variable_nominal(variable)
-                        if bound[0] != None:
+                        if bound[0] is not None:
                             if isinstance(bound[0], Timeseries):
                                 lbx[offset] = self.interpolate(self.initial_time, bound[0].times, bound[
                                                                 0].values, -np.inf, -np.inf) / nominal
                             else:
                                 lbx[offset] = bound[0] / nominal
-                        if bound[1] != None:
+                        if bound[1] is not None:
                             if isinstance(bound[1], Timeseries):
                                 ubx[offset] = self.interpolate(self.initial_time, bound[1].times, bound[
                                                                 1].values, +np.inf, +np.inf) / nominal
@@ -1170,13 +1170,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                         pass
                     else:
                         nominal = self.variable_nominal(variable)
-                        if bound[0] != None:
+                        if bound[0] is not None:
                             if isinstance(bound[0], Timeseries):
                                 lbx[offset:offset + n_times] = self.interpolate(
                                     times, bound[0].times, bound[0].values, -np.inf, -np.inf) / nominal
                             else:
                                 lbx[offset:offset + n_times] = bound[0] / nominal
-                        if bound[1] != None:
+                        if bound[1] is not None:
                             if isinstance(bound[1], Timeseries):
                                 ubx[offset:offset + n_times] = self.interpolate(
                                     times, bound[1].times, bound[1].values, +np.inf, +np.inf) / nominal
@@ -1191,9 +1191,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 except KeyError:
                     pass
                 else:
-                    if bound[0] != None:
+                    if bound[0] is not None:
                         lbx[offset + k] = bound[0]
-                    if bound[1] != None:
+                    if bound[1] is not None:
                         ubx[offset + k] = bound[1]
 
             # Initial guess based on provided seeds, defaulting to zero if no
