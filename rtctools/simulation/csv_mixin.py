@@ -6,7 +6,7 @@ import os
 
 import rtctools.data.csv as csv
 
-from simulation_problem import SimulationProblem
+from .simulation_problem import SimulationProblem
 
 logger = logging.getLogger("rtctools")
 
