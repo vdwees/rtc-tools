@@ -56,6 +56,11 @@ class HybridShootingTestProblem(ModelicaMixin, CollocatedIntegratedOptimizationP
         # Do
         pass
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
 
 class TestHybridShooting(TestCase):
 

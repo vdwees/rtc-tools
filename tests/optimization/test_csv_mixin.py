@@ -40,6 +40,11 @@ class TestProblem(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProbl
         # No additional constraints
         return []
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
 
 class TestProblemLookup(CSVLookupTableMixin, TestProblem):
 

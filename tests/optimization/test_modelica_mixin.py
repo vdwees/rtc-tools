@@ -58,6 +58,11 @@ class TestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
         # Do
         pass
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
 
 class TestProblemNonConvex(TestProblem):
 
@@ -164,6 +169,11 @@ class TestProblemAlgebraic(ModelicaMixin, CollocatedIntegratedOptimizationProble
         # Do
         pass
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
 
 class TestProblemMixedInteger(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
@@ -193,6 +203,11 @@ class TestProblemMixedInteger(ModelicaMixin, CollocatedIntegratedOptimizationPro
     def post(self):
         # Do
         pass
+
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
 
 
 class TestModelicaMixin(TestCase):
@@ -238,7 +253,7 @@ class TestModelicaMixin(TestCase):
     def test_multiple_states(self):
         self.assertAlmostEqual(self.results['w'][0], 0.0, self.tolerance)
         self.assertAlmostEqual(self.results['w'][-1], 0.5917, 1e-4)
-        
+
     @expectedFailure
     def test_states_in(self):
         states = list(self.problem.states_in('x', 0.05, 0.95))

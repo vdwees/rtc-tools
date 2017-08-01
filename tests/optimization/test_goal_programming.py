@@ -48,6 +48,11 @@ class TestProblem(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptim
         # Do nothing
         pass
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
 
 class TestGoal1(Goal):
 
@@ -266,6 +271,11 @@ class TestProblemPathGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegr
     def path_goals(self):
         return [PathGoal1(), PathGoal2(), PathGoal3(), PathGoal4(), PathGoal5()]
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
 
 class TestGoalProgrammingPathGoals(TestCase):
 
@@ -438,6 +448,12 @@ class TestProblemPathGoalsSmoothing(GoalProgrammingMixin, ModelicaMixin, Colloca
         return [PathGoal1(), PathGoal2(), PathGoalSmoothing()]
 
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
+
 class TestGoalProgrammingSmoothing(TestCase):
 
     def setUp(self):
@@ -505,6 +521,11 @@ class TestProblemStateGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedInteg
     def set_timeseries(self, timeseries_id, timeseries, ensemble_member, **kwargs):
         # Do nothing
         pass
+
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
 
 
 class TestGoalProgrammingStateGoals(TestCase):

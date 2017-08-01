@@ -76,6 +76,11 @@ class TestProblem(ControlTreeMixin, ModelicaMixin, CollocatedIntegratedOptimizat
         # Do
         pass
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
 
 class TestControlTreeMixin1(TestCase):
     @property
@@ -200,6 +205,11 @@ class TestProblemDijkverruiming(ControlTreeMixin, ModelicaMixin, CollocatedInteg
         # Do
         pass
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
 
 class TestDijkverruiming(TestCase):
     def setUp(self):
@@ -220,7 +230,7 @@ class TestDijkverruiming(TestCase):
         self.assertTrue(repr(v[0][1]) != repr(v[5][1]))
         for ensemble_member in range(5, 12):
             self.assertTrue(repr(v[5][1]) == repr(v[ensemble_member][1]))
-        
+
         # t = 0.5
         for ensemble_member in range(0, 2):
             self.assertTrue(repr(v[0][2]) == repr(v[ensemble_member][2]))
