@@ -1255,9 +1255,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             # elimination.
             f = Function('f', [self.solver_input], [
                            vertcat(*self.integrators_mx)])
-            f.setInput(X[0:])
-            f.evaluate()
-            integrators_output = f.getOutput()
+            integrators_output = f(X)
             j = 0
             for variable in self.integrated_states:
                 n = self.integrators[variable].size1()
