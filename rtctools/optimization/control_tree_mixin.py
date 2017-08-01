@@ -154,7 +154,7 @@ class ControlTreeMixin(OptimizationProblem):
                 branch(current_branch + str(i))
 
         current_branch = ''
-        branches[current_branch] = range(self.ensemble_size)
+        branches[current_branch] = list(range(self.ensemble_size))
         branch(current_branch)
 
         logger.debug("ControlTreeMixin:  Control tree is:")
@@ -176,7 +176,7 @@ class ControlTreeMixin(OptimizationProblem):
                 nnz = np.count_nonzero(els)
                 for member in members:
                     self._control_indices[control_input][
-                        member, els] = range(count, count + nnz)
+                        member, els] = list(range(count, count + nnz))
                 count += nnz
 
         # Construct bounds and initial guess

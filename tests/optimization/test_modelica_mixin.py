@@ -293,7 +293,7 @@ class TestModelicaMixin(TestCase):
         integral = self.problem.integral('x', 0.05, 0.95)
         knots = self.problem.times()[1:-1]
         verify = MX(0.0)
-        for i in xrange(len(knots) - 1):
+        for i in range(len(knots) - 1):
             verify += 0.5 * (self.problem.state_at('x', knots[i]) + self.problem.state_at(
                 'x', knots[i + 1])) * (knots[i + 1] - knots[i])
         self.assertEqual(repr(integral), repr(verify))
@@ -304,7 +304,7 @@ class TestModelicaMixin(TestCase):
         knots.extend(self.problem.times()[2:-1])
         knots.append(0.951)
         verify = MX(0.0)
-        for i in xrange(len(knots) - 1):
+        for i in range(len(knots) - 1):
             verify += 0.5 * (self.problem.state_at('x', knots[i]) + self.problem.state_at(
                 'x', knots[i + 1])) * (knots[i + 1] - knots[i])
         self.assertEqual(repr(integral), repr(verify))
@@ -312,7 +312,7 @@ class TestModelicaMixin(TestCase):
         integral = self.problem.integral('x', 0.0, 0.951)
         knots = list(self.problem.times()[0:-1]) + [0.951]
         verify = MX(0.0)
-        for i in xrange(len(knots) - 1):
+        for i in range(len(knots) - 1):
             verify += 0.5 * (self.problem.state_at('x', knots[i]) + self.problem.state_at(
                 'x', knots[i + 1])) * (knots[i + 1] - knots[i])
         self.assertEqual(repr(integral), repr(verify))
