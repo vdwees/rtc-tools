@@ -215,7 +215,7 @@ class ModelicaMixin(OptimizationProblem):
                     times, np.full_like(times, v.value))
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("Read constant input {} = {} from Modelica model".format(
-                        sym.name(), sym.value))
+                        v.symbol.name(), v.value))
 
         return constant_inputs
 
