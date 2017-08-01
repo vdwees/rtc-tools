@@ -24,7 +24,7 @@ class HomotopyMixin(OptimizationProblem):
     """
 
     def seed(self, ensemble_member):
-        seed = super(HomotopyMixin, self).seed(ensemble_member)
+        seed = super().seed(ensemble_member)
         if self._theta > 0:
             # Add previous results to seed
             # Do not override any previously seeded values, such as goal programming results.
@@ -37,7 +37,7 @@ class HomotopyMixin(OptimizationProblem):
         return seed
 
     def parameters(self, ensemble_member):
-        parameters = super(HomotopyMixin, self).parameters(ensemble_member)
+        parameters = super().parameters(ensemble_member)
 
         options = self.homotopy_options()
         parameters[options['homotopy_parameter']] = self._theta
@@ -87,7 +87,7 @@ class HomotopyMixin(OptimizationProblem):
         while self._theta <= 1.0:
             logger.info("Solving with homotopy parameter theta = {}.".format(self._theta))
 
-            success = super(HomotopyMixin, self).optimize(preprocessing=False, postprocessing=False, log_solver_failure_as_error=False)
+            success = super().optimize(preprocessing=False, postprocessing=False, log_solver_failure_as_error=False)
             if success:
                 self._results = [self.extract_results(ensemble_member) for ensemble_member in range(self.ensemble_size)]
 

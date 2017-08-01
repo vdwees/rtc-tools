@@ -19,7 +19,7 @@ logger.setLevel(logging.DEBUG)
 class TestProblem(ControlTreeMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self, branching_times):
-        super(TestProblem, self).__init__(
+        super().__init__(
             model_name='TestModelWithInitial', model_folder=data_path())
         self._branching_times = branching_times
 
@@ -130,7 +130,7 @@ class TestControlTreeMixin5(TestControlTreeMixin1):
 class TestProblemDijkverruiming(ControlTreeMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
-        super(TestProblemDijkverruiming, self).__init__(
+        super().__init__(
             model_name='TestModelWithInitial', model_folder=data_path())
 
     def times(self, variable=None):

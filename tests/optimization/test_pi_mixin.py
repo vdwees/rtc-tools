@@ -20,7 +20,7 @@ class TestProblem(PIMixin, ModelicaMixin, CollocatedIntegratedOptimizationProble
     pi_validate_timeseries = False
 
     def __init__(self):
-        super(TestProblem, self).__init__(input_folder=data_path(), output_folder=data_path(
+        super().__init__(input_folder=data_path(), output_folder=data_path(
         ), model_name='TestModel', model_folder=data_path())
 
     def delayed_feedback(self):

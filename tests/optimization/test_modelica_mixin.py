@@ -20,7 +20,7 @@ logger.setLevel(logging.DEBUG)
 class TestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
-        super(TestProblem, self).__init__(input_folder=data_path(), output_folder=data_path(
+        super().__init__(input_folder=data_path(), output_folder=data_path(
         ), model_name='TestModelWithInitial', model_folder=data_path())
 
     def times(self, variable=None):
@@ -67,7 +67,7 @@ class TestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 class TestProblemNonConvex(TestProblem):
 
     def __init__(self, u_seed):
-        super(TestProblemNonConvex, self).__init__()
+        super().__init__()
 
         self.u_seed = u_seed
 
@@ -139,7 +139,7 @@ class TestProblemEnsemble(TestProblem):
 class TestProblemAlgebraic(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
-        super(TestProblemAlgebraic, self).__init__(input_folder=data_path(
+        super().__init__(input_folder=data_path(
         ), output_folder=data_path(), model_name='TestModelAlgebraic', model_folder=data_path())
 
     def times(self, variable=None):
@@ -178,7 +178,7 @@ class TestProblemAlgebraic(ModelicaMixin, CollocatedIntegratedOptimizationProble
 class TestProblemMixedInteger(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
-        super(TestProblemMixedInteger, self).__init__(input_folder=data_path(
+        super().__init__(input_folder=data_path(
         ), output_folder=data_path(), model_name='TestModelMixedInteger', model_folder=data_path())
 
     def times(self, variable=None):

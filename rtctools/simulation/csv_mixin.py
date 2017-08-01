@@ -43,11 +43,11 @@ class CSVMixin(SimulationProblem):
         self._output_folder = kwargs['output_folder']
 
         # Call parent class first for default behaviour.
-        super(CSVMixin, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def pre(self):
         # Call parent class first for default behaviour.
-        super(CSVMixin, self).pre()
+        super().pre()
 
         # Helper function to check if initiale state array actually defines
         # only the initial state
@@ -144,7 +144,7 @@ class CSVMixin(SimulationProblem):
         self._output = {variable : np.full(n_times, np.nan) for variable in self._output_variables}
 
         # Call super, which will also initialize the model itself
-        super(CSVMixin, self).initialize(config_file)
+        super().initialize(config_file)
 
         # Extract consistent t0 values
         for variable in self._output_variables:
@@ -156,7 +156,7 @@ class CSVMixin(SimulationProblem):
             dt = self._dt
 
         # Current time stamp
-        t = self.get_current_time()   
+        t = self.get_current_time()
 
         # Get current time index
         t_idx = bisect.bisect_left(self._timeseries_times_sec, t + dt)
@@ -169,7 +169,7 @@ class CSVMixin(SimulationProblem):
                     self.set_var(variable, value)
 
         # Call super
-        super(CSVMixin, self).update(dt)
+        super().update(dt)
 
         # Extract results
         for variable in self._output_variables:
@@ -177,7 +177,7 @@ class CSVMixin(SimulationProblem):
 
     def post(self):
         # Call parent class first for default behaviour.
-        super(CSVMixin, self).post()
+        super().post()
 
          # Write output
         names = ['time'] + sorted(set(self._output.keys()))

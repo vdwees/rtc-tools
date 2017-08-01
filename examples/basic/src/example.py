@@ -17,7 +17,7 @@ class Example(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def path_constraints(self, ensemble_member):
         # Call super() class to not overwrite default behaviour
-        constraints = super(Example, self).path_constraints(ensemble_member)
+        constraints = super().path_constraints(ensemble_member)
         # Constrain the volume of storage between 380000 and 420000 m^3
         constraints.append((self.state('storage.V'), 380000, 420000))
         return constraints

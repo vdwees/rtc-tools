@@ -17,7 +17,7 @@ logger = logging.getLogger("rtctools")
 class HybridShootingTestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self, integrated_states):
-        super(HybridShootingTestProblem, self).__init__(input_folder=data_path(
+        super().__init__(input_folder=data_path(
         ), output_folder=data_path(), model_name='HybridShootingTestModel', model_folder=data_path())
 
         self._integrated_states = integrated_states

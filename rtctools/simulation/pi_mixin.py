@@ -53,11 +53,11 @@ class PIMixin(SimulationProblem):
         self._data_config = rtc.DataConfig(self._input_folder)
 
         # Call parent class first for default behaviour.
-        super(PIMixin, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def pre(self):
         # Call parent class first for default behaviour.
-        super(PIMixin, self).pre()
+        super().pre()
 
         # rtcParameterConfig
         self._parameter_config = []
@@ -142,7 +142,7 @@ class PIMixin(SimulationProblem):
         self._output = {variable : np.full(n_times, np.nan) for variable in self._output_variables}
 
         # Call super, which will also initialize the model itself
-        super(PIMixin, self).initialize(config_file)
+        super().initialize(config_file)
 
         # Extract consistent t0 values
         for variable in self._output_variables:
@@ -167,7 +167,7 @@ class PIMixin(SimulationProblem):
                     self.set_var(variable, value)
 
         # Call super
-        super(PIMixin, self).update(dt)
+        super().update(dt)
 
         # Extract results
         for variable in self._output_variables:
@@ -175,7 +175,7 @@ class PIMixin(SimulationProblem):
 
     def post(self):
         # Call parent class first for default behaviour.
-        super(PIMixin, self).post()
+        super().post()
 
         # Start of write output
         # Write the time range for the export file.

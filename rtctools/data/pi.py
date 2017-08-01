@@ -143,7 +143,7 @@ class DiagHandler(logging.Handler):
 
     def close(self):
         self.flush()
-        super(DiagHandler, self).close()
+        super().close()
 
 
 class ParameterConfig:

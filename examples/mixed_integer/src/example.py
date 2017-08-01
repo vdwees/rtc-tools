@@ -24,7 +24,7 @@ class Example(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
     # Timeseries rather than a single number.
     def path_constraints(self, ensemble_member):
         # Call super to get default constraints
-        constraints = super(Example, self).path_constraints(ensemble_member)
+        constraints = super().path_constraints(ensemble_member)
         # M is a handy big number
         M = 1e10
 
@@ -54,7 +54,7 @@ class Example(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     # Any solver options can be set here
     def solver_options(self):
-        options = super(Example, self).solver_options()
+        options = super().solver_options()
         # Restrict solver output
         options['print_level'] = 1
         return options
