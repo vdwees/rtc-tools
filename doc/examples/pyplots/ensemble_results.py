@@ -25,11 +25,11 @@ shades = [0.5, 0.8]
 f.autofmt_xdate()
 
 # Upper Subplot
-axarr[0].set_ylabel(u'Water Volume in Storage [m\u00B3]')
+axarr[0].set_ylabel('Water Volume in Storage [m\u00B3]')
 axarr[0].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 
 # Lower Subplot
-axarr[1].set_ylabel(u'Flow Rate [m\u00B3/s]')
+axarr[1].set_ylabel('Flow Rate [m\u00B3/s]')
 
 # Plot Ensemble Members
 for idx, forecast in enumerate(forecast_names):
