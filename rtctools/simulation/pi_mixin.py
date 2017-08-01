@@ -130,7 +130,7 @@ class PIMixin(SimulationProblem):
         logger.debug("Model inputs are {}".format(self._input_variables))
 
         # Set initial input values
-        for variable, timeseries in self._timeseries_import.iteritems():
+        for variable, timeseries in self._timeseries_import.items():
             if variable in self._input_variables:
                 value = timeseries[self._timeseries_import._forecast_index]
                 if np.isfinite(value):
@@ -160,7 +160,7 @@ class PIMixin(SimulationProblem):
         t_idx = bisect.bisect_left(self._timeseries_import_times, t + dt)
 
         # Set input values
-        for variable, timeseries in self._timeseries_import.iteritems():
+        for variable, timeseries in self._timeseries_import.items():
             if variable in self._input_variables:
                 value = timeseries[t_idx]
                 if np.isfinite(value):
@@ -199,7 +199,7 @@ class PIMixin(SimulationProblem):
 
         # For all variables that are output variables the values are
         # extracted from the results.
-        for key, values in self._output.iteritems():
+        for key, values in self._output.items():
             # Check if ID mapping is present
             try:
                 location_parameter_id = self._timeseries_export._data_config.pi_variable_ids(key)

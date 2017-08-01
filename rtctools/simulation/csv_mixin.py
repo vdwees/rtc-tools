@@ -111,7 +111,7 @@ class CSVMixin(SimulationProblem):
 
         logger.debug("Model parameters are {}".format(self._parameter_variables))
 
-        for parameter, value in self._parameters.iteritems():
+        for parameter, value in self._parameters.items():
             if parameter in self._parameter_variables:
                 logger.debug("Setting parameter {} = {}".format(parameter, value))
 
@@ -121,7 +121,7 @@ class CSVMixin(SimulationProblem):
         self._input_variables = set(self.get_input_variables().keys())
 
         # Set initial states
-        for variable, value in self._initial_state.iteritems():
+        for variable, value in self._initial_state.items():
             if variable in self._input_variables:
                 if variable in self._timeseries:
                     logger.warning("Entry {} in initial_state.csv was also found in timeseries_import.csv.".format(variable))
@@ -132,7 +132,7 @@ class CSVMixin(SimulationProblem):
         logger.debug("Model inputs are {}".format(self._input_variables))
 
         # Set initial input values
-        for variable, timeseries in self._timeseries.iteritems():
+        for variable, timeseries in self._timeseries.items():
             if variable in self._input_variables:
                 value = timeseries[0]
                 if np.isfinite(value):
@@ -162,7 +162,7 @@ class CSVMixin(SimulationProblem):
         t_idx = bisect.bisect_left(self._timeseries_times_sec, t + dt)
 
         # Set input values
-        for variable, timeseries in self._timeseries.iteritems():
+        for variable, timeseries in self._timeseries.items():
             if variable in self._input_variables:
                 value = timeseries[t_idx]
                 if np.isfinite(value):
@@ -185,7 +185,7 @@ class CSVMixin(SimulationProblem):
         dtype = dict(names=names, formats=formats)
         data = np.zeros(len(self._timeseries_times), dtype=dtype)
         data['time'] = self._timeseries_times
-        for variable, values in self._output.iteritems():
+        for variable, values in self._output.items():
             data[variable] = values
 
         fname = os.path.join(self._output_folder, 'timeseries_export.csv')
