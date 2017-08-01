@@ -5,14 +5,14 @@ import re
 import numpy as np
 import collections
 
-from data_path import data_path
+from .data_path import data_path
 from test_case import TestCase
 
 import pyfmi
 
 class SimulationTestProblem(SimulationProblem):
     def __init__(self):
-        super(SimulationTestProblem, self).__init__(input_folder=data_path(), output_folder=data_path(
+        super().__init__(input_folder=data_path(), output_folder=data_path(
         ), model_name='TestModel', model_folder=data_path())
 
 class TestSimulation(TestCase):
@@ -64,14 +64,14 @@ class TestSimulation(TestCase):
             idx += 1
 
         varname = self.problem.get_var_name(idx)
-        self.assertEqual(varname,'switched')
+        self.assertEqual(varname, 'switched')
 
     def test_get_time(self):
         # test methods for get_time
         start = 0.0
         stop = 10.0
         dt = 1.0
-        self.problem.setup_experiment(start,stop, dt)
+        self.problem.setup_experiment(start, stop, dt)
         self.problem.initialize()
         val = self.problem.get_start_time()
         self.assertAlmostEqual(self.problem.get_start_time(), start, 1e-6)
@@ -88,7 +88,7 @@ class TestSimulation(TestCase):
         start = 0.0
         stop = 10.0
         dt = 1.0
-        self.problem.setup_experiment(start,stop, dt)
+        self.problem.setup_experiment(start, stop, dt)
         self.problem.initialize()
         curtime = self.problem.get_current_time()
         while curtime < stop:

@@ -24,7 +24,7 @@ class TestProblem(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProbl
         kwargs['input_folder'] = data_path()
         kwargs['output_folder'] = data_path()
         kwargs['model_folder'] = data_path()
-        super(TestProblem, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def delayed_feedback(self):
         # Delayed feedback
@@ -40,11 +40,16 @@ class TestProblem(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProbl
         # No additional constraints
         return []
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
 
 class TestProblemLookup(CSVLookupTableMixin, TestProblem):
 
     def __init__(self):
-        super(TestProblemLookup, self).__init__(input_folder=data_path(), output_folder=data_path(
+        super().__init__(input_folder=data_path(), output_folder=data_path(
         ), model_name='TestModel', model_folder=data_path(), lookup_tables=['constant_input'])
 
 
@@ -53,7 +58,7 @@ class TestProblemEnsemble(TestProblem):
     csv_ensemble_mode = True
 
     def __init__(self):
-        super(TestProblemEnsemble, self).__init__(input_folder=data_path(), output_folder=data_path(
+        super().__init__(input_folder=data_path(), output_folder=data_path(
         ), model_name='TestModel', model_folder=data_path(), lookup_tables=[])
 
 

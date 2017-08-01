@@ -57,11 +57,11 @@ class CSVMixin(OptimizationProblem):
         self._output_timeseries = set()
 
         # Call parent class first for default behaviour.
-        super(CSVMixin, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def pre(self):
         # Call parent class first for default behaviour.
-        super(CSVMixin, self).pre()
+        super().pre()
 
         # Helper function to check if initiale state array actually defines
         # only the initial state
@@ -180,7 +180,7 @@ class CSVMixin(OptimizationProblem):
     @cached
     def parameters(self, ensemble_member):
         # Call parent class first for default values.
-        parameters = super(CSVMixin, self).parameters(ensemble_member)
+        parameters = super().parameters(ensemble_member)
 
         # Load parameters from parameter config
         for parameter in self.dae_variables['parameters']:
@@ -217,7 +217,7 @@ class CSVMixin(OptimizationProblem):
     @cached
     def bounds(self):
         # Call parent class first for default values.
-        bounds = super(CSVMixin, self).bounds()
+        bounds = super().bounds()
 
         # Load bounds from timeseries
         for variable in self.dae_variables['free_variables']:
@@ -244,15 +244,15 @@ class CSVMixin(OptimizationProblem):
                     logger.debug("CSVMixin: Read upper bound for variable {}".format(variable))
 
             # Replace NaN with +/- inf, and create Timeseries objects
-            if m != None:
+            if m is not None:
                 m[np.isnan(m)] = np.finfo(m.dtype).min
                 m = Timeseries(self._timeseries_times_sec, m)
-            if M != None:
+            if M is not None:
                 M[np.isnan(M)] = np.finfo(M.dtype).max
                 M = Timeseries(self._timeseries_times_sec, M)
 
             # Store
-            if m != None or M != None:
+            if m is not None or M is not None:
                 bounds[variable] = (m, M)
         return bounds
 
@@ -263,7 +263,7 @@ class CSVMixin(OptimizationProblem):
     @cached
     def initial_state(self, ensemble_member):
         # Call parent class first for default values.
-        initial_state = super(CSVMixin, self).initial_state(ensemble_member)
+        initial_state = super().initial_state(ensemble_member)
 
         # Load parameters from parameter config
         for variable in self.dae_variables['free_variables']:
@@ -280,7 +280,7 @@ class CSVMixin(OptimizationProblem):
     @cached
     def seed(self, ensemble_member):
         # Call parent class first for default values.
-        seed = super(CSVMixin, self).seed(ensemble_member)
+        seed = super().seed(ensemble_member)
 
         # Load seed values from CSV
         for variable in self.dae_variables['free_variables']:
@@ -299,7 +299,7 @@ class CSVMixin(OptimizationProblem):
 
     def post(self):
         # Call parent class first for default behaviour.
-        super(CSVMixin, self).post()
+        super().post()
 
         # Write output
         times = self.times()
@@ -378,7 +378,7 @@ class CSVMixin(OptimizationProblem):
 
     @property
     def output_variables(self):
-        variables = super(CSVMixin, self).output_variables
+        variables = super().output_variables
         variables.extend([MX.sym(variable)
                           for variable in self._output_timeseries])
         return variables

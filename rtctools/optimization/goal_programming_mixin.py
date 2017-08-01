@@ -281,7 +281,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
 
     def __init__(self, **kwargs):
         # Call parent class first for default behaviour.
-        super(GoalProgrammingMixin, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # Initialize empty lists, so that the overridden methods may be called outside of the goal programming loop,
         # for example in pre().
@@ -301,7 +301,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         return self._subproblem_path_epsilons + [variable for (variable, value) in self._subproblem_path_timeseries]
 
     def bounds(self):
-        bounds = super(GoalProgrammingMixin, self).bounds()
+        bounds = super().bounds()
         for epsilon in self._subproblem_epsilons + self._subproblem_path_epsilons:
             bounds[epsilon.name()] = (0.0, 1.0)
         for (variable, value) in self._subproblem_path_timeseries:
@@ -312,7 +312,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
 
     def seed(self, ensemble_member):
         if self._first_run:
-            seed = super(GoalProgrammingMixin, self).seed(ensemble_member)
+            seed = super().seed(ensemble_member)
         else:
             # Seed with previous results
             seed = AliasDict(self.alias_relation)
@@ -348,20 +348,20 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
             return MX(0)
 
     def constraints(self, ensemble_member):
-        constraints = super(GoalProgrammingMixin, self).constraints(ensemble_member)
+        constraints = super().constraints(ensemble_member)
         for l in self._subproblem_constraints[ensemble_member].values():
             constraints.extend(((constraint.function(self), constraint.min, constraint.max) for constraint in l))
         return constraints
 
     def path_constraints(self, ensemble_member):
-        path_constraints = super(GoalProgrammingMixin, self).path_constraints(ensemble_member)
+        path_constraints = super().path_constraints(ensemble_member)
         for l in self._subproblem_path_constraints[ensemble_member].values():
             path_constraints.extend(((constraint.function(self), constraint.min, constraint.max) for constraint in l))
         return path_constraints
 
     def solver_options(self):
         # Call parent
-        options = super(GoalProgrammingMixin, self).solver_options()
+        options = super().solver_options()
 
         # Make sure constant states, such as min/max timeseries for violation variables,
         # are turned into parameters for the final optimization problem.
@@ -805,7 +805,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                             goal, epsilon, ensemble_member, options, min_series, max_series)
 
             # Solve subproblem
-            success = super(GoalProgrammingMixin, self).optimize(
+            success = super().optimize(
                 preprocessing=False, postprocessing=False, log_solver_failure_as_error=log_solver_failure_as_error)
             if not success:
                 break
@@ -937,4 +937,4 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
 
         # If self._results is not up to date, do the super().extract_results
         # method
-        return super(GoalProgrammingMixin, self).extract_results(ensemble_member)
+        return super().extract_results(ensemble_member)

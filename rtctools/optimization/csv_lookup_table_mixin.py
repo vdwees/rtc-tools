@@ -66,11 +66,11 @@ class CSVLookupTableMixin(OptimizationProblem):
             self._lookup_table_folder = kwargs['lookup_table_folder']
 
         # Call parent
-        super(CSVLookupTableMixin, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def pre(self):
         # Call parent class first for default behaviour.
-        super(CSVLookupTableMixin, self).pre()
+        super().pre()
 
         # Get curve fitting options from curvefit_options.ini file
         ini_path = os.path.join(

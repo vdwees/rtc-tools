@@ -20,7 +20,7 @@ logger.setLevel(logging.WARNING)
 class TestProblem(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
-        super(TestProblem, self).__init__(input_folder=data_path(), output_folder=data_path(
+        super().__init__(input_folder=data_path(), output_folder=data_path(
         ), model_name='TestModelWithInitial', model_folder=data_path())
 
     def times(self, variable=None):
@@ -37,7 +37,7 @@ class TestProblem(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptim
         return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
 
     def bounds(self):
-        bounds = super(TestProblem, self).bounds()
+        bounds = super().bounds()
         bounds['u'] = (-2.0, 2.0)
         return bounds
 
@@ -47,6 +47,11 @@ class TestProblem(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptim
     def set_timeseries(self, timeseries_id, timeseries, ensemble_member, **kwargs):
         # Do nothing
         pass
+
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
 
 
 class TestGoal1(Goal):
@@ -242,7 +247,7 @@ class PathGoal5(Goal):
 class TestProblemPathGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
-        super(TestProblemPathGoals, self).__init__(input_folder=data_path(
+        super().__init__(input_folder=data_path(
         ), output_folder=data_path(), model_name='TestModelWithInitial', model_folder=data_path())
 
     def times(self, variable=None):
@@ -259,12 +264,17 @@ class TestProblemPathGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegr
         return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
 
     def bounds(self):
-        bounds = super(TestProblemPathGoals, self).bounds()
+        bounds = super().bounds()
         bounds['u'] = (-2.0, 2.0)
         return bounds
 
     def path_goals(self):
         return [PathGoal1(), PathGoal2(), PathGoal3(), PathGoal4(), PathGoal5()]
+
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
 
 
 class TestGoalProgrammingPathGoals(TestCase):
@@ -413,7 +423,7 @@ class PathGoalSmoothing(Goal):
 class TestProblemPathGoalsSmoothing(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
-        super(TestProblemPathGoalsSmoothing, self).__init__(input_folder=data_path(
+        super().__init__(input_folder=data_path(
         ), output_folder=data_path(), model_name='TestModelWithInitial', model_folder=data_path())
 
     def times(self, variable=None):
@@ -430,12 +440,18 @@ class TestProblemPathGoalsSmoothing(GoalProgrammingMixin, ModelicaMixin, Colloca
         return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
 
     def bounds(self):
-        bounds = super(TestProblemPathGoalsSmoothing, self).bounds()
+        bounds = super().bounds()
         bounds['u'] = (-2.0, 2.0)
         return bounds
 
     def path_goals(self):
         return [PathGoal1(), PathGoal2(), PathGoalSmoothing()]
+
+
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
 
 
 class TestGoalProgrammingSmoothing(TestCase):
@@ -477,7 +493,7 @@ class StateGoal3(StateGoal):
 class TestProblemStateGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
-        super(TestProblemStateGoals, self).__init__(input_folder=data_path(
+        super().__init__(input_folder=data_path(
         ), output_folder=data_path(), model_name='TestModelWithInitial', model_folder=data_path())
 
     def times(self, variable=None):
@@ -494,7 +510,7 @@ class TestProblemStateGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedInteg
         return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
 
     def bounds(self):
-        bounds = super(TestProblemStateGoals, self).bounds()
+        bounds = super().bounds()
         bounds['u'] = (-2.0, 2.0)
         bounds['x'] = (-10, 10)
         return bounds
@@ -505,6 +521,11 @@ class TestProblemStateGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedInteg
     def set_timeseries(self, timeseries_id, timeseries, ensemble_member, **kwargs):
         # Do nothing
         pass
+
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
 
 
 class TestGoalProgrammingStateGoals(TestCase):

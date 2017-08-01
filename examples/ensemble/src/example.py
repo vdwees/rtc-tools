@@ -13,7 +13,7 @@ import numpy as np
 class WaterVolumeRangeGoal(StateGoal):
     def __init__(self, optimization_problem):
         # Call super class first, and pass in the optimization problem
-        super(WaterVolumeRangeGoal, self).__init__(optimization_problem)
+        super().__init__(optimization_problem)
         # Assign V_min and V_max the the target range
         self.target_min = optimization_problem.get_timeseries('V_min')
         self.target_max = optimization_problem.get_timeseries('V_max')
@@ -41,7 +41,7 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
 
     def pre(self):
         # Do the standard preprocessing
-        super(Example, self).pre()
+        super().pre()
 
         # Create a dict of empty lists for storing intermediate results from
         # each ensemble
@@ -82,7 +82,7 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
     def control_tree_options(self):
         # We want to modify the control tree options, so we override the default
         # control_tree_options method. We call super() to get the default options
-        options = super(Example, self).control_tree_options()
+        options = super().control_tree_options()
         # Change the branching_times list to only contain the fifth timestep
         options['branching_times'] = [self.times()[5]]
         return options
@@ -111,7 +111,7 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
                                                    q_release_integral))
 
     def post(self):
-        super(Example, self).post()
+        super().post()
         for e_m in range(self.ensemble_size):
             print('\n\nResults for Ensemble Member {}:'.format(e_m))
             for priority, n_level_satisfied, q_release_integral in \
@@ -123,7 +123,7 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
 
     # Any solver options can be set here
     def solver_options(self):
-        options = super(Example, self).solver_options()
+        options = super().solver_options()
         # When mumps_scaling is not zero, errors occur. RTC-Tools does its own
         # scaling, so mumps scaling is not critical. Proprietary HSL solvers
         # do not exhibit this error.

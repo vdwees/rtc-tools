@@ -62,11 +62,11 @@ class PIMixin(OptimizationProblem):
         self._output_timeseries = set()
 
         # Call parent class first for default behaviour.
-        super(PIMixin, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def pre(self):
         # Call parent class first for default behaviour.
-        super(PIMixin, self).pre()
+        super().pre()
 
         # rtcParameterConfig
         self._parameter_config = []
@@ -132,14 +132,14 @@ class PIMixin(OptimizationProblem):
 
     @property
     def equidistant(self):
-        if self._timeseries_import._dt != None:
+        if self._timeseries_import._dt is not None:
             return True
         else:
             return False
 
     def solver_options(self):
         # Call parent
-        options = super(PIMixin, self).solver_options()
+        options = super().solver_options()
 
         # Only do this if we have a rtcParameterConfig_Numerical
         if self._parameter_config_numerical is None:
@@ -155,7 +155,7 @@ class PIMixin(OptimizationProblem):
     @cached
     def parameters(self, ensemble_member):
         # Call parent class first for default values.
-        parameters = super(PIMixin, self).parameters(ensemble_member)
+        parameters = super().parameters(ensemble_member)
 
         # Load parameters from parameter config
         for parameter_config in self._parameter_config:
@@ -177,7 +177,7 @@ class PIMixin(OptimizationProblem):
     @cached
     def constant_inputs(self, ensemble_member):
         # Call parent class first for default values.
-        constant_inputs = super(PIMixin, self).constant_inputs(ensemble_member)
+        constant_inputs = super().constant_inputs(ensemble_member)
 
         # Load bounds from timeseries
         for variable in self.dae_variables['constant_inputs']:
@@ -198,7 +198,7 @@ class PIMixin(OptimizationProblem):
     @cached
     def bounds(self):
         # Call parent class first for default values.
-        bounds = super(PIMixin, self).bounds()
+        bounds = super().bounds()
 
         # Load bounds from timeseries
         for variable in self.dae_variables['free_variables']:
@@ -227,17 +227,17 @@ class PIMixin(OptimizationProblem):
                     logger.debug("Read upper bound for variable {}".format(variable))
 
             # Replace NaN with +/- inf, and create Timeseries objects
-            if m != None:
+            if m is not None:
                 m[np.isnan(m)] = np.finfo(m.dtype).min
                 m = Timeseries(self._timeseries_import_times[
                                self._timeseries_import.forecast_index:], m)
-            if M != None:
+            if M is not None:
                 M[np.isnan(M)] = np.finfo(M.dtype).max
                 M = Timeseries(self._timeseries_import_times[
                                self._timeseries_import.forecast_index:], M)
 
             # Store
-            if m != None or M != None:
+            if m is not None or M is not None:
                 bounds[variable] = (m, M)
         return bounds
 
@@ -269,7 +269,7 @@ class PIMixin(OptimizationProblem):
     @cached
     def seed(self, ensemble_member):
         # Call parent class first for default values.
-        seed = super(PIMixin, self).seed(ensemble_member)
+        seed = super().seed(ensemble_member)
 
         # Load seeds
         for variable in self.dae_variables['free_variables']:
@@ -288,7 +288,7 @@ class PIMixin(OptimizationProblem):
 
     def post(self):
         # Call parent class first for default behaviour.
-        super(PIMixin, self).post()
+        super().post()
 
         # Start of write output
         # Write the time range for the export file.
@@ -430,7 +430,7 @@ class PIMixin(OptimizationProblem):
 
     @property
     def output_variables(self):
-        variables = super(PIMixin, self).output_variables
+        variables = super().output_variables
         variables.extend([MX.sym(variable)
                           for variable in self._output_timeseries])
         return variables

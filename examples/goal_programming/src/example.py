@@ -67,7 +67,7 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
         # We want to add a few hard constraints to our problem. The goal
         # programming mixin however also generates constraints (and objectives)
         # from on our goals, so we have to call super() here.
-        constraints = super(Example, self).path_constraints(ensemble_member)
+        constraints = super().path_constraints(ensemble_member)
 
         # Release through orifice downhill only. This constraint enforces the
         # fact that water only flows downhill
@@ -108,7 +108,7 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
 
     def pre(self):
         # Call super() class to not overwrite default behaviour
-        super(Example, self).pre()
+        super().pre()
         # We keep track of our intermediate results, so that we can print some
         # information about the progress of goals at the end of our run.
         self.intermediate_results = []
@@ -134,7 +134,7 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
 
     def post(self):
         # Call super() class to not overwrite default behaviour
-        super(Example, self).post()
+        super().post()
         for priority, n_level_satisfied, q_pump_integral, q_pump_sum_changes \
                 in self.intermediate_results:
             print('\nAfter finishing goals of priority {}:'.format(priority))
@@ -145,7 +145,7 @@ class Example(GoalProgrammingMixin, CSVMixin, ModelicaMixin,
 
     # Any solver options can be set here
     def solver_options(self):
-        options = super(Example, self).solver_options()
+        options = super().solver_options()
         options['print_level'] = 1
         return options
 

@@ -108,7 +108,7 @@ class ModelicaMixin(OptimizationProblem):
         self._nominals = {}
         self._discrete = {}
         for v in itertools.chain(self._pymola_model.states, self._pymola_model.alg_states, self._pymola_model.inputs):
-            sym_name = v.symbol.name()  
+            sym_name = v.symbol.name()
             if v.nominal != 0 and v.nominal != 1:
                 self._nominals[sym_name] = abs(float(v.nominal))
 
@@ -131,7 +131,7 @@ class ModelicaMixin(OptimizationProblem):
             self._initial_residual = MX()
 
         # Call parent class first for default behaviour.
-        super(ModelicaMixin, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     @cached
     def compiler_options(self):
@@ -173,7 +173,7 @@ class ModelicaMixin(OptimizationProblem):
         return compiler_options
 
     def delayed_feedback(self):
-        delayed_feedback = super(ModelicaMixin, self).delayed_feedback()
+        delayed_feedback = super().delayed_feedback()
         delayed_feedback.extend([(dfb.origin, dfb.name, dfb.delay) for dfb in self._pymola_model.delayed_states])
         return delayed_feedback
 
@@ -192,7 +192,7 @@ class ModelicaMixin(OptimizationProblem):
     @cached
     def parameters(self, ensemble_member):
         # Call parent class first for default values.
-        parameters = super(ModelicaMixin, self).parameters(ensemble_member)
+        parameters = super().parameters(ensemble_member)
 
         # Return parameter values from pymola model
         for v in self._pymola_model.parameters:
@@ -204,7 +204,7 @@ class ModelicaMixin(OptimizationProblem):
     @cached
     def constant_inputs(self, ensemble_member):
         # Call parent class first for default values.
-        constant_inputs = super(ModelicaMixin, self).constant_inputs(ensemble_member)
+        constant_inputs = super().constant_inputs(ensemble_member)
 
         # Return input values from pymola model
         times = self.times()
@@ -215,7 +215,7 @@ class ModelicaMixin(OptimizationProblem):
                     times, np.full_like(times, v.value))
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("Read constant input {} = {} from Modelica model".format(
-                        sym.name(), sym.value))
+                        v.symbol.name(), v.value))
 
         return constant_inputs
 
@@ -248,7 +248,7 @@ class ModelicaMixin(OptimizationProblem):
     @cached
     def bounds(self):
         # Call parent class first for default values.
-        bounds = super(ModelicaMixin, self).bounds()
+        bounds = super().bounds()
 
         # Parameter values
         parameters = self.parameters(0)

@@ -136,7 +136,7 @@ We turn on ensemble mode by setting ``csv_ensemble_mode = True``:
 
 The method ``pre()`` is already defined in RTC-Tools, but we would like to add
 a line to it to create a variable for storing intermediate results. To do
-this, we declare a new ``pre()`` method, call ``super(Example, self).pre()``
+this, we declare a new ``pre()`` method, call ``super().pre()``
 to ensure that the original method runs unmodified, and add in a variable
 declaration to store our list of intermediate results. This variable is a
 dict, reflecting the need to store results from multiple ensemble.

@@ -16,7 +16,7 @@ class WaterVolumeRangeGoal(StateGoal):
     # this goal.
     def __init__(self, optimization_problem):
         # Call super class first, and pass in the optimization problem
-        super(WaterVolumeRangeGoal, self).__init__(optimization_problem)
+        super().__init__(optimization_problem)
         # Assign V_min and V_max the the target range
         self.target_min = optimization_problem.get_timeseries('V_min')
         self.target_max = optimization_problem.get_timeseries('V_max')
@@ -41,7 +41,7 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
     """
 
     def pre(self):
-        super(Example, self).pre()
+        super().pre()
         # Empty list for storing intermediate_results
         self.intermediate_results = []
 
@@ -91,7 +91,7 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
 
     def post(self):
         # Call super() class to not overwrite default behaviour
-        super(Example, self).post()
+        super().post()
         for priority, n_level_satisfied, q_release_integral in self.intermediate_results:
             print("\nAfter finishing goals of priority {}:".format(priority))
             print("Volume goal satisfied at {} of {} time steps".format(
@@ -100,7 +100,7 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
 
     # Any solver options can be set here
     def solver_options(self):
-        options = super(Example, self).solver_options()
+        options = super().solver_options()
         options['print_level'] = 1
         return options
 

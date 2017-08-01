@@ -20,7 +20,7 @@ logger.setLevel(logging.DEBUG)
 class TestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
-        super(TestProblem, self).__init__(input_folder=data_path(), output_folder=data_path(
+        super().__init__(input_folder=data_path(), output_folder=data_path(
         ), model_name='TestModelWithInitial', model_folder=data_path())
 
     def times(self, variable=None):
@@ -58,11 +58,16 @@ class TestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
         # Do
         pass
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
 
 class TestProblemNonConvex(TestProblem):
 
     def __init__(self, u_seed):
-        super(TestProblemNonConvex, self).__init__()
+        super().__init__()
 
         self.u_seed = u_seed
 
@@ -134,7 +139,7 @@ class TestProblemEnsemble(TestProblem):
 class TestProblemAlgebraic(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
-        super(TestProblemAlgebraic, self).__init__(input_folder=data_path(
+        super().__init__(input_folder=data_path(
         ), output_folder=data_path(), model_name='TestModelAlgebraic', model_folder=data_path())
 
     def times(self, variable=None):
@@ -164,11 +169,16 @@ class TestProblemAlgebraic(ModelicaMixin, CollocatedIntegratedOptimizationProble
         # Do
         pass
 
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
+
 
 class TestProblemMixedInteger(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def __init__(self):
-        super(TestProblemMixedInteger, self).__init__(input_folder=data_path(
+        super().__init__(input_folder=data_path(
         ), output_folder=data_path(), model_name='TestModelMixedInteger', model_folder=data_path())
 
     def times(self, variable=None):
@@ -193,6 +203,11 @@ class TestProblemMixedInteger(ModelicaMixin, CollocatedIntegratedOptimizationPro
     def post(self):
         # Do
         pass
+
+    def compiler_options(self):
+        compiler_options = super().compiler_options()
+        compiler_options['cache'] = False
+        return compiler_options
 
 
 class TestModelicaMixin(TestCase):
@@ -238,7 +253,7 @@ class TestModelicaMixin(TestCase):
     def test_multiple_states(self):
         self.assertAlmostEqual(self.results['w'][0], 0.0, self.tolerance)
         self.assertAlmostEqual(self.results['w'][-1], 0.5917, 1e-4)
-        
+
     @expectedFailure
     def test_states_in(self):
         states = list(self.problem.states_in('x', 0.05, 0.95))
@@ -278,7 +293,7 @@ class TestModelicaMixin(TestCase):
         integral = self.problem.integral('x', 0.05, 0.95)
         knots = self.problem.times()[1:-1]
         verify = MX(0.0)
-        for i in xrange(len(knots) - 1):
+        for i in range(len(knots) - 1):
             verify += 0.5 * (self.problem.state_at('x', knots[i]) + self.problem.state_at(
                 'x', knots[i + 1])) * (knots[i + 1] - knots[i])
         self.assertEqual(repr(integral), repr(verify))
@@ -289,7 +304,7 @@ class TestModelicaMixin(TestCase):
         knots.extend(self.problem.times()[2:-1])
         knots.append(0.951)
         verify = MX(0.0)
-        for i in xrange(len(knots) - 1):
+        for i in range(len(knots) - 1):
             verify += 0.5 * (self.problem.state_at('x', knots[i]) + self.problem.state_at(
                 'x', knots[i + 1])) * (knots[i + 1] - knots[i])
         self.assertEqual(repr(integral), repr(verify))
@@ -297,7 +312,7 @@ class TestModelicaMixin(TestCase):
         integral = self.problem.integral('x', 0.0, 0.951)
         knots = list(self.problem.times()[0:-1]) + [0.951]
         verify = MX(0.0)
-        for i in xrange(len(knots) - 1):
+        for i in range(len(knots) - 1):
             verify += 0.5 * (self.problem.state_at('x', knots[i]) + self.problem.state_at(
                 'x', knots[i + 1])) * (knots[i + 1] - knots[i])
         self.assertEqual(repr(integral), repr(verify))

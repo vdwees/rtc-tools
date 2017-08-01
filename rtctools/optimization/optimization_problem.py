@@ -591,12 +591,12 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
 
         if t < ts[0]:
-            if f_left != None:
+            if f_left is not None:
                 return f_left
             else:
                 raise Exception("CSVMixin: Point {} left of range".format(t))
         if t > ts[-1]:
-            if f_right != None:
+            if f_right is not None:
                 return f_right
             else:
                 raise Exception("CSVMixin: Point {} right of range".format(t))

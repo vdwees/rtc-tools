@@ -70,7 +70,7 @@ class InitialStateEstimationMixin(GoalProgrammingMixin):
         return []
 
     def goals(self):
-        g = super(InitialStateEstimationMixin, self).goals()
+        g = super().goals()
 
         for measurement in self.initial_state_measurements():
             g.append(_MeasurementGoal(*measurement))

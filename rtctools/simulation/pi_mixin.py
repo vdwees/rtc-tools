@@ -53,11 +53,11 @@ class PIMixin(SimulationProblem):
         self._data_config = rtc.DataConfig(self._input_folder)
 
         # Call parent class first for default behaviour.
-        super(PIMixin, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def pre(self):
         # Call parent class first for default behaviour.
-        super(PIMixin, self).pre()
+        super().pre()
 
         # rtcParameterConfig
         self._parameter_config = []
@@ -130,7 +130,7 @@ class PIMixin(SimulationProblem):
         logger.debug("Model inputs are {}".format(self._input_variables))
 
         # Set initial input values
-        for variable, timeseries in self._timeseries_import.iteritems():
+        for variable, timeseries in self._timeseries_import.items():
             if variable in self._input_variables:
                 value = timeseries[self._timeseries_import._forecast_index]
                 if np.isfinite(value):
@@ -142,7 +142,7 @@ class PIMixin(SimulationProblem):
         self._output = {variable : np.full(n_times, np.nan) for variable in self._output_variables}
 
         # Call super, which will also initialize the model itself
-        super(PIMixin, self).initialize(config_file)
+        super().initialize(config_file)
 
         # Extract consistent t0 values
         for variable in self._output_variables:
@@ -160,14 +160,14 @@ class PIMixin(SimulationProblem):
         t_idx = bisect.bisect_left(self._timeseries_import_times, t + dt)
 
         # Set input values
-        for variable, timeseries in self._timeseries_import.iteritems():
+        for variable, timeseries in self._timeseries_import.items():
             if variable in self._input_variables:
                 value = timeseries[t_idx]
                 if np.isfinite(value):
                     self.set_var(variable, value)
 
         # Call super
-        super(PIMixin, self).update(dt)
+        super().update(dt)
 
         # Extract results
         for variable in self._output_variables:
@@ -175,7 +175,7 @@ class PIMixin(SimulationProblem):
 
     def post(self):
         # Call parent class first for default behaviour.
-        super(PIMixin, self).post()
+        super().post()
 
         # Start of write output
         # Write the time range for the export file.
@@ -199,7 +199,7 @@ class PIMixin(SimulationProblem):
 
         # For all variables that are output variables the values are
         # extracted from the results.
-        for key, values in self._output.iteritems():
+        for key, values in self._output.items():
             # Check if ID mapping is present
             try:
                 location_parameter_id = self._timeseries_export._data_config.pi_variable_ids(key)
