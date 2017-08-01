@@ -26,7 +26,7 @@ f.autofmt_xdate()
 
 # Upper Subplot
 axarr[0].set_ylabel('Water Volume in Storage [m³]')
-axarr[0].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+axarr[0].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
 
 # Lower Subplot
 axarr[1].set_ylabel('Flow Rate [m³/s]')

@@ -21,7 +21,7 @@ f.autofmt_xdate()
 
 # Upper subplot
 axarr[0].set_ylabel('Water Volume [m³]')
-axarr[0].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+axarr[0].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
 axarr[0].plot(results['time'], results['V_storage'], label='Storage',
               linewidth=2, color='b')
 axarr[0].plot(results['time'], [420000]*len(results['time']), label='Storage Max',
