@@ -18,9 +18,9 @@ class BSpline1D(BSpline):
         """
 
         # Store arguments
-        self._t = t
-        self._w = w
-        self._k = k
+        self.__t = t
+        self.__w = w
+        self.__k = k
 
     def __call__(self, x):
         """
@@ -33,9 +33,9 @@ class BSpline1D(BSpline):
         :returns: The spline evaluated at the given point.
         """
         y = 0.0
-        for i in range(len(self._t) - self._k - 1):
-            y += if_else(logic_and(x >= self._t[i], x <= self._t[i + self._k + 1]), self._w[
-                         i] * self.basis(self._t, x, self._k, i), 0.0)
+        for i in range(len(self.__t) - self.__k - 1):
+            y += if_else(logic_and(x >= self.__t[i], x <= self.__t[i + self.__k + 1]), self.__w[
+                         i] * self.basis(self.__t, x, self.__k, i), 0.0)
         return y
 
     @classmethod

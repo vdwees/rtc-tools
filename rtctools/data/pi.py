@@ -12,12 +12,12 @@ ns = {'fews': 'http://www.wldelft.nl/fews',
       'pi': 'http://www.wldelft.nl/fews/PI'}
 
 
-def _parse_date_time(el):
+def __parse_date_time(el):
     # Parse a PI date time element.
     return datetime.datetime.strptime(el.get('date') + ' ' + el.get('time'), '%Y-%m-%d %H:%M:%S')
 
 
-def _parse_time_step(el):
+def __parse_time_step(el):
     # Parse a PI time step element.
     if el.get('unit') == 'second':
         return datetime.timedelta(seconds=int(el.get('multiplier')))
@@ -27,7 +27,7 @@ def _parse_time_step(el):
         raise Exception('Unsupported unit type: ' + el.get('unit'))
 
 
-def _floor_date_time(dt=datetime.datetime.now(), tdel=datetime.timedelta(minutes=1)):
+def __floor_date_time(dt=datetime.datetime.now(), tdel=datetime.timedelta(minutes=1)):
     # Floor a PI date time based on a PI time step
     roundTo = tdel.total_seconds()
 
@@ -55,10 +55,10 @@ class Diag:
         :param folder:   Folder in which diag.xml is found or to be created.
         :param basename: Alternative basename for the diagnostics XML file.
         """
-        self._path_xml = os.path.join(folder, basename + '.xml')
+        self.__path_xml = os.path.join(folder, basename + '.xml')
 
-        self._tree = ET.parse(self._path_xml)
-        self._xml_root = self._tree.getroot()
+        self.__tree = ET.parse(self.__path_xml)
+        self.__xml_root = self.__tree.getroot()
 
     def get(self, level=ERROR_FATAL):
         """
@@ -67,7 +67,7 @@ class Diag:
         :param level: Log level.
         """
 
-        diag_lines = self._xml_root.findall("*", ns)
+        diag_lines = self.__xml_root.findall("*", ns)
         diag_lines_out = []
         USED_LEVELS = []
 
@@ -111,35 +111,35 @@ class DiagHandler(logging.Handler):
     def __init__(self, folder, basename='diag', level=logging.NOTSET):
         super(DiagHandler,  self).__init__(level=level)
 
-        self._path_xml = os.path.join(folder, basename + '.xml')
+        self.__path_xml = os.path.join(folder, basename + '.xml')
 
         try:
-            self._tree = ET.parse(self._path_xml)
-            self._xml_root = self._tree.getroot()
+            self.__tree = ET.parse(self.__path_xml)
+            self.__xml_root = self.__tree.getroot()
         except:
-            self._xml_root = ET.Element('{%s}Diag' % (ns['pi'], ))
-            self._tree = ET.ElementTree(element=self._xml_root)
+            self.__xml_root = ET.Element('{%s}Diag' % (ns['pi'], ))
+            self.__tree = ET.ElementTree(element=self.__xml_root)
 
-        self._map_level = {50: 0, 40: 1, 30: 2, 20: 3, 10: 4, 0: 4}
+        self.__map_level = {50: 0, 40: 1, 30: 2, 20: 3, 10: 4, 0: 4}
 
     def emit(self, record):
         self.format(record)
 
         self.acquire()
-        el = ET.SubElement(self._xml_root, '{%s}line' % (ns['pi'], ))
+        el = ET.SubElement(self.__xml_root, '{%s}line' % (ns['pi'], ))
         # Work around cElementTree issue 21403
         el.set('description', record.message)
         el.set('eventCode', record.module + '.' + record.funcName)
-        el.set('level', str(self._map_level[record.levelno]))
+        el.set('level', str(self.__map_level[record.levelno]))
         self.release()
 
     def append_element(self, el):
         self.acquire()
-        self._xml_root.append(el)
+        self.__xml_root.append(el)
         self.release()
 
     def flush(self):
-        self._tree.write(self._path_xml)
+        self.__tree.write(self.__path_xml)
 
     def close(self):
         self.flush()
@@ -158,10 +158,10 @@ class ParameterConfig:
         :param folder:    Folder in which the parameter configuration file is located.
         :param basename:  Basename of the parameter configuration file (e.g, 'rtcParameterConfig').
         """
-        self._path_xml = os.path.join(folder, basename + '.xml')
+        self.__path_xml = os.path.join(folder, basename + '.xml')
 
-        self._tree = ET.parse(self._path_xml)
-        self._xml_root = self._tree.getroot()
+        self.__tree = ET.parse(self.__path_xml)
+        self.__xml_root = self.__tree.getroot()
 
     def get(self, group_id, parameter_id, location_id=None, model=None):
         """
@@ -174,7 +174,7 @@ class ParameterConfig:
 
         :returns: The value of the specified parameter.
         """
-        groups = self._xml_root.findall(
+        groups = self.__xml_root.findall(
             "pi:group[@id='{}']".format(group_id), ns)
         for group in groups:
             el = group.find("pi:locationId", ns)
@@ -190,7 +190,7 @@ class ParameterConfig:
             el = group.find("pi:parameter[@id='{}']".format(parameter_id), ns)
             if el is None:
                 raise KeyError
-            return self._parse_parameter(el)
+            return self.__parse_parameter(el)
 
         raise KeyError("No such parameter ({}, {})".format(
             group_id, parameter_id))
@@ -205,7 +205,7 @@ class ParameterConfig:
         :param location_id:  The optional  ID of the parameter location to look in.
         :param model:        The optional ID of the parameter model to look in.
         """
-        groups = self._xml_root.findall(
+        groups = self.__xml_root.findall(
             "pi:group[@id='{}']".format(group_id), ns)
         for group in groups:
             el = group.find("pi:locationId", ns)
@@ -248,16 +248,16 @@ class ParameterConfig:
         """
         Writes the parameter configuration to a file.
         """
-        self._tree.write(self._path_xml)
+        self.__tree.write(self.__path_xml)
 
-    def _parse_type(self, fews_type):
+    def __parse_type(self, fews_type):
         # Parse a FEWS type to an np type
         if fews_type == 'double':
             return np.dtype('float')
         else:
             return np.dtype('S128')
 
-    def _parse_parameter(self, parameter):
+    def __parse_parameter(self, parameter):
         for child in parameter:
             if child.tag.endswith('boolValue'):
                 if child.text.lower() == 'true':
@@ -290,7 +290,7 @@ class ParameterConfig:
                 el_columnTypes = child.find("pi:columnTypes", ns)
                 if el_columnTypes is not None:
                     for key, value in el_columnTypes.attrib.items():
-                        columnType[key] = self._parse_type(value)
+                        columnType[key] = self.__parse_type(value)
 
                 # get table contenstart_datetime
                 el_row = child.findall("pi:row", ns)
@@ -310,7 +310,7 @@ class ParameterConfig:
 
     def __iter__(self):
         # Iterate over all parameter key, value pairs.
-        groups = self._xml_root.findall("pi:group", ns)
+        groups = self.__xml_root.findall("pi:group", ns)
         for group in groups:
             el = group.find("pi:locationId", ns)
             if el is not None:
@@ -326,7 +326,7 @@ class ParameterConfig:
 
             parameters = group.findall("pi:parameter", ns)
             for parameter in parameters:
-                yield location_id, model_id, parameter.attrib['id'], self._parse_parameter(parameter)
+                yield location_id, model_id, parameter.attrib['id'], self.__parse_parameter(parameter)
 
 
 class Timeseries:
@@ -345,36 +345,36 @@ class Timeseries:
         :param pi_validate_times        Check consistency of times.  Default is ``False``.
         :param make_new_file            Make new XML object which can be filled and written to a new file. Default is ``False``.
         """
-        self._data_config = data_config
+        self.__data_config = data_config
 
-        self._folder = folder
-        self._basename = basename
+        self.__folder = folder
+        self.__basename = basename
 
-        self._path_xml = os.path.join(self._folder, basename + '.xml')
+        self.__path_xml = os.path.join(self.__folder, basename + '.xml')
 
-        self._internal_dtype = np.float64
-        self._pi_dtype = np.float32
+        self.__internal_dtype = np.float64
+        self.__pi_dtype = np.float32
 
         self.make_new_file = make_new_file
         if self.make_new_file:
-            self._xml_root = ET.Element('{%s}' % (ns['pi'], ) + 'TimeSeries')
-            self._tree = ET.ElementTree(self._xml_root)
+            self.__xml_root = ET.Element('{%s}' % (ns['pi'], ) + 'TimeSeries')
+            self.__tree = ET.ElementTree(self.__xml_root)
 
-            self._xml_root.set('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
-            self._xml_root.set('version', '1.2')
-            self._xml_root.set('xsi:schemaLocation', 'http://www.wldelft.nl/fews/PI http://fews.wldelft.nl/schemas/version1.0/pi-schemas/pi_timeseries.xsd')
+            self.__xml_root.set('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
+            self.__xml_root.set('version', '1.2')
+            self.__xml_root.set('xsi:schemaLocation', 'http://www.wldelft.nl/fews/PI http://fews.wldelft.nl/schemas/version1.0/pi-schemas/pi_timeseries.xsd')
         else:
-            self._tree = ET.parse(self._path_xml)
-            self._xml_root = self._tree.getroot()
+            self.__tree = ET.parse(self.__path_xml)
+            self.__xml_root = self.__tree.getroot()
 
-        self._values = [{}]
-        self._units  = [{}]
+        self.__values = [{}]
+        self.__units  = [{}]
 
-        self._binary = binary
+        self.__binary = binary
 
         if not self.make_new_file:
             f = None
-            if self._binary:
+            if self.__binary:
                 try:
                     f = io.open(self.binary_path, 'rb')
                 except IOError:
@@ -382,223 +382,223 @@ class Timeseries:
                     pass
 
             # Read timezone
-            timezone = self._xml_root.find('pi:timeZone', ns)
+            timezone = self.__xml_root.find('pi:timeZone', ns)
             if timezone is not None:
-                self._timezone = float(timezone.text)
+                self.__timezone = float(timezone.text)
             else:
-                self._timezone = None
+                self.__timezone = None
 
             # Check data consistency
-            self._dt = None
-            self._start_datetime = None
-            self._end_datetime = None
-            self._forecast_datetime = None
-            self._forecast_index = None
-            self._contains_ensemble = False
-            self._ensemble_size = 1
-            for series in self._xml_root.findall('pi:series', ns):
+            self.__dt = None
+            self.__start_datetime = None
+            self.__end_datetime = None
+            self.__forecast_datetime = None
+            self.__forecast_index = None
+            self.__contains_ensemble = False
+            self.__ensemble_size = 1
+            for series in self.__xml_root.findall('pi:series', ns):
                 header = series.find('pi:header', ns)
 
-                variable = self._data_config.variable(header)
+                variable = self.__data_config.variable(header)
 
                 try:
-                    dt = _parse_time_step(header.find('pi:timeStep', ns))
+                    dt = __parse_time_step(header.find('pi:timeStep', ns))
                 except ValueError:
                     raise Exception('PI: Multiplier of time step of variable {} must be a positive integer per the PI schema.'.format(variable))
-                if self._dt is None:
-                    self._dt = dt
+                if self.__dt is None:
+                    self.__dt = dt
                 else:
-                    if dt != self._dt:
+                    if dt != self.__dt:
                         raise Exception(
                             'PI: Not all timeseries have the same time step size.')
                 try:
-                    start_datetime = _parse_date_time(
+                    start_datetime = __parse_date_time(
                         header.find('pi:startDate', ns))
-                    if self._start_datetime is None:
-                        self._start_datetime = start_datetime
+                    if self.__start_datetime is None:
+                        self.__start_datetime = start_datetime
                     else:
-                        if start_datetime < self._start_datetime:
-                            self._start_datetime = start_datetime
+                        if start_datetime < self.__start_datetime:
+                            self.__start_datetime = start_datetime
                 except (AttributeError, ValueError):
                     raise Exception('PI: Variable {} in {} has no startDate.'.format(
-                        variable, os.path.join(self._folder, basename + '.xml')))
+                        variable, os.path.join(self.__folder, basename + '.xml')))
 
                 try:
-                    end_datetime = _parse_date_time(header.find('pi:endDate', ns))
-                    if self._end_datetime is None:
-                        self._end_datetime = end_datetime
+                    end_datetime = __parse_date_time(header.find('pi:endDate', ns))
+                    if self.__end_datetime is None:
+                        self.__end_datetime = end_datetime
                     else:
-                        if end_datetime > self._end_datetime:
-                            self._end_datetime = end_datetime
+                        if end_datetime > self.__end_datetime:
+                            self.__end_datetime = end_datetime
                 except (AttributeError, ValueError):
                     raise Exception('PI: Variable {} in {} has no endDate.'.format(
-                        variable, os.path.join(self._folder, basename + '.xml')))
+                        variable, os.path.join(self.__folder, basename + '.xml')))
 
                 el = header.find('pi:forecastDate', ns)
                 if el is not None:
-                    forecast_datetime = _parse_date_time(el)
+                    forecast_datetime = __parse_date_time(el)
                 else:
                     # the timeseries has no forecastDate, so the forecastDate
                     # is set to the startDate (per the PI-schema)
                     forecast_datetime = start_datetime
-                if self._forecast_datetime is None:
-                    self._forecast_datetime = forecast_datetime
+                if self.__forecast_datetime is None:
+                    self.__forecast_datetime = forecast_datetime
                 else:
-                    if el is not None and forecast_datetime != self._forecast_datetime:
+                    if el is not None and forecast_datetime != self.__forecast_datetime:
                         raise Exception(
                             'PI: Not all timeseries share the same forecastDate.')
 
                 el = header.find('pi:ensembleMemberIndex', ns)
                 if el is not None:
                     contains_ensemble = True
-                    if int(el.text) > self._ensemble_size - 1: # Assume zero-based
-                        self._ensemble_size = int(el.text) + 1
+                    if int(el.text) > self.__ensemble_size - 1: # Assume zero-based
+                        self.__ensemble_size = int(el.text) + 1
                 else:
                     contains_ensemble = False
-                if self._contains_ensemble == False:
+                if self.__contains_ensemble == False:
                 # Only overwrite when _contains_ensemble was False before
-                    self._contains_ensemble = contains_ensemble
+                    self.__contains_ensemble = contains_ensemble
 
             # Define the times, and floor the global forecast_datetime to the
             # global time step to get its index
-            if self._dt:
+            if self.__dt:
                 t_len = int(round(
-                    (self._end_datetime - self._start_datetime).total_seconds() / self._dt.total_seconds() + 1))
-                self._times = [self._start_datetime + i *
-                               self._dt for i in range(0, t_len)]
+                    (self.__end_datetime - self.__start_datetime).total_seconds() / self.__dt.total_seconds() + 1))
+                self.__times = [self.__start_datetime + i *
+                               self.__dt for i in range(0, t_len)]
             else: # Timeseries are non-equidistant
-                self._times = []
-                for series in self._xml_root.findall('pi:series', ns):
+                self.__times = []
+                for series in self.__xml_root.findall('pi:series', ns):
                     events = series.findall('pi:event', ns)
                     # We assume that timeseries can differ in length, but always are
                     # a complete 'slice' of datetimes between start and end. The
                     # longest timeseries then contains all datetimes between start and end.
-                    if len(events) > len(self._times):
-                        self._times = [_parse_date_time(e) for e in events]
+                    if len(events) > len(self.__times):
+                        self.__times = [__parse_date_time(e) for e in events]
 
             # Check if the time steps of all series match the time steps of the global
             # time range.
             if pi_validate_times:
-                for series in self._xml_root.findall('pi:series', ns):
+                for series in self.__xml_root.findall('pi:series', ns):
                     events = series.findall('pi:event', ns)
-                    times = [_parse_date_time(e) for e in events]
-                    if not set(self._times).issuperset(set(times)):
+                    times = [__parse_date_time(e) for e in events]
+                    if not set(self.__times).issuperset(set(times)):
                         raise Exception('PI: Not all timeseries share the same time step spacing. Make sure the time steps of all series are a subset of the global time steps.')
 
-            if self._forecast_datetime is not None:
-                if self._dt:
-                    self._forecast_datetime = _floor_date_time(
-                        dt=self._forecast_datetime, tdel=self._dt)
+            if self.__forecast_datetime is not None:
+                if self.__dt:
+                    self.__forecast_datetime = __floor_date_time(
+                        dt=self.__forecast_datetime, tdel=self.__dt)
                 try:
-                    self._forecast_index = self._times.index(
-                        self._forecast_datetime)
+                    self.__forecast_index = self.__times.index(
+                        self.__forecast_datetime)
                 except ValueError:
                     # This may occur if forecast_datetime is outside of
                     # the timeseries' range.  Can be a valid case for historical
                     # timeseries, for instance.
-                    self._forecast_index = -1
+                    self.__forecast_index = -1
 
             # Parse data
-            for series in self._xml_root.findall('pi:series', ns):
+            for series in self.__xml_root.findall('pi:series', ns):
                 header = series.find('pi:header', ns)
 
-                variable = self._data_config.variable(header)
+                variable = self.__data_config.variable(header)
 
-                dt = _parse_time_step(header.find('pi:timeStep', ns))
-                start_datetime = _parse_date_time(header.find('pi:startDate', ns))
-                end_datetime = _parse_date_time(header.find('pi:endDate', ns))
+                dt = __parse_time_step(header.find('pi:timeStep', ns))
+                start_datetime = __parse_date_time(header.find('pi:startDate', ns))
+                end_datetime = __parse_date_time(header.find('pi:endDate', ns))
 
                 make_virtual_ensemble = False
                 el = header.find('pi:ensembleMemberIndex', ns)
                 if el is not None:
                     ensemble_member = int(el.text)
-                    while ensemble_member >= len(self._values):
-                        self._values.append({})
-                    while ensemble_member >= len(self._units):
-                        self._units.append({})
+                    while ensemble_member >= len(self.__values):
+                        self.__values.append({})
+                    while ensemble_member >= len(self.__units):
+                        self.__units.append({})
                 else:
                     ensemble_member = 0
                 if el is None and self.contains_ensemble == True:
                     # Expand values dict to accomodate referencing of (virtual)
                     # ensemble series to the input values. This is e.g. needed
                     # for initial states that have a single historical values.
-                    while self.ensemble_size > len(self._values):
-                        self._values.append({})
+                    while self.ensemble_size > len(self.__values):
+                        self.__values.append({})
                     make_virtual_ensemble = True
 
-                if self._dt:
+                if self.__dt:
                     n_values = int(
                         round((end_datetime - start_datetime).total_seconds() / dt.total_seconds() + 1))
                 else:
-                    n_values = bisect.bisect_left(self._times, end_datetime) - bisect.bisect_left(self._times, start_datetime) + 1
+                    n_values = bisect.bisect_left(self.__times, end_datetime) - bisect.bisect_left(self.__times, start_datetime) + 1
 
-                if self._binary:
+                if self.__binary:
                     if f is not None:
-                        self._values[ensemble_member][variable] = np.fromstring(
-                            f.read(self._pi_dtype(0).itemsize * n_values), dtype=self._pi_dtype)
+                        self.__values[ensemble_member][variable] = np.fromstring(
+                            f.read(self.__pi_dtype(0).itemsize * n_values), dtype=self.__pi_dtype)
                     else:
-                        self._values[ensemble_member][variable] = np.empty(
-                            n_values, dtype=self._internal_dtype)
-                        self._values[ensemble_member][variable].fill(np.nan)
+                        self.__values[ensemble_member][variable] = np.empty(
+                            n_values, dtype=self.__internal_dtype)
+                        self.__values[ensemble_member][variable].fill(np.nan)
 
                 else:
                     events = series.findall('pi:event', ns)
 
-                    self._values[ensemble_member][variable] = np.empty(
-                        n_values, dtype=self._internal_dtype)
-                    self._values[ensemble_member][variable].fill(np.nan)
+                    self.__values[ensemble_member][variable] = np.empty(
+                        n_values, dtype=self.__internal_dtype)
+                    self.__values[ensemble_member][variable].fill(np.nan)
                     # This assumes that start_datetime equals the datetime of the
                     # first value (which should be the case).
                     for i in range(min(n_values, len(events))):
-                        self._values[ensemble_member][variable][
+                        self.__values[ensemble_member][variable][
                             i] = float(events[i].get('value'))
 
                 miss_val = float(header.find('pi:missVal', ns).text)
-                self._values[ensemble_member][variable][self._values[
+                self.__values[ensemble_member][variable][self.__values[
                     ensemble_member][variable] == miss_val] = np.nan
 
                 unit = header.find('pi:units', ns).text
-                self._set_unit(variable, unit=unit, ensemble_member=ensemble_member)
+                self.__set_unit(variable, unit=unit, ensemble_member=ensemble_member)
 
                 if make_virtual_ensemble:
                     # Make references to the original input series for the virtual
                     # ensemble members.
                     for i in range(1, self.ensemble_size):
-                        self._values[ensemble_member][variable] = self._values[0][variable]
+                        self.__values[ensemble_member][variable] = self.__values[0][variable]
 
-                # Prepend empty space, if start_datetime > self._start_datetime.
-                if start_datetime > self._start_datetime:
-                    if self._dt:
+                # Prepend empty space, if start_datetime > self.__start_datetime.
+                if start_datetime > self.__start_datetime:
+                    if self.__dt:
                         filler = np.empty(int(round(
-                            (start_datetime - self._start_datetime).total_seconds() / dt.total_seconds())), dtype=self._internal_dtype)
+                            (start_datetime - self.__start_datetime).total_seconds() / dt.total_seconds())), dtype=self.__internal_dtype)
                     else:
                         filler = np.empty(int(round(
-                            bisect.bisect_left(self._times, start_datetime) - bisect.bisect_left(self._times, self._start_datetime))), dtype=self._internal_dtype)
+                            bisect.bisect_left(self.__times, start_datetime) - bisect.bisect_left(self.__times, self.__start_datetime))), dtype=self.__internal_dtype)
 
                     filler.fill(np.nan)
-                    self._values[ensemble_member][variable] = np.hstack(
-                        (filler, self._values[ensemble_member][variable]))
+                    self.__values[ensemble_member][variable] = np.hstack(
+                        (filler, self.__values[ensemble_member][variable]))
 
-                # Append empty space, if end_datetime < self._end_datetime
-                if end_datetime < self._end_datetime:
-                    if self._dt:
+                # Append empty space, if end_datetime < self.__end_datetime
+                if end_datetime < self.__end_datetime:
+                    if self.__dt:
                         filler = np.empty(int(round(
-                            (self._end_datetime - end_datetime).total_seconds() / dt.total_seconds())), dtype=self._internal_dtype)
+                            (self.__end_datetime - end_datetime).total_seconds() / dt.total_seconds())), dtype=self.__internal_dtype)
                     else:
                         filler = np.empty(int(round(
-                            bisect.bisect_left(self._times, self._end_datetime) - bisect.bisect_left(self._times, end_datetime))), dtype=self._internal_dtype)
+                            bisect.bisect_left(self.__times, self.__end_datetime) - bisect.bisect_left(self.__times, end_datetime))), dtype=self.__internal_dtype)
 
                     filler.fill(np.nan)
-                    self._values[ensemble_member][variable] = np.hstack(
-                        (self._values[ensemble_member][variable], filler))
+                    self.__values[ensemble_member][variable] = np.hstack(
+                        (self.__values[ensemble_member][variable], filler))
 
-            if not self._dt:
+            if not self.__dt:
                 # Remove time values outside the start/end datetimes.
                 # Only needed for non-equidistant, because we can't build the
                 # times automatically from global start/end datetime.
-                self._times = self._times[bisect.bisect_left(self._times, self._start_datetime) : bisect.bisect_left(self._times, self._end_datetime)+1]
+                self.__times = self.__times[bisect.bisect_left(self.__times, self.__start_datetime) : bisect.bisect_left(self.__times, self.__end_datetime)+1]
 
-            if f is not None and self._binary:
+            if f is not None and self.__binary:
                 f.close()
 
     def _add_header(self, variable, location_parameter_id, ensemble_member=0, miss_val=-999, unit='unit_unknown'):
@@ -613,7 +613,7 @@ class Timeseries:
         header_element_texts  = ['instantaneous', location_parameter_id.location_id, location_parameter_id.parameter_id, '', '', '', str(miss_val), location_parameter_id.location_id, unit, now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')]
 
         # Add ensembleMemberIndex, forecastDate and qualifierId if necessary.
-        if self._forecast_datetime != self._start_datetime:
+        if self.__forecast_datetime != self.__start_datetime:
             header_elements.insert(6, 'forecastDate')
             header_element_texts.insert(6, '')
         if self.contains_ensemble:
@@ -644,46 +644,46 @@ class Timeseries:
 
         # Set the time range.
         el = header.find('pi:startDate', ns)
-        el.set('date', self._start_datetime.strftime('%Y-%m-%d'))
-        el.set('time', self._start_datetime.strftime('%H:%M:%S'))
+        el.set('date', self.__start_datetime.strftime('%Y-%m-%d'))
+        el.set('time', self.__start_datetime.strftime('%H:%M:%S'))
         el = header.find('pi:endDate', ns)
-        el.set('date', self._end_datetime.strftime('%Y-%m-%d'))
-        el.set('time', self._end_datetime.strftime('%H:%M:%S'))
+        el.set('date', self.__end_datetime.strftime('%Y-%m-%d'))
+        el.set('time', self.__end_datetime.strftime('%H:%M:%S'))
 
         # Set the forecast date if applicable
-        if self._forecast_datetime != self._start_datetime:
+        if self.__forecast_datetime != self.__start_datetime:
             el = header.find('pi:forecastDate', ns)
-            el.set('date', self._forecast_datetime.strftime('%Y-%m-%d'))
-            el.set('time', self._forecast_datetime.strftime('%H:%M:%S'))
+            el.set('date', self.__forecast_datetime.strftime('%Y-%m-%d'))
+            el.set('time', self.__forecast_datetime.strftime('%H:%M:%S'))
 
         # Add series to xml
-        self._xml_root.append(series)
+        self.__xml_root.append(series)
 
     def write(self):
         """
         Writes the time series data to disk.
         """
 
-        if self._binary:
+        if self.__binary:
             f = io.open(self.binary_path, 'wb')
 
         if self.timezone is not None:
-            timezone = self._xml_root.find('pi:timeZone', ns)
+            timezone = self.__xml_root.find('pi:timeZone', ns)
             if timezone is None:
                 timezone = ET.Element('{%s}' % (ns['pi'], ) + 'timeZone')
                 # timeZone has to be the first element according to the schema
-                self._xml_root.insert(0, timezone)
+                self.__xml_root.insert(0, timezone)
             timezone.text = str(self.timezone)
 
         if self.make_new_file:
-            for ensemble_member in range(len(self._values)):
-                for variable in self._values[ensemble_member].keys():
-                    location_parameter_id = self._data_config.pi_variable_ids(variable)
-                    unit = self._get_unit(variable, ensemble_member)
-                    self._add_header(variable, location_parameter_id, ensemble_member=ensemble_member, miss_val=-999, unit=unit)
+            for ensemble_member in range(len(self.__values)):
+                for variable in self.__values[ensemble_member].keys():
+                    location_parameter_id = self.__data_config.pi_variable_ids(variable)
+                    unit = self.__get_unit(variable, ensemble_member)
+                    self.__add_header(variable, location_parameter_id, ensemble_member=ensemble_member, miss_val=-999, unit=unit)
 
-        for ensemble_member in range(len(self._values)):
-            for series in self._xml_root.findall('pi:series', ns):
+        for ensemble_member in range(len(self.__values)):
+            for series in self.__xml_root.findall('pi:series', ns):
                 header = series.find('pi:header', ns)
 
                 # First check ensembleMemberIndex, to see if it is the correct one.
@@ -695,26 +695,26 @@ class Timeseries:
 
                 # Update the time range, which may have changed.
                 el = header.find('pi:startDate', ns)
-                el.set('date', self._start_datetime.strftime('%Y-%m-%d'))
-                el.set('time', self._start_datetime.strftime('%H:%M:%S'))
+                el.set('date', self.__start_datetime.strftime('%Y-%m-%d'))
+                el.set('time', self.__start_datetime.strftime('%H:%M:%S'))
 
                 el = header.find('pi:endDate', ns)
-                el.set('date', self._end_datetime.strftime('%Y-%m-%d'))
-                el.set('time', self._end_datetime.strftime('%H:%M:%S'))
+                el.set('date', self.__end_datetime.strftime('%Y-%m-%d'))
+                el.set('time', self.__end_datetime.strftime('%H:%M:%S'))
 
-                variable = self._data_config.variable(header)
+                variable = self.__data_config.variable(header)
 
                 miss_val = float(header.find('pi:missVal', ns).text)
-                l = self._values[ensemble_member][variable]
+                l = self.__values[ensemble_member][variable]
 
                 # Update the header, which may have changed
                 el = header.find('pi:units', ns)
-                el.text = self._get_unit(variable, ensemble_member)
+                el.text = self.__get_unit(variable, ensemble_member)
 
                 # No values to be written, so the entire element is removed from
                 # the XML, and the loop restarts.
                 if len(l) == 0:
-                    self._xml_root.remove(series)
+                    self.__xml_root.remove(series)
                     continue
 
                 # Replace NaN with missing value
@@ -722,12 +722,12 @@ class Timeseries:
                 l[nans] = miss_val
 
                 # Write output
-                if self._binary:
-                    f.write(l.astype(self._pi_dtype).tostring())
+                if self.__binary:
+                    f.write(l.astype(self.__pi_dtype).tostring())
                 else:
                     events = series.findall('pi:event', ns)
 
-                    t = self._start_datetime
+                    t = self.__start_datetime
                     for i in range(min(len(events), len(l))):
                         if self.dt is None:
                             t = self.times[i]
@@ -759,73 +759,73 @@ class Timeseries:
                 # Restore NaN
                 l[nans] = np.nan
 
-        if self._binary:
+        if self.__binary:
             f.close()
 
-        self._tree.write(self._path_xml)
+        self.__tree.write(self.__path_xml)
 
     @property
     def contains_ensemble(self):
         """
         Flag to indicate TimeSeries contains an ensemble.
         """
-        return self._contains_ensemble
+        return self.__contains_ensemble
 
     @property
     def ensemble_size(self):
         """
         Ensemble size.
         """
-        return self._ensemble_size
+        return self.__ensemble_size
 
     @property
     def start_datetime(self):
         """
         Start time.
         """
-        return self._start_datetime
+        return self.__start_datetime
 
     @property
     def end_datetime(self):
         """
         End time.
         """
-        return self._end_datetime
+        return self.__end_datetime
 
     @property
     def forecast_datetime(self):
         """
         Forecast time (t0).
         """
-        return self._forecast_datetime
+        return self.__forecast_datetime
 
     @property
     def forecast_index(self):
         """
         Forecast time (t0) index.
         """
-        return self._forecast_index
+        return self.__forecast_index
 
     @property
     def dt(self):
         """
         Time step.
         """
-        return self._dt
+        return self.__dt
 
     @property
     def times(self):
         """
         Time stamps.
         """
-        return self._times
+        return self.__times
 
     @property
     def timezone(self):
         """
         Time zone in decimal hours shift from GMT.
         """
-        return self._timezone
+        return self.__timezone
 
     def get(self, variable, ensemble_member=0):
         """
@@ -836,7 +836,7 @@ class Timeseries:
 
         :returns: A :class:`Timeseries` object.
         """
-        return self._values[ensemble_member][variable]
+        return self.__values[ensemble_member][variable]
 
     def set(self, variable, new_values, unit=None, ensemble_member=0):
         """
@@ -847,10 +847,10 @@ class Timeseries:
         :param unit:            Unit.
         :param ensemble_member: Ensemble member index.
         """
-        self._values[ensemble_member][variable] = new_values
+        self.__values[ensemble_member][variable] = new_values
         if unit is None:
-            unit = self._get_unit(variable, ensemble_member)
-        self._set_unit(variable, unit, ensemble_member)
+            unit = self.__get_unit(variable, ensemble_member)
+        self.__set_unit(variable, unit, ensemble_member)
 
     def _get_unit(self, variable, ensemble_member=0):
         """
@@ -862,7 +862,7 @@ class Timeseries:
         :returns: A :string: containing the unit. If this has not been set for the variable, it will return 'unit_unknown'.
         """
         try:
-            return self._units[ensemble_member][variable]
+            return self.__units[ensemble_member][variable]
         except KeyError:
             return 'unit_unknown'
 
@@ -874,7 +874,7 @@ class Timeseries:
         :param unit:            Unit.
         :param ensemble_member: Ensemble member index.
         """
-        self._units[ensemble_member][variable] = unit
+        self.__units[ensemble_member][variable] = unit
 
     def resize(self, start_datetime, end_datetime):
         """
@@ -884,67 +884,67 @@ class Timeseries:
         :param end_datetime:   End date and time.
         """
 
-        if self._dt:
+        if self.__dt:
             n_delta_s = int(round(
-                (start_datetime - self._start_datetime).total_seconds() / self._dt.total_seconds()))
+                (start_datetime - self.__start_datetime).total_seconds() / self.__dt.total_seconds()))
         else:
-            if start_datetime >= self._start_datetime:
-                n_delta_s = bisect.bisect_left(self._times, start_datetime) - \
-                    bisect.bisect_left(self._times, self._start_datetime)
+            if start_datetime >= self.__start_datetime:
+                n_delta_s = bisect.bisect_left(self.__times, start_datetime) - \
+                    bisect.bisect_left(self.__times, self.__start_datetime)
             else:
                 raise Exception("PI: Resizing a non-equidistant timeseries to stretch outside of the global range of times is not allowed.")
 
-        for ensemble_member in range(len(self._values)):
+        for ensemble_member in range(len(self.__values)):
             if n_delta_s > 0:
                 # New start datetime lies after old start datetime (timeseries will be shortened).
-                for key in self._values[ensemble_member].keys():
-                    self._values[ensemble_member][key] = self._values[
+                for key in self.__values[ensemble_member].keys():
+                    self.__values[ensemble_member][key] = self.__values[
                         ensemble_member][key][n_delta_s:]
             elif n_delta_s < 0:
                 # New start datetime lies before old start datetime (timeseries will be lengthened).
                 filler = np.empty(abs(n_delta_s))
                 filler.fill(np.nan)
-                for key in self._values[ensemble_member].keys():
-                    self._values[ensemble_member][key] = np.hstack(
-                        (filler, self._values[ensemble_member][key]))
-        self._start_datetime = start_datetime
+                for key in self.__values[ensemble_member].keys():
+                    self.__values[ensemble_member][key] = np.hstack(
+                        (filler, self.__values[ensemble_member][key]))
+        self.__start_datetime = start_datetime
 
-        if self._dt:
+        if self.__dt:
             n_delta_e = int(round(
-                (end_datetime - self._end_datetime).total_seconds() / self._dt.total_seconds()))
+                (end_datetime - self.__end_datetime).total_seconds() / self.__dt.total_seconds()))
         else:
-            if end_datetime <= self._end_datetime:
-                n_delta_e = bisect.bisect_left(self._times, end_datetime) - \
-                    bisect.bisect_left(self._times, self._end_datetime)
+            if end_datetime <= self.__end_datetime:
+                n_delta_e = bisect.bisect_left(self.__times, end_datetime) - \
+                    bisect.bisect_left(self.__times, self.__end_datetime)
             else:
                 raise Exception("PI: Resizing a non-equidistant timeseries to stretch outside of the global range of times is not allowed.")
 
-        for ensemble_member in range(len(self._values)):
+        for ensemble_member in range(len(self.__values)):
             if n_delta_e > 0:
                 # New end datetime lies after old end datetime (timeseries will be lengthened).
                 filler = np.empty(n_delta_e)
                 filler.fill(np.nan)
-                for key in self._values[ensemble_member].keys():
-                    self._values[ensemble_member][key] = np.hstack(
-                        (self._values[ensemble_member][key], filler))
+                for key in self.__values[ensemble_member].keys():
+                    self.__values[ensemble_member][key] = np.hstack(
+                        (self.__values[ensemble_member][key], filler))
             elif n_delta_e < 0:
                 # New end datetime lies before old end datetime (timeseries will be shortened).
-                for key in self._values[ensemble_member].keys():
-                    self._values[ensemble_member][key] = self._values[
+                for key in self.__values[ensemble_member].keys():
+                    self.__values[ensemble_member][key] = self.__values[
                         ensemble_member][key][:n_delta_e]
-        self._end_datetime = end_datetime
+        self.__end_datetime = end_datetime
 
     @property
     def binary_path(self):
         """
         The path for the binary data .bin file.
         """
-        return os.path.join(self._folder, self._basename + '.bin')
+        return os.path.join(self.__folder, self.__basename + '.bin')
 
     def items(self, ensemble_member=0):
         """
         Returns an iterator over all timeseries IDs and value arrays for the given
         ensemble member.
         """
-        for key in self._values[ensemble_member].keys():
+        for key in self.__values[ensemble_member].keys():
             yield key, self.get(key)

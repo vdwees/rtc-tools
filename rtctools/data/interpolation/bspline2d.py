@@ -19,11 +19,11 @@ class BSpline2D(BSpline):
         """
 
         # Store arguments
-        self._tx = tx
-        self._ty = ty
-        self._w = w
-        self._kx = kx
-        self._ky = ky
+        self.__tx = tx
+        self.__ty = ty
+        self.__w = w
+        self.__kx = kx
+        self.__ky = ky
 
     def __call__(self, x, y):
         """
@@ -37,11 +37,11 @@ class BSpline2D(BSpline):
         :returns: The spline evaluated at the given point.
         """
         z = 0.0
-        for i in range(len(self._tx) - self._kx - 1):
-            bx = if_else(logic_and(x >= self._tx[i], x <= self._tx[
-                         i + self._kx + 1]), self.basis(self._tx, x, self._kx, i), 0.0)
-            for j in range(len(self._ty) - self._ky - 1):
-                by = if_else(logic_and(y >= self._ty[j], y <= self._ty[
-                             j + self._ky + 1]), self.basis(self._ty, y, self._ky, j), 0.0)
-                z += self._w[i * (len(self._ty) - self._ky - 1) + j] * bx * by
+        for i in range(len(self.__tx) - self.__kx - 1):
+            bx = if_else(logic_and(x >= self.__tx[i], x <= self.__tx[
+                         i + self.__kx + 1]), self.basis(self.__tx, x, self.__kx, i), 0.0)
+            for j in range(len(self.__ty) - self.__ky - 1):
+                by = if_else(logic_and(y >= self.__ty[j], y <= self.__ty[
+                             j + self.__ky + 1]), self.basis(self.__ty, y, self.__ky, j), 0.0)
+                z += self.__w[i * (len(self.__ty) - self.__ky - 1) + j] * bx * by
         return z

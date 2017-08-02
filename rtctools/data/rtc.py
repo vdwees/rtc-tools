@@ -30,12 +30,12 @@ class DataConfig:
 
         :param folder: Folder in which rtcDataConfig.xml is located.
         """
-        self._variable_map = {}
-        self._location_parameter_ids = {}
-        self._parameter_map = {}
-        self._model_parameter_ids = {}
-        self._basename_import = None
-        self._basename_export = None
+        self.__variable_map = {}
+        self.__location_parameter_ids = {}
+        self.__parameter_map = {}
+        self.__model_parameter_ids = {}
+        self.__basename_import = None
+        self.__basename_export = None
 
         path = os.path.join(folder, "rtcDataConfig.xml")
         try:
@@ -50,18 +50,18 @@ class DataConfig:
                 pi_timeseries = timeseries.find('fews:PITimeSeries', ns)
                 if pi_timeseries is not None:
                     internal_id = timeseries.get('id')
-                    external_id = self._pi_timeseries_id(pi_timeseries, 'fews')
+                    external_id = self.__pi_timeseries_id(pi_timeseries, 'fews')
 
-                    if internal_id in self._location_parameter_ids:
+                    if internal_id in self.__location_parameter_ids:
                         logger.error("Found more than one external timeseries mapped to internal id {} in {}.".format(internal_id, path))
                         raise Exception
-                    elif external_id in self._variable_map:
+                    elif external_id in self.__variable_map:
                         logger.error("Found more than one internal timeseries mapped to external id {} in {}.".format(external_id, path))
                         raise Exception
                     else:
-                        self._location_parameter_ids[internal_id] = \
-                            self._pi_location_parameter_id(pi_timeseries, 'fews')
-                        self._variable_map[external_id] = internal_id
+                        self.__location_parameter_ids[internal_id] = \
+                            self.__pi_location_parameter_id(pi_timeseries, 'fews')
+                        self.__variable_map[external_id] = internal_id
 
             for k in ['import', 'export']:
                 res = root.find(
@@ -76,18 +76,18 @@ class DataConfig:
                     pi_parameter = parameter.find('fews:PIParameter', ns)
                     if pi_parameter is not None:
                         internal_id   = parameter.get('id')
-                        external_id = self._pi_parameter_id(pi_parameter, 'fews')
+                        external_id = self.__pi_parameter_id(pi_parameter, 'fews')
 
-                        if internal_id in self._model_parameter_ids:
+                        if internal_id in self.__model_parameter_ids:
                             logger.error("Found more than one external parameter mapped to internal id {} in {}.".format(internal_id, path))
                             raise Exception
-                        if external_id in self._parameter_map:
+                        if external_id in self.__parameter_map:
                             logger.error("Found more than one interal parameter mapped to external modelId {}, locationId {}, parameterId {} in {}.".format( \
                                           external_id.model_id, external_id.location_id, external_id.parameter_id, path))
                             raise Exception
                         else:
-                            self._model_parameter_ids[internal_id] = self._pi_model_parameter_id(pi_parameter, 'fews')
-                            self._parameter_map[external_id] = internal_id
+                            self.__model_parameter_ids[internal_id] = self.__pi_model_parameter_id(pi_parameter, 'fews')
+                            self.__parameter_map[external_id] = internal_id
 
         except IOError:
             logger.error(
@@ -128,7 +128,7 @@ class DataConfig:
         location_id = el.find(namespace + ':locationId', ns).text
         parameter_id = el.find(namespace + ':parameterId', ns).text
 
-        return self._long_parameter_id(parameter_id, location_id, model_id)
+        return self.__long_parameter_id(parameter_id, location_id, model_id)
 
     def _pi_model_parameter_id(self, el, namespace):
         model_id = el.find(namespace + ':modelId', ns).text
@@ -161,9 +161,9 @@ class DataConfig:
         :returns: A timeseries ID.
         :rtype: string
         """
-        series_id = self._pi_timeseries_id(pi_header, 'pi')
+        series_id = self.__pi_timeseries_id(pi_header, 'pi')
         try:
-            return self._variable_map[series_id]
+            return self.__variable_map[series_id]
         except KeyError:
             return series_id
 
@@ -178,7 +178,7 @@ class DataConfig:
         :rtype: namedtuple
         :raises KeyError: If the timeseries ID has no mapping in rtcDataConfig.
         """
-        return self._location_parameter_ids[variable]
+        return self.__location_parameter_ids[variable]
 
     def parameter(self, parameter_id, location_id=None, model_id=None):
         """
@@ -193,9 +193,9 @@ class DataConfig:
         :rtype: string
         :raises KeyError: If the combination has no mapping in rtcDataConfig.
         """
-        parameter_id_long = self._long_parameter_id(parameter_id, location_id, model_id)
+        parameter_id_long = self.__long_parameter_id(parameter_id, location_id, model_id)
 
-        return self._parameter_map[parameter_id_long]
+        return self.__parameter_map[parameter_id_long]
 
     def pi_parameter_ids(self, parameter):
         """
@@ -208,4 +208,4 @@ class DataConfig:
         :rtype: namedtuple
         :raises KeyError: If the paramter ID has no mapping in rtcDataConfig.
         """
-        return self._model_parameter_ids[parameter]
+        return self.__model_parameter_ids[parameter]
