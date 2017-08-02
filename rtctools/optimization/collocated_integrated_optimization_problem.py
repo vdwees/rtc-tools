@@ -42,22 +42,22 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             'states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
 
         # Cache names of states
-        self._differentiated_states = [
+        self.__differentiated_states = [
             variable.name() for variable in self.dae_variables['states']]
-        self._algebraic_states = [variable.name()
+        self.__algebraic_states = [variable.name()
                                   for variable in self.dae_variables['algebraics']]
-        self._controls = [variable.name()
+        self.__controls = [variable.name()
                           for variable in self.dae_variables['control_inputs']]
 
         # DAE cache
-        self._integrator_step_function = None
-        self._dae_residual_function_collocated = None
-        self._initial_residual_with_params_fun_map = None
+        self.__integrator_step_function = None
+        self.__dae_residual_function_collocated = None
+        self.__initial_residual_with_params_fun_map = None
 
         # Create dictionary of variables so that we have O(1) state lookup available
-        self._variables = AliasDict(self.alias_relation)
+        self.__variables = AliasDict(self.alias_relation)
         for var in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.dae_variables['control_inputs'], self.dae_variables['constant_inputs'], self.dae_variables['parameters'], self.dae_variables['time']):
-            self._variables[var.name()] = var
+            self.__variables[var.name()] = var
 
         # Call super
         super().__init__(**kwargs)
@@ -136,14 +136,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
         # Reset dictionary of variables
         for var in itertools.chain(self.path_variables, self.extra_variables):
-            self._variables[var.name()] = var
+            self.__variables[var.name()] = var
 
         # Cache path variable names
-        self._path_variable_names = [variable.name()
+        self.__path_variable_names = [variable.name()
                                      for variable in self.path_variables]
 
         # Set up state vector cache
-        self._state_vector_cache = [{} for i in range(self.ensemble_size)]
+        self.__state_vector_cache = [{} for i in range(self.ensemble_size)]
 
         # Collocation times
         collocation_times = self.times()
@@ -169,7 +169,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
             if ensemble_member == 0:
                 # Store parameter values of member 0, as variable bounds may depend on these.
-                self._parameter_values_ensemble_member_0 = parameter_values
+                self.__parameter_values_ensemble_member_0 = parameter_values
             ensemble_data["parameters"] = nullvertcat(*parameter_values)
 
             # Store constant inputs
@@ -201,9 +201,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         lb_mx_indices = np.where([isinstance(v, MX) and not v.is_constant() for v in lb_values])
         ub_mx_indices = np.where([isinstance(v, MX) and not v.is_constant() for v in ub_values])
         if len(lb_mx_indices[0]) > 0:
-            lb_values[lb_mx_indices] = substitute_in_external(list(lb_values[lb_mx_indices]), self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+            lb_values[lb_mx_indices] = substitute_in_external(list(lb_values[lb_mx_indices]), self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
         if len(ub_mx_indices[0]) > 0:
-            ub_values[ub_mx_indices] = substitute_in_external(list(ub_values[ub_mx_indices]), self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+            ub_values[ub_mx_indices] = substitute_in_external(list(ub_values[ub_mx_indices]), self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
         resolved_bounds = AliasDict(self.alias_relation)
         for i, key in enumerate(bound_keys):
             lb, ub = lb_values[i], ub_values[i]
@@ -217,7 +217,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
         # Initialize vector of optimization symbols
         X = MX.sym('X', control_size + state_size)
-        self._solver_input = X
+        self.__solver_input = X
 
         # Initialize bound and seed vectors
         discrete = np.zeros(X.size1(), dtype=np.bool)
@@ -237,9 +237,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         x0[len(x0_control):] = x0_state
 
         # Provide a state for self.state_at() and self.der() to work with.
-        self._control_size = control_size
-        self._state_size = state_size
-        self._symbol_cache = {}
+        self.__control_size = control_size
+        self.__state_size = state_size
+        self.__symbol_cache = {}
 
         # Free variables for the collocated optimization problem
         integrated_variables = []
@@ -269,10 +269,10 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             else:
                 collocated_derivatives.append(
                     self.dae_variables['derivatives'][k])
-        self._algebraic_and_control_derivatives = []
+        self.__algebraic_and_control_derivatives = []
         for k, var in enumerate(itertools.chain(self.dae_variables['algebraics'], self.dae_variables['control_inputs'])):
             sym = MX.sym('der({})'.format(var.name()))
-            self._algebraic_and_control_derivatives.append(sym)
+            self.__algebraic_and_control_derivatives.append(sym)
             collocated_derivatives.append(sym)
 
         # Parameter symbols
@@ -340,7 +340,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         ensemble_aggregate["initial_path_variables"] = horzcat(*[d["initial_path_variables"] for d in ensemble_store])
         ensemble_aggregate["initial_path_variables"] = reduce_matvec(ensemble_aggregate["initial_path_variables"], self.solver_input)
 
-        if (self._dae_residual_function_collocated is None) and (self._integrator_step_function is None):
+        if (self.__dae_residual_function_collocated is None) and (self.__integrator_step_function is None):
             # Insert lookup tables.  No support yet for different lookup tables per ensemble member.
             lookup_tables = self.lookup_tables(0)
 
@@ -419,17 +419,17 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                     self.dae_variables['constant_inputs']))] + [dt_sym] + collocated_variables + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_integrated], function_options)
 
                 options = self.integrator_options()
-                self._integrator_step_function = rootfinder('integrator_step_function', 'newton', dae_residual_function_integrated, options)
+                self.__integrator_step_function = rootfinder('integrator_step_function', 'newton', dae_residual_function_integrated, options)
                 
             # Initialize an Function for the DAE residual (collocated part)
             if len(collocated_variables) > 0:
-                self._dae_residual_function_collocated = Function('dae_residual_function_collocated', [symbolic_parameters, vertcat(*
+                self.__dae_residual_function_collocated = Function('dae_residual_function_collocated', [symbolic_parameters, vertcat(*
                     integrated_variables + collocated_variables + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [dae_residual_collocated], function_options)
 
         if len(integrated_variables) > 0:
-            integrator_step_function = self._integrator_step_function
+            integrator_step_function = self.__integrator_step_function
         if len(collocated_variables) > 0:
-            dae_residual_function_collocated = self._dae_residual_function_collocated
+            dae_residual_function_collocated = self.__dae_residual_function_collocated
             dae_residual_collocated_size = dae_residual_function_collocated.mx_out(0).size1()
         else:
             dae_residual_collocated_size = 0
@@ -590,12 +590,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         ubg = []
 
         # Add constraints for initial conditions
-        if self._initial_residual_with_params_fun_map is None:
+        if self.__initial_residual_with_params_fun_map is None:
             initial_residual_with_params_fun = Function('initial_residual_total', [symbolic_parameters, vertcat(*self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables[
                                                   'control_inputs'] + integrated_derivatives + collocated_derivatives + self.dae_variables['constant_inputs'] + self.dae_variables['time'])], [veccat(dae_residual, initial_residual)],
                                                   function_options)
-            self._initial_residual_with_params_fun_map = initial_residual_with_params_fun.map(self.ensemble_size)
-        initial_residual_with_params_fun_map = self._initial_residual_with_params_fun_map
+            self.__initial_residual_with_params_fun_map = initial_residual_with_params_fun.map(self.ensemble_size)
+        initial_residual_with_params_fun_map = self.__initial_residual_with_params_fun_map
         [res] = initial_residual_with_params_fun_map.call([ensemble_aggregate["parameters"], vertcat(*[ensemble_aggregate["initial_state"], ensemble_aggregate["initial_derivatives"], ensemble_aggregate["initial_constant_inputs"], repmat([0.0], 1, self.ensemble_size)])], False, True)
 
         res = vec(res)
@@ -858,14 +858,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
                     lb = path_constraint[1]
                     if isinstance(lb, MX) and not lb.is_constant():
-                        [lb] = substitute([lb], self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+                        [lb] = substitute([lb], self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
                     elif isinstance(lb, Timeseries):
                         lb = self.interpolate(
                             collocation_times, lb.times, lb.values, -np.inf, -np.inf)
 
                     ub = path_constraint[2]
                     if isinstance(ub, MX) and not ub.is_constant():
-                        [ub] = substitute([ub], self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+                        [ub] = substitute([ub], self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
                     elif isinstance(ub, Timeseries):
                         ub = self.interpolate(
                             collocation_times, ub.times, ub.values, np.inf, np.inf)
@@ -889,9 +889,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         """
         Clears the DAE ``Function``s that were cached by ``transcribe``.
         """
-        self._dae_residual_function_collocated = None
-        self._integrator_step_function = None
-        self._initial_residual_with_params_fun_map = None
+        self.__dae_residual_function_collocated = None
+        self.__integrator_step_function = None
+        self.__initial_residual_with_params_fun_map = None
 
     def extract_results(self, ensemble_member=0):
         logger.info("Extracting results")
@@ -912,7 +912,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
     @property
     def solver_input(self):
-        return self._solver_input
+        return self.__solver_input
 
     def solver_options(self):
         options = super(CollocatedIntegratedOptimizationProblem,
@@ -931,7 +931,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
     @property
     def controls(self):
-        return self._controls
+        return self.__controls
 
     def discretize_controls(self, resolved_bounds):
         # Default implementation: One single set of control inputs for all
@@ -1075,18 +1075,18 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
     @property
     def differentiated_states(self):
-        return self._differentiated_states
+        return self.__differentiated_states
 
     @property
     def algebraic_states(self):
-        return self._algebraic_states
+        return self.__algebraic_states
 
     def discretize_states(self, resolved_bounds):
         # Default implementation: States for all ensemble members
         ensemble_member_size = 0
 
         # Space for collocated states
-        for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
+        for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
             if variable in self.integrated_states:
                 ensemble_member_size += 1  # Initial state
             else:
@@ -1112,7 +1112,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         # Types
         for ensemble_member in range(self.ensemble_size):
             offset = ensemble_member * ensemble_member_size
-            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
+            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
                 if variable in self.integrated_states:
                     discrete[offset] = self.variable_is_discrete(variable)
 
@@ -1134,7 +1134,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         # Bounds, defaulting to +/- inf, if not set
         for ensemble_member in range(self.ensemble_size):
             offset = ensemble_member * ensemble_member_size
-            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
+            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
                 if variable in self.integrated_states:
                     try:
                         bound = resolved_bounds[variable]
@@ -1198,7 +1198,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             seed = self.seed(ensemble_member)
 
             offset = ensemble_member * ensemble_member_size
-            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
+            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
                 if variable in self.integrated_states:
                     try:
                         seed_k = seed[variable]
@@ -1238,8 +1238,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         X = self.solver_output
 
         # Discretization parameters
-        control_size = self._control_size
-        ensemble_member_size = int(self._state_size / self.ensemble_size)
+        control_size = self.__control_size
+        ensemble_member_size = int(self.__state_size / self.ensemble_size)
 
         # Extract control inputs
         results = {}
@@ -1299,18 +1299,18 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         return results
 
     def state_vector(self, variable, ensemble_member=0):
-        if variable in self._state_vector_cache[ensemble_member]:
-            return self._state_vector_cache[ensemble_member][variable]
+        if variable in self.__state_vector_cache[ensemble_member]:
+            return self.__state_vector_cache[ensemble_member][variable]
 
         # Look up transcribe_problem() state.
         X = self.solver_input
-        control_size = self._control_size
-        ensemble_member_size = int(self._state_size / self.ensemble_size)
+        control_size = self.__control_size
+        ensemble_member_size = int(self.__state_size / self.ensemble_size)
 
         # Find state vector
         vector = None
         offset = control_size + ensemble_member * ensemble_member_size
-        for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
+        for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
             times = self.times(free_variable)
             n_times = len(times)
             if free_variable == variable:
@@ -1329,7 +1329,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             # Could not find state.  Try controls.
             vector = self.control_vector(variable, ensemble_member=ensemble_member)
 
-        self._state_vector_cache[ensemble_member][variable] = vector
+        self.__state_vector_cache[ensemble_member][variable] = vector
         return vector
 
     def state_at(self, variable, t, ensemble_member=0, scaled=False, extrapolate=True):
@@ -1340,20 +1340,20 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         if extrapolate:
             name += 'E'
         try:
-            return self._symbol_cache[name]
+            return self.__symbol_cache[name]
         except KeyError:
             # Look up transcribe_problem() state.
             t0 = self.initial_time
             X = self.solver_input
-            control_size = self._control_size
-            ensemble_member_size = int(self._state_size / self.ensemble_size)
+            control_size = self.__control_size
+            ensemble_member_size = int(self.__state_size / self.ensemble_size)
 
             # Fetch appropriate symbol, or value.
             canonical, sign = self.alias_relation.canonical_signed(variable)
             found = False
             if not found:
                 offset = control_size + ensemble_member * ensemble_member_size
-                for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self._path_variable_names):
+                for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
                     if free_variable == canonical:
                         times = self.times(free_variable)
                         n_times = len(times)
@@ -1436,18 +1436,18 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 raise KeyError(variable)
 
             # Cache symbol.
-            self._symbol_cache[name] = sym
+            self.__symbol_cache[name] = sym
 
             return sym
 
     def variable(self, variable):
-        return self._variables[variable]
+        return self.__variables[variable]
 
     def extra_variable(self, extra_variable, ensemble_member=0):
         # Look up transcribe_problem() state.
         X = self.solver_input
-        control_size = self._control_size
-        ensemble_member_size = int(self._state_size / self.ensemble_size)
+        control_size = self.__control_size
+        ensemble_member_size = int(self.__state_size / self.ensemble_size)
 
         # Compute position in state vector
         offset = control_size + ensemble_member * ensemble_member_size
@@ -1580,15 +1580,15 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 i = self.algebraic_states.index(canonical)
             except ValueError:
                 i = len(self.algebraic_states) + self.controls.index(canonical)
-            return sign * self._algebraic_and_control_derivatives[i]
+            return sign * self.__algebraic_and_control_derivatives[i]
 
     def der_at(self, variable, t, ensemble_member=0):
         # Special case t being t0 for differentiated states
         if t == self.initial_time:
             # We have a special symbol for t0 derivatives
             X = self.solver_input
-            control_size = self._control_size
-            ensemble_member_size = int(self._state_size / self.ensemble_size)
+            control_size = self.__control_size
+            ensemble_member_size = int(self.__state_size / self.ensemble_size)
 
             canonical, sign = self.alias_relation.canonical_signed(variable)
             try:
@@ -1636,7 +1636,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         # Expression as function of states and derivatives
         states = self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs']
         states_and_path_variables = states + self.path_variables
-        derivatives = self.dae_variables['derivatives'] + self._algebraic_and_control_derivatives
+        derivatives = self.dae_variables['derivatives'] + self.__algebraic_and_control_derivatives
 
         f = Function('f', [vertcat(*states_and_path_variables), vertcat(*derivatives),
             vertcat(*self.dae_variables['constant_inputs']), vertcat(*self.dae_variables['parameters']),
@@ -1684,9 +1684,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             else:
                 values = constant_input.values
                 if isinstance(values, MX) and not values.is_constant():
-                    [values] = substitute_in_external([values], self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+                    [values] = substitute_in_external([values], self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
                 elif np.any([isinstance(value, MX) and not value.is_constant() for value in values]):
-                    values = substitute_in_external(values, self.dae_variables['parameters'], self._parameter_values_ensemble_member_0)
+                    values = substitute_in_external(values, self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
                 accumulation_constant_inputs[i] = self.interpolate(
                     collocation_times, constant_input.times, values, 0.0, 0.0)
                 
@@ -1694,6 +1694,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
 
         # Map
         values = fmap(accumulation_states, accumulation_derivatives,
-            accumulation_constant_inputs, repmat(vertcat(*self._parameter_values_ensemble_member_0), 1, n_collocation_times),
+            accumulation_constant_inputs, repmat(vertcat(*self.__parameter_values_ensemble_member_0), 1, n_collocation_times),
             np.transpose(collocation_times))
         return transpose(values)

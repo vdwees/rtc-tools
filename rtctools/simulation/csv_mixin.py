@@ -39,8 +39,8 @@ class CSVMixin(SimulationProblem):
         assert('output_folder' in kwargs)
 
         # Save arguments
-        self._input_folder = kwargs['input_folder']
-        self._output_folder = kwargs['output_folder']
+        self.__input_folder = kwargs['input_folder']
+        self.__output_folder = kwargs['output_folder']
 
         # Call parent class first for default behaviour.
         super().__init__(**kwargs)
@@ -57,113 +57,113 @@ class CSVMixin(SimulationProblem):
             """
             if initial_state.shape:
                 raise Exception("CSVMixin: Initial state file {} contains more than one row of data. Please remove the data row(s) that do not describe the initial state.".format(
-                    os.path.join(self._input_folder, 'initial_state.csv')))
+                    os.path.join(self.__input_folder, 'initial_state.csv')))
 
         # Read CSV files
         _timeseries = csv.load(os.path.join(
-            self._input_folder, 'timeseries_import.csv'), delimiter=self.csv_delimiter, with_time=True)
-        self._timeseries_times = _timeseries[_timeseries.dtype.names[0]]
-        self._timeseries = {key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}
+            self.__input_folder, 'timeseries_import.csv'), delimiter=self.csv_delimiter, with_time=True)
+        self.__timeseries_times = _timeseries[_timeseries.dtype.names[0]]
+        self.__timeseries = {key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}
         logger.debug("CSVMixin: Read timeseries.")
 
         try:
             _parameters = csv.load(os.path.join(
-                self._input_folder, 'parameters.csv'), delimiter=self.csv_delimiter)
+                self.__input_folder, 'parameters.csv'), delimiter=self.csv_delimiter)
             logger.debug("CSVMixin: Read parameters.")
-            self._parameters = {key: float(_parameters[key]) for key in _parameters.dtype.names}
+            self.__parameters = {key: float(_parameters[key]) for key in _parameters.dtype.names}
         except IOError:
-            self._parameters = {}
+            self.__parameters = {}
 
         try:
             _initial_state = csv.load(os.path.join(
-                self._input_folder, 'initial_state.csv'), delimiter=self.csv_delimiter)
+                self.__input_folder, 'initial_state.csv'), delimiter=self.csv_delimiter)
             logger.debug("CSVMixin: Read initial state.")
             check_initial_state_array(_initial_state)
-            self._initial_state = {key: float(_initial_state[key]) for key in _initial_state.dtype.names}
+            self.__initial_state = {key: float(_initial_state[key]) for key in _initial_state.dtype.names}
         except IOError:
-            self._initial_state = {}
+            self.__initial_state = {}
 
-        self._timeseries_times_sec = self._datetime_to_sec(
-            self._timeseries_times)
+        self.__timeseries_times_sec = self.__datetime_to_sec(
+            self.__timeseries_times)
 
         # Timestamp check
         if self.csv_validate_timeseries:
-            for i in range(len(self._timeseries_times_sec) - 1):
-                if self._timeseries_times_sec[i] >= self._timeseries_times_sec[i + 1]:
+            for i in range(len(self.__timeseries_times_sec) - 1):
+                if self.__timeseries_times_sec[i] >= self.__timeseries_times_sec[i + 1]:
                     raise Exception(
                         'CSVMixin: Time stamps must be strictly increasing.')
 
-        self._dt = self._timeseries_times_sec[1] - self._timeseries_times_sec[0]
+        self.__dt = self.__timeseries_times_sec[1] - self.__timeseries_times_sec[0]
 
         # Check if the timeseries are truly equidistant
         if self.csv_validate_timeseries:
-            for i in range(len(self._timeseries_times_sec) - 1):
-                if self._timeseries_times_sec[i + 1] - self._timeseries_times_sec[i] != self._dt:
+            for i in range(len(self.__timeseries_times_sec) - 1):
+                if self.__timeseries_times_sec[i + 1] - self.__timeseries_times_sec[i] != self.__dt:
                     raise Exception('CSVMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set equidistant=False if this is intended.'.format(
-                        self._timeseries_times[i + 1]))
+                        self.__timeseries_times[i + 1]))
 
     def initialize(self, config_file=None):
         # Set up experiment
-        self.setup_experiment(0, self._timeseries_times_sec[-1], self._dt)
+        self.setup_experiment(0, self.__timeseries_times_sec[-1], self.__dt)
 
         # Load parameters from parameter config
-        self._parameter_variables = set(self.get_parameter_variables())
+        self.__parameter_variables = set(self.get_parameter_variables())
 
-        logger.debug("Model parameters are {}".format(self._parameter_variables))
+        logger.debug("Model parameters are {}".format(self.__parameter_variables))
 
-        for parameter, value in self._parameters.items():
-            if parameter in self._parameter_variables:
+        for parameter, value in self.__parameters.items():
+            if parameter in self.__parameter_variables:
                 logger.debug("Setting parameter {} = {}".format(parameter, value))
 
                 self.set_var(parameter, value)
 
         # Load input variable names
-        self._input_variables = set(self.get_input_variables().keys())
+        self.__input_variables = set(self.get_input_variables().keys())
 
         # Set initial states
-        for variable, value in self._initial_state.items():
-            if variable in self._input_variables:
-                if variable in self._timeseries:
+        for variable, value in self.__initial_state.items():
+            if variable in self.__input_variables:
+                if variable in self.__timeseries:
                     logger.warning("Entry {} in initial_state.csv was also found in timeseries_import.csv.".format(variable))
                 self.set_var(variable, value)
             else:
                 logger.warning("Entry {} in initial_state.csv is not an input variable.".format(variable))
 
-        logger.debug("Model inputs are {}".format(self._input_variables))
+        logger.debug("Model inputs are {}".format(self.__input_variables))
 
         # Set initial input values
-        for variable, timeseries in self._timeseries.items():
-            if variable in self._input_variables:
+        for variable, timeseries in self.__timeseries.items():
+            if variable in self.__input_variables:
                 value = timeseries[0]
                 if np.isfinite(value):
                     self.set_var(variable, value)
 
         # Empty output
-        self._output_variables = set(self.get_output_variables().keys())
-        n_times = len(self._timeseries_times_sec)
-        self._output = {variable : np.full(n_times, np.nan) for variable in self._output_variables}
+        self.__output_variables = set(self.get_output_variables().keys())
+        n_times = len(self.__timeseries_times_sec)
+        self.__output = {variable : np.full(n_times, np.nan) for variable in self.__output_variables}
 
         # Call super, which will also initialize the model itself
         super().initialize(config_file)
 
         # Extract consistent t0 values
-        for variable in self._output_variables:
-            self._output[variable][0] = self.get_var(variable)
+        for variable in self.__output_variables:
+            self.__output[variable][0] = self.get_var(variable)
 
     def update(self, dt):
         # Time step
         if dt < 0:
-            dt = self._dt
+            dt = self.__dt
 
         # Current time stamp
         t = self.get_current_time()
 
         # Get current time index
-        t_idx = bisect.bisect_left(self._timeseries_times_sec, t + dt)
+        t_idx = bisect.bisect_left(self.__timeseries_times_sec, t + dt)
 
         # Set input values
-        for variable, timeseries in self._timeseries.items():
-            if variable in self._input_variables:
+        for variable, timeseries in self.__timeseries.items():
+            if variable in self.__input_variables:
                 value = timeseries[t_idx]
                 if np.isfinite(value):
                     self.set_var(variable, value)
@@ -172,38 +172,38 @@ class CSVMixin(SimulationProblem):
         super().update(dt)
 
         # Extract results
-        for variable in self._output_variables:
-            self._output[variable][t_idx] = self.get_var(variable)
+        for variable in self.__output_variables:
+            self.__output[variable][t_idx] = self.get_var(variable)
 
     def post(self):
         # Call parent class first for default behaviour.
         super().post()
 
          # Write output
-        names = ['time'] + sorted(set(self._output.keys()))
+        names = ['time'] + sorted(set(self.__output.keys()))
         formats = ['O'] + (len(names) - 1) * ['f8']
         dtype = dict(names=names, formats=formats)
-        data = np.zeros(len(self._timeseries_times), dtype=dtype)
-        data['time'] = self._timeseries_times
-        for variable, values in self._output.items():
+        data = np.zeros(len(self.__timeseries_times), dtype=dtype)
+        data['time'] = self.__timeseries_times
+        for variable, values in self.__output.items():
             data[variable] = values
 
-        fname = os.path.join(self._output_folder, 'timeseries_export.csv')
+        fname = os.path.join(self.__output_folder, 'timeseries_export.csv')
         csv.save(fname, data, delimiter=self.csv_delimiter, with_time=True)
 
     def _datetime_to_sec(self, d):
         # Return the date/timestamps in seconds since t0.
         if hasattr(d, '__iter__'):
-            return np.array([(t - self._timeseries_times[0]).total_seconds() for t in d])
+            return np.array([(t - self.__timeseries_times[0]).total_seconds() for t in d])
         else:
-            return (d - self._timeseries_times[0]).total_seconds()
+            return (d - self.__timeseries_times[0]).total_seconds()
 
     def _sec_to_datetime(self, s):
         # Return the date/timestamps in seconds since t0 as datetime objects.
         if hasattr(s, '__iter__'):
-            return [self._timeseries_times[0] + timedelta(seconds=t) for t in s]
+            return [self.__timeseries_times[0] + timedelta(seconds=t) for t in s]
         else:
-            return self._timeseries_times[0] + timedelta(seconds=s)
+            return self.__timeseries_times[0] + timedelta(seconds=s)
 
     def timeseries_at(self, variable, t):
         """
@@ -216,9 +216,9 @@ class CSVMixin(SimulationProblem):
 
         :raises: KeyError
         """
-        values = self._timeseries[variable]
-        t_idx = bisect.bisect_left(self._timeseries_times_sec, t)
-        if self._timeseries_times_sec[t_idx] == t:
+        values = self.__timeseries[variable]
+        t_idx = bisect.bisect_left(self.__timeseries_times_sec, t)
+        if self.__timeseries_times_sec[t_idx] == t:
             return values[t_idx]
         else:
-            return np.interp1d(t, self._timeseries_times_sec, values)
+            return np.interp1d(t, self.__timeseries_times_sec, values)

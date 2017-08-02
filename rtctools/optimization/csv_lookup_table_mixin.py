@@ -60,10 +60,10 @@ class CSVLookupTableMixin(OptimizationProblem):
         if 'input_folder' in kwargs:
             assert('lookup_table_folder' not in kwargs)
 
-            self._lookup_table_folder = os.path.join(
+            self.__lookup_table_folder = os.path.join(
                 kwargs['input_folder'], 'lookup_tables')
         else:
-            self._lookup_table_folder = kwargs['lookup_table_folder']
+            self.__lookup_table_folder = kwargs['lookup_table_folder']
 
         # Call parent
         super().__init__(**kwargs)
@@ -74,7 +74,7 @@ class CSVLookupTableMixin(OptimizationProblem):
 
         # Get curve fitting options from curvefit_options.ini file
         ini_path = os.path.join(
-            self._lookup_table_folder, 'curvefit_options.ini')
+            self.__lookup_table_folder, 'curvefit_options.ini')
         try:
             ini_config = configparser.RawConfigParser()
             ini_config.readfp(open(ini_path))
@@ -112,8 +112,8 @@ class CSVLookupTableMixin(OptimizationProblem):
         # Read CSV files
         logger.info(
             "CSVLookupTableMixin: Generating Splines from lookup table data.")
-        self._lookup_tables = {}
-        for filename in glob.glob(os.path.join(self._lookup_table_folder, "*.csv")):
+        self.__lookup_tables = {}
+        for filename in glob.glob(os.path.join(self.__lookup_table_folder, "*.csv")):
 
             logger.debug(
                 "CSVLookupTableMixin: Reading lookup table from {}".format(filename))
@@ -174,7 +174,7 @@ class CSVLookupTableMixin(OptimizationProblem):
                     pylab.savefig(figure_filename)
                 symbols = [ca.SX.sym(inputs[0])]
                 function = ca.Function('f', symbols, [BSpline1D(*tck)(symbols[0])])
-                self._lookup_tables[output] = LookupTable(symbols, function)
+                self.__lookup_tables[output] = LookupTable(symbols, function)
 
             elif len(csvinput.dtype.names) == 3:
                 if tck is None:
@@ -208,7 +208,7 @@ class CSVLookupTableMixin(OptimizationProblem):
                 symbols = [ca.SX.sym(inputs[0]), ca.SX.sym(inputs[1])]
                 function = ca.Function('f', 
                     symbols, [BSpline2D(*tck)(symbols[0], symbols[1])])
-                self._lookup_tables[output] = LookupTable(symbols, function)
+                self.__lookup_tables[output] = LookupTable(symbols, function)
 
             else:
                 raise Exception(
@@ -223,6 +223,6 @@ class CSVLookupTableMixin(OptimizationProblem):
                               self).lookup_tables(ensemble_member)
 
         # Update lookup_tables with imported csv lookup tables
-        lookup_tables.update(self._lookup_tables)
+        lookup_tables.update(self.__lookup_tables)
 
         return lookup_tables

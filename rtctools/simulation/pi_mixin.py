@@ -45,12 +45,12 @@ class PIMixin(SimulationProblem):
         assert('output_folder' in kwargs)
 
         # Save arguments
-        self._input_folder = kwargs['input_folder']
-        self._output_folder = kwargs['output_folder']
+        self.__input_folder = kwargs['input_folder']
+        self.__output_folder = kwargs['output_folder']
 
         # Load rtcDataConfig.xml.  We assume this file does not change over the
         # life time of this object.
-        self._data_config = rtc.DataConfig(self._input_folder)
+        self.__data_config = rtc.DataConfig(self.__input_folder)
 
         # Call parent class first for default behaviour.
         super().__init__(**kwargs)
@@ -60,108 +60,108 @@ class PIMixin(SimulationProblem):
         super().pre()
 
         # rtcParameterConfig
-        self._parameter_config = []
+        self.__parameter_config = []
         try:
             for pi_parameter_config_basename in self.pi_parameter_config_basenames:
-                self._parameter_config.append(pi.ParameterConfig(
-                    self._input_folder, pi_parameter_config_basename))
+                self.__parameter_config.append(pi.ParameterConfig(
+                    self.__input_folder, pi_parameter_config_basename))
         except IOError:
             raise Exception(
-                "PI: {}.xml not found in {}.".format(pi_parameter_config_basename, self._input_folder))
+                "PI: {}.xml not found in {}.".format(pi_parameter_config_basename, self.__input_folder))
 
         # timeseries_{import,export}.xml. rtcDataConfig can override (if not
         # falsy)
-        basename_import = self._data_config._basename_import or 'timeseries_import'
-        basename_export = self._data_config._basename_export or 'timeseries_export'
+        basename_import = self.__data_config._basename_import or 'timeseries_import'
+        basename_export = self.__data_config._basename_export or 'timeseries_export'
 
         try:
-            self._timeseries_import = pi.Timeseries(
-                self._data_config, self._input_folder, basename_import, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
+            self.__timeseries_import = pi.Timeseries(
+                self.__data_config, self.__input_folder, basename_import, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
         except IOError:
             raise Exception("PI: {}.xml not found in {}.".format(
-                basename_import, self._input_folder))
+                basename_import, self.__input_folder))
 
-        self._timeseries_export = pi.Timeseries(
-            self._data_config, self._output_folder, basename_export, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
+        self.__timeseries_export = pi.Timeseries(
+            self.__data_config, self.__output_folder, basename_export, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
 
         # Convert timeseries timestamps to seconds since t0 for internal use
-        self._timeseries_import_times = self._datetime_to_sec(
-            self._timeseries_import.times)
+        self.__timeseries_import_times = self.__datetime_to_sec(
+            self.__timeseries_import.times)
 
         # Timestamp check
         if self.pi_validate_timeseries:
-            for i in range(len(self._timeseries_import_times) - 1):
-                if self._timeseries_import_times[i] >= self._timeseries_import_times[i + 1]:
+            for i in range(len(self.__timeseries_import_times) - 1):
+                if self.__timeseries_import_times[i] >= self.__timeseries_import_times[i + 1]:
                     raise Exception(
                         'PIMixin: Time stamps must be strictly increasing.')
 
         # Check if the timeseries are equidistant
-        self._dt = self._timeseries_import_times[1] - self._timeseries_import_times[0]
+        self.__dt = self.__timeseries_import_times[1] - self.__timeseries_import_times[0]
         if self.pi_validate_timeseries:
-            for i in range(len(self._timeseries_import_times) - 1):
-                if self._timeseries_import_times[i + 1] - self._timeseries_import_times[i] != self._dt:
+            for i in range(len(self.__timeseries_import_times) - 1):
+                if self.__timeseries_import_times[i + 1] - self.__timeseries_import_times[i] != self.__dt:
                     raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
-                        self._timeseries_import.times[i + 1]))
+                        self.__timeseries_import.times[i + 1]))
 
     def initialize(self, config_file=None):
         # Set up experiment
-        self.setup_experiment(0, self._timeseries_import_times[-1], self._dt)
+        self.setup_experiment(0, self.__timeseries_import_times[-1], self.__dt)
 
         # Load parameters from parameter config
-        self._parameter_variables = set(self.get_parameter_variables())
+        self.__parameter_variables = set(self.get_parameter_variables())
 
-        logger.debug("Model parameters are {}".format(self._parameter_variables))
+        logger.debug("Model parameters are {}".format(self.__parameter_variables))
 
-        for parameter_config in self._parameter_config:
+        for parameter_config in self.__parameter_config:
             for location_id, model_id, parameter_id, value in parameter_config:
                 try:
-                    parameter = self._data_config.parameter(parameter_id, location_id, model_id)
+                    parameter = self.__data_config.parameter(parameter_id, location_id, model_id)
                 except KeyError:
                     parameter = parameter_id
 
-                if parameter in self._parameter_variables:
+                if parameter in self.__parameter_variables:
                     logger.debug("Setting parameter {} = {}".format(parameter, value))
 
                     self.set_var(parameter, value)
 
         # Load input variable names
-        self._input_variables = set(self.get_input_variables().keys())
+        self.__input_variables = set(self.get_input_variables().keys())
 
-        logger.debug("Model inputs are {}".format(self._input_variables))
+        logger.debug("Model inputs are {}".format(self.__input_variables))
 
         # Set initial input values
-        for variable, timeseries in self._timeseries_import.items():
-            if variable in self._input_variables:
-                value = timeseries[self._timeseries_import._forecast_index]
+        for variable, timeseries in self.__timeseries_import.items():
+            if variable in self.__input_variables:
+                value = timeseries[self.__timeseries_import._forecast_index]
                 if np.isfinite(value):
                     self.set_var(variable, value)
 
         # Empty output
-        self._output_variables = set(self.get_output_variables().keys())
-        n_times = len(self._timeseries_import_times)
-        self._output = {variable : np.full(n_times, np.nan) for variable in self._output_variables}
+        self.__output_variables = set(self.get_output_variables().keys())
+        n_times = len(self.__timeseries_import_times)
+        self.__output = {variable : np.full(n_times, np.nan) for variable in self.__output_variables}
 
         # Call super, which will also initialize the model itself
         super().initialize(config_file)
 
         # Extract consistent t0 values
-        for variable in self._output_variables:
-            self._output[variable][self._timeseries_import._forecast_index] = self.get_var(variable)
+        for variable in self.__output_variables:
+            self.__output[variable][self.__timeseries_import._forecast_index] = self.get_var(variable)
 
     def update(self, dt):
         # Time step
         if dt < 0:
-            dt = self._dt
+            dt = self.__dt
 
         # Current time stamp
         t = self.get_current_time()   
 
         # Get current time index
-        t_idx = bisect.bisect_left(self._timeseries_import_times, t + dt)
+        t_idx = bisect.bisect_left(self.__timeseries_import_times, t + dt)
 
         # Set input values
-        for variable, timeseries in self._timeseries_import.items():
-            if variable in self._input_variables:
+        for variable, timeseries in self.__timeseries_import.items():
+            if variable in self.__input_variables:
                 value = timeseries[t_idx]
                 if np.isfinite(value):
                     self.set_var(variable, value)
@@ -170,8 +170,8 @@ class PIMixin(SimulationProblem):
         super().update(dt)
 
         # Extract results
-        for variable in self._output_variables:
-            self._output[variable][t_idx] = self.get_var(variable)
+        for variable in self.__output_variables:
+            self.__output[variable][t_idx] = self.get_var(variable)
 
     def post(self):
         # Call parent class first for default behaviour.
@@ -179,53 +179,53 @@ class PIMixin(SimulationProblem):
 
         # Start of write output
         # Write the time range for the export file.
-        self._timeseries_export._times = self._timeseries_import.times[self._timeseries_import.forecast_index:]
+        self.__timeseries_export._times = self.__timeseries_import.times[self.__timeseries_import.forecast_index:]
 
         # Write other time settings
-        self._timeseries_export._start_datetime = self._timeseries_import._forecast_datetime
-        self._timeseries_export._end_datetime  = self._timeseries_import._end_datetime
-        self._timeseries_export._forecast_datetime  = self._timeseries_import._forecast_datetime
-        self._timeseries_export._dt = self._timeseries_import._dt
-        self._timeseries_export._timezone = self._timeseries_import._timezone
+        self.__timeseries_export._start_datetime = self.__timeseries_import._forecast_datetime
+        self.__timeseries_export._end_datetime  = self.__timeseries_import._end_datetime
+        self.__timeseries_export._forecast_datetime  = self.__timeseries_import._forecast_datetime
+        self.__timeseries_export._dt = self.__timeseries_import._dt
+        self.__timeseries_export._timezone = self.__timeseries_import._timezone
 
         # Write the ensemble properties for the export file.
-        self._timeseries_export._ensemble_size = 1
-        self._timeseries_export._contains_ensemble = self._timeseries_import.contains_ensemble
-        while self._timeseries_export._ensemble_size > len(self._timeseries_export._values):
-            self._timeseries_export._values.append({})
+        self.__timeseries_export._ensemble_size = 1
+        self.__timeseries_export._contains_ensemble = self.__timeseries_import.contains_ensemble
+        while self.__timeseries_export._ensemble_size > len(self.__timeseries_export._values):
+            self.__timeseries_export._values.append({})
 
         # Transfer units from import timeseries
-        self._timeseries_export._units = self._timeseries_import._units
+        self.__timeseries_export._units = self.__timeseries_import._units
 
         # For all variables that are output variables the values are
         # extracted from the results.
-        for key, values in self._output.items():
+        for key, values in self.__output.items():
             # Check if ID mapping is present
             try:
-                location_parameter_id = self._timeseries_export._data_config.pi_variable_ids(key)
+                location_parameter_id = self.__timeseries_export._data_config.pi_variable_ids(key)
             except KeyError:
                 logger.debug('PIMixIn: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(key))
                 continue
 
             # Add series to output file
-            self._timeseries_export.set(key, values)
+            self.__timeseries_export.set(key, values)
 
         # Write output file to disk
-        self._timeseries_export.write()
+        self.__timeseries_export.write()
 
     def _datetime_to_sec(self, d):
         # Return the date/timestamps in seconds since t0.
         if hasattr(d, '__iter__'):
-            return np.array([(t - self._timeseries_import.forecast_datetime).total_seconds() for t in d])
+            return np.array([(t - self.__timeseries_import.forecast_datetime).total_seconds() for t in d])
         else:
-            return (d - self._timeseries_import.forecast_datetime).total_seconds()
+            return (d - self.__timeseries_import.forecast_datetime).total_seconds()
 
     def _sec_to_datetime(self, s):
         # Return the date/timestamps in seconds since t0 as datetime objects.
         if hasattr(s, '__iter__'):
-            return [self._timeseries_import.forecast_datetime + timedelta(seconds=t) for t in s]
+            return [self.__timeseries_import.forecast_datetime + timedelta(seconds=t) for t in s]
         else:
-            return self._timeseries_import.forecast_datetime + timedelta(seconds=s)
+            return self.__timeseries_import.forecast_datetime + timedelta(seconds=s)
 
     def timeseries_at(self, variable, t):
         """
@@ -238,9 +238,9 @@ class PIMixin(SimulationProblem):
 
         :raises: KeyError
         """
-        values = self._timeseries_import.get(variable)
-        t_idx = bisect.bisect_left(self._timeseries_import_times, t)
-        if self._timeseries_import_times[t_idx] == t:
+        values = self.__timeseries_import.get(variable)
+        t_idx = bisect.bisect_left(self.__timeseries_import_times, t)
+        if self.__timeseries_import_times[t_idx] == t:
             return values[t_idx]
         else:
-            return np.interp1d(t, self._timeseries_import_times, values)
+            return np.interp1d(t, self.__timeseries_import_times, values)

@@ -64,10 +64,10 @@ class SimulationProblem:
             except ModelicaClassNotFoundError:
                 raise RuntimeError("Could not find files to compile FMU.")
 
-        self._model = pyfmi.load_fmu(fmu_filename)
-        if self._model is None:
+        self.__model = pyfmi.load_fmu(fmu_filename)
+        if self.__model is None:
             raise RuntimeError("FMU could not be loaded")
-        self._model_types = {0: 'float', 1: 'int',
+        self.__model_types = {0: 'float', 1: 'int',
                              2: 'bool', 3: 'str', 4: 'dict'}
 
     def initialize(self, config_file=None):
@@ -81,7 +81,7 @@ class SimulationProblem:
             # self.setup_experiment(start,stop)
             # for now, assume that setup_experiment was called beforehand
             raise NotImplementedError
-        self._model.initialize()
+        self.__model.initialize()
 
     def pre(self):
         """
@@ -105,17 +105,17 @@ class SimulationProblem:
         :param tol:   Tolerance of the underlying FMU method.
         """
         if tol is None:
-            tol = self._model.get_default_experiment_tolerance()
-        self._start = start
-        self._stop = stop
-        self._dt = dt
-        self._model.setup_experiment(tol, tol, start, stop, stop)
+            tol = self.__model.get_default_experiment_tolerance()
+        self.__start = start
+        self.__stop = stop
+        self.__dt = dt
+        self.__model.setup_experiment(tol, tol, start, stop, stop)
 
     def finalize(self):
         """
         Finalize FMU.
         """
-        self._model.terminate()
+        self.__model.terminate()
 
     def update(self, dt):
         """
@@ -126,10 +126,10 @@ class SimulationProblem:
         :param dt: Time step size.
         """
         if dt < 0:
-            dt = self._dt
+            dt = self.__dt
 
         logger.debug("Taking a step at {} with size {}".format(self.get_current_time(), dt))
-        return self._model.do_step(self._model.time, dt, True)
+        return self.__model.do_step(self.__model.time, dt, True)
 
     def simulate(self):
         """ 
@@ -158,7 +158,7 @@ class SimulationProblem:
         """
         Reset the FMU.
         """
-        self._model.reset()
+        self.__model.reset()
 
     def get_start_time(self):
         """
@@ -166,7 +166,7 @@ class SimulationProblem:
 
         :returns: The start time of the experiment.
         """
-        return self._start
+        return self.__start
 
     def get_end_time(self):
         """
@@ -174,7 +174,7 @@ class SimulationProblem:
 
         :returns: The end time of the experiment.
         """
-        return self._stop
+        return self.__stop
 
     def get_current_time(self):
         """
@@ -182,7 +182,7 @@ class SimulationProblem:
 
         :returns: The current simulation time.
         """
-        return self._model.time
+        return self.__model.time
 
     def get_options(self):
         """
@@ -190,7 +190,7 @@ class SimulationProblem:
 
         :returns: A dictionary of options supported by the FMU.
         """
-        return self._model.simulate_options()
+        return self.__model.simulate_options()
 
     def get_var(self, name):
         """
@@ -200,7 +200,7 @@ class SimulationProblem:
 
         :returns: The value of the variable.
         """
-        return self._model.get(name)
+        return self.__model.get(name)
 
     def get_var_count(self):
         """
@@ -208,7 +208,7 @@ class SimulationProblem:
 
         :returns: The number of variables supported by the FMU.
         """
-        return len(self._model.get_model_variables())
+        return len(self.__model.get_model_variables())
 
     def get_var_name(self, i):
         """
@@ -228,8 +228,8 @@ class SimulationProblem:
 
         :returns: The type of the variable.
         """
-        retval = self._model.get_variable_data_type(name)
-        return self._model_types[retval]
+        retval = self.__model.get_variable_data_type(name)
+        return self.__model_types[retval]
 
     def get_var_rank(self, name):
         """
@@ -249,16 +249,16 @@ class SimulationProblem:
 
         :returns: A list of all variables supported by the FMU.
         """
-        return self._model.get_model_variables()
+        return self.__model.get_model_variables()
 
     def get_parameter_variables(self):
-        return self._model.get_model_variables(causality=1)
+        return self.__model.get_model_variables(causality=1)
 
     def get_input_variables(self):
-        return self._model.get_model_variables(causality=2)
+        return self.__model.get_model_variables(causality=2)
 
     def get_output_variables(self):
-        return self._model.get_model_variables(causality=3)
+        return self.__model.get_model_variables(causality=3)
 
     def set_var(self, name, val):
         """
@@ -267,7 +267,7 @@ class SimulationProblem:
         :param name: Name of variable to set.
         :param val:  Value(s).
         """
-        self._model.set(name, val)
+        self.__model.set(name, val)
 
     def set_var_slice(self, name, start, count, var):
         """

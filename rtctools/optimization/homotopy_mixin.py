@@ -25,7 +25,7 @@ class HomotopyMixin(OptimizationProblem):
 
     def seed(self, ensemble_member):
         seed = super().seed(ensemble_member)
-        if self._theta > 0:
+        if self.__theta > 0:
             # Add previous results to seed
             # Do not override any previously seeded values, such as goal programming results.
             for key, result in self._results[ensemble_member].items():
@@ -40,7 +40,7 @@ class HomotopyMixin(OptimizationProblem):
         parameters = super().parameters(ensemble_member)
 
         options = self.homotopy_options()
-        parameters[options['homotopy_parameter']] = self._theta
+        parameters[options['homotopy_parameter']] = self.__theta
 
         return parameters
 
@@ -79,19 +79,19 @@ class HomotopyMixin(OptimizationProblem):
             self.pre()
 
         # Homotopy loop
-        self._theta = 0.0
+        self.__theta = 0.0
 
         options = self.homotopy_options()
         delta_theta = options['delta_theta_0']
 
-        while self._theta <= 1.0:
-            logger.info("Solving with homotopy parameter theta = {}.".format(self._theta))
+        while self.__theta <= 1.0:
+            logger.info("Solving with homotopy parameter theta = {}.".format(self.__theta))
 
             success = super().optimize(preprocessing=False, postprocessing=False, log_solver_failure_as_error=False)
             if success:
                 self._results = [self.extract_results(ensemble_member) for ensemble_member in range(self.ensemble_size)]
 
-                if self._theta == 0.0:
+                if self.__theta == 0.0:
                     self.check_collocation_linearity = False
                     self.linear_collocation = False
 
@@ -99,22 +99,22 @@ class HomotopyMixin(OptimizationProblem):
                     self.clear_transcription_cache()
 
             else:
-                if self._theta == 0.0:
+                if self.__theta == 0.0:
                     break
 
-                self._theta -= delta_theta
+                self.__theta -= delta_theta
                 delta_theta /= 2
 
                 if delta_theta < options['delta_theta_min']:
                     if log_solver_failure_as_error:
-                        logger.error("Solver failed with homotopy parameter theta = {}. Theta cannot be decreased further, as that would violate the minimum delta theta of {}.".format(self._theta, options['delta_theta_min']))
+                        logger.error("Solver failed with homotopy parameter theta = {}. Theta cannot be decreased further, as that would violate the minimum delta theta of {}.".format(self.__theta, options['delta_theta_min']))
                     else:
                         # In this case we expect some higher level process to deal
                         # with the solver failure, so we only log it as info here.
-                        logger.info("Solver failed with homotopy parameter theta = {}. Theta cannot be decreased further, as that would violate the minimum delta theta of {}.".format(self._theta, options['delta_theta_min']))
+                        logger.info("Solver failed with homotopy parameter theta = {}. Theta cannot be decreased further, as that would violate the minimum delta theta of {}.".format(self.__theta, options['delta_theta_min']))
                     break
 
-            self._theta += delta_theta
+            self.__theta += delta_theta
 
         # Post-processing
         if postprocessing:

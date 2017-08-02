@@ -284,38 +284,38 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
 
         # Initialize empty lists, so that the overridden methods may be called outside of the goal programming loop,
         # for example in pre().
-        self._subproblem_epsilons = []
-        self._subproblem_path_epsilons = []
-        self._subproblem_path_timeseries = []
-        self._subproblem_objectives = []
-        self._subproblem_constraints = []
-        self._subproblem_path_constraints = []
+        self.__subproblem_epsilons = []
+        self.__subproblem_path_epsilons = []
+        self.__subproblem_path_timeseries = []
+        self.__subproblem_objectives = []
+        self.__subproblem_constraints = []
+        self.__subproblem_path_constraints = []
 
     @property
     def extra_variables(self):
-        return self._subproblem_epsilons
+        return self.__subproblem_epsilons
 
     @property
     def path_variables(self):
-        return self._subproblem_path_epsilons + [variable for (variable, value) in self._subproblem_path_timeseries]
+        return self.__subproblem_path_epsilons + [variable for (variable, value) in self.__subproblem_path_timeseries]
 
     def bounds(self):
         bounds = super().bounds()
-        for epsilon in self._subproblem_epsilons + self._subproblem_path_epsilons:
+        for epsilon in self.__subproblem_epsilons + self.__subproblem_path_epsilons:
             bounds[epsilon.name()] = (0.0, 1.0)
-        for (variable, value) in self._subproblem_path_timeseries:
+        for (variable, value) in self.__subproblem_path_timeseries:
             # IPOPT will turn these variables into parameters (assuming we
             # remain in 'make_parameter' mode)
             bounds[variable.name()] = (value, value)
         return bounds
 
     def seed(self, ensemble_member):
-        if self._first_run:
+        if self.__first_run:
             seed = super().seed(ensemble_member)
         else:
             # Seed with previous results
             seed = AliasDict(self.alias_relation)
-            for key, result in self._results[ensemble_member].items():
+            for key, result in self.__results[ensemble_member].items():
                 times = self.times(key)
                 if len(result) == len(times):
                     # Only include seed timeseries which are consistent
@@ -323,38 +323,38 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                     seed[key] = Timeseries(times, result)
 
         # Seed epsilons
-        for epsilon in self._subproblem_epsilons:
+        for epsilon in self.__subproblem_epsilons:
             seed[epsilon.name()] = 1.0
 
         times = self.times()
-        for epsilon in self._subproblem_path_epsilons:
+        for epsilon in self.__subproblem_path_epsilons:
             seed[epsilon.name()] = Timeseries(times, np.ones(len(times)))
 
         return seed
 
     def objective(self, ensemble_member):
-        if len(self._subproblem_objectives) > 0:
-            acc_objective = ca.sum1(ca.vertcat(*[o(self, ensemble_member) for o in self._subproblem_objectives]))
-            return acc_objective / len(self._subproblem_objectives)
+        if len(self.__subproblem_objectives) > 0:
+            acc_objective = ca.sum1(ca.vertcat(*[o(self, ensemble_member) for o in self.__subproblem_objectives]))
+            return acc_objective / len(self.__subproblem_objectives)
         else:
             return ca.MX(0)
 
     def path_objective(self, ensemble_member):
-        if len(self._subproblem_path_objectives) > 0:
-            acc_objective = ca.sum1(ca.vertcat(*[o(self, ensemble_member) for o in self._subproblem_path_objectives]))
-            return acc_objective / len(self._subproblem_path_objectives)
+        if len(self.__subproblem_path_objectives) > 0:
+            acc_objective = ca.sum1(ca.vertcat(*[o(self, ensemble_member) for o in self.__subproblem_path_objectives]))
+            return acc_objective / len(self.__subproblem_path_objectives)
         else:
             return ca.MX(0)
 
     def constraints(self, ensemble_member):
         constraints = super().constraints(ensemble_member)
-        for l in self._subproblem_constraints[ensemble_member].values():
+        for l in self.__subproblem_constraints[ensemble_member].values():
             constraints.extend(((constraint.function(self), constraint.min, constraint.max) for constraint in l))
         return constraints
 
     def path_constraints(self, ensemble_member):
         path_constraints = super().path_constraints(ensemble_member)
-        for l in self._subproblem_path_constraints[ensemble_member].values():
+        for l in self.__subproblem_path_constraints[ensemble_member].values():
             path_constraints.extend(((constraint.function(self), constraint.min, constraint.max) for constraint in l))
         return path_constraints
 
@@ -369,7 +369,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         if not self.goal_programming_options()['mu_reinit']:
             options['mu_strategy'] = 'monotone'
             options['gather_stats'] = True
-            if not self._first_run:
+            if not self.__first_run:
                 options['mu_init'] = self.solver_stats['iterations'][
                     'mu'][-1]
 
@@ -451,7 +451,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
 
     def _add_goal_constraint(self, goal, epsilon, ensemble_member, options):
         # Check existing constraints for this state.
-        constraints = self._subproblem_constraints[
+        constraints = self.__subproblem_constraints[
             ensemble_member].get(goal.get_function_key(self, ensemble_member), [])
         for constraint in constraints:
             if constraint.goal == goal:
@@ -491,7 +491,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
             # Epsilon is not fixed yet.  This constraint is therefore linearly independent of any existing constraints,
             # and we add it to the list of constraints for this state.  We keep the existing constraints to ensure
             # that the attainment of previous goals is not worsened.
-            self._subproblem_constraints[ensemble_member][
+            self.__subproblem_constraints[ensemble_member][
                 goal.get_function_key(self, ensemble_member)] = constraints
         else:
             fix_value = False
@@ -541,7 +541,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
             # small numerical computation errors.
             constraint.min = min(constraint.min, constraint.max)
 
-            self._subproblem_constraints[ensemble_member][
+            self.__subproblem_constraints[ensemble_member][
                 goal.get_function_key(self, ensemble_member)] = [constraint]
 
     def _add_path_goal_constraint(self, goal, epsilon, ensemble_member, options, min_series=None, max_series=None):
@@ -565,7 +565,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         goal_m, goal_M = _min_max_arrays(goal)
 
         # Check existing constraints for this state.
-        constraints = self._subproblem_path_constraints[
+        constraints = self.__subproblem_path_constraints[
             ensemble_member].get(goal.get_function_key(self, ensemble_member), [])
         for constraint in constraints:
             if constraint.goal == goal or not constraint.optimized:
@@ -613,7 +613,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
             # Epsilon is not fixed yet.  This constraint is therefore linearly independent of any existing constraints,
             # and we add it to the list of constraints for this state.  We keep the existing constraints to ensure
             # that the attainment of previous goals is not worsened.
-            self._subproblem_path_constraints[ensemble_member][
+            self.__subproblem_path_constraints[ensemble_member][
                 goal.get_function_key(self, ensemble_member)] = constraints
         else:
             fix_value = False
@@ -677,7 +677,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
             # small numerical computation errors.
             constraint.min = Timeseries(times, np.minimum(constraint.min.values, constraint.max.values))
 
-            self._subproblem_path_constraints[ensemble_member][
+            self.__subproblem_path_constraints[ensemble_member][
                 goal.get_function_key(self, ensemble_member)] = [constraint]
 
     def optimize(self, preprocessing=True, postprocessing=True, log_solver_failure_as_error=True):
@@ -720,10 +720,10 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
 
         options = self.goal_programming_options()
 
-        self._subproblem_constraints = [{} for ensemble_member in range(self.ensemble_size)]
-        self._subproblem_path_constraints = [{} for ensemble_member in range(self.ensemble_size)]
-        self._first_run = True
-        self._results_are_current = False
+        self.__subproblem_constraints = [{} for ensemble_member in range(self.ensemble_size)]
+        self.__subproblem_path_constraints = [{} for ensemble_member in range(self.ensemble_size)]
+        self.__first_run = True
+        self.__results_are_current = False
         for i, (priority, goals, path_goals) in enumerate(subproblems):
             logger.info("Solving goals at priority {}".format(priority))
 
@@ -731,13 +731,13 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
             self.priority_started(priority)
 
             # Reset epsilons
-            self._subproblem_epsilons = []
-            self._subproblem_path_epsilons = []
-            self._subproblem_path_timeseries = []
+            self.__subproblem_epsilons = []
+            self.__subproblem_path_epsilons = []
+            self.__subproblem_path_timeseries = []
 
             # Reset objective function
-            self._subproblem_objectives = []
-            self._subproblem_path_objectives = []
+            self.__subproblem_objectives = []
+            self.__subproblem_path_objectives = []
 
             for j, goal in enumerate(goals):
                 if goal.critical:
@@ -747,14 +747,14 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                 else:
                     if goal.has_target_bounds:
                         epsilon = ca.MX.sym('eps_{}_{}'.format(i, j))
-                        self._subproblem_epsilons.append(epsilon)
+                        self.__subproblem_epsilons.append(epsilon)
 
                 if not goal.critical:
                     if goal.has_target_bounds:
-                        self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * ca.constpow(
+                        self.__subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * ca.constpow(
                             problem.extra_variable(epsilon.name(), ensemble_member=ensemble_member), goal.order))
                     else:
-                        self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight * ca.constpow(
+                        self.__subproblem_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight * ca.constpow(
                             goal.function(problem, ensemble_member) / (goal.function_range[1] - goal.function_range[0]) / goal.function_nominal, goal.order))
 
                 if goal.has_target_bounds:
@@ -770,7 +770,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                 else:
                     if goal.has_target_bounds:
                         epsilon = ca.MX.sym('path_eps_{}_{}'.format(i, j))
-                        self._subproblem_path_epsilons.append(epsilon)
+                        self.__subproblem_path_epsilons.append(epsilon)
 
                 if goal.has_target_min:
                     min_series = ca.MX.sym('path_min_{}_{}'.format(i, j))
@@ -781,7 +781,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                     else:
                         target_min = goal.target_min
 
-                    self._subproblem_path_timeseries.append(
+                    self.__subproblem_path_timeseries.append(
                         (min_series, target_min))
                 else:
                     min_series = None
@@ -794,17 +794,17 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                     else:
                         target_max = goal.target_max
 
-                    self._subproblem_path_timeseries.append(
+                    self.__subproblem_path_timeseries.append(
                         (max_series, target_max))
                 else:
                     max_series = None
 
                 if not goal.critical:
                     if goal.has_target_bounds:
-                        self._subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * ca.sum1(
+                        self.__subproblem_objectives.append(lambda problem, ensemble_member, goal=goal, epsilon=epsilon: goal.weight * ca.sum1(
                             ca.constpow(problem.state_vector(epsilon.name(), ensemble_member=ensemble_member), goal.order)))
                     else:
-                        self._subproblem_path_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight *
+                        self.__subproblem_path_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight *
                             ca.constpow(goal.function(problem, ensemble_member) / (goal.function_range[1] - goal.function_range[0]) / goal.function_nominal, goal.order))
 
                 if goal.has_target_bounds:
@@ -818,14 +818,14 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
             if not success:
                 break
 
-            self._first_run = False
+            self.__first_run = False
 
             # Store results.  Do this here, to make sure we have results even
             # if a subsequent priority fails.
-            self._results_are_current = False
-            self._results = [self.extract_results(
+            self.__results_are_current = False
+            self.__results = [self.extract_results(
                 ensemble_member) for ensemble_member in range(self.ensemble_size)]
-            self._results_are_current = True
+            self.__results_are_current = True
 
             # Call the post priority hook, so that intermediate results can be
             # logged/inspected.
@@ -846,7 +846,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                             self.set_timeseries(goal.function_value_timeseries_id, np.full_like(times, function_value), ensemble_member)
 
                     if goal.has_target_bounds:
-                        epsilon = self._results[ensemble_member][
+                        epsilon = self.__results[ensemble_member][
                             'eps_{}_{}'.format(i, j)]
 
                         # Store results
@@ -884,7 +884,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                             self.set_timeseries(goal.function_value_timeseries_id, function_value, ensemble_member)
 
                     if goal.has_target_bounds:
-                        epsilon = self._results[ensemble_member][
+                        epsilon = self.__results[ensemble_member][
                             'path_eps_{}_{}'.format(i, j)]
 
                         # Store results
@@ -939,10 +939,10 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         pass
 
     def extract_results(self, ensemble_member=0):
-        if self._results_are_current:
+        if self.__results_are_current:
             logger.debug("Returning cached results")
-            return self._results[ensemble_member]
+            return self.__results[ensemble_member]
 
-        # If self._results is not up to date, do the super().extract_results
+        # If self.__results is not up to date, do the super().extract_results
         # method
         return super().extract_results(ensemble_member)

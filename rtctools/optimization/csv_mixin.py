@@ -51,11 +51,11 @@ class CSVMixin(OptimizationProblem):
         assert('output_folder' in kwargs)
 
         # Save arguments
-        self._input_folder = kwargs['input_folder']
-        self._output_folder = kwargs['output_folder']
+        self.__input_folder = kwargs['input_folder']
+        self.__output_folder = kwargs['output_folder']
 
         # Additional output variables
-        self._output_timeseries = set()
+        self.__output_timeseries = set()
 
         # Call parent class first for default behaviour.
         super().__init__(**kwargs)
@@ -72,94 +72,94 @@ class CSVMixin(OptimizationProblem):
             """
             if initial_state.shape:
                 raise Exception("CSVMixin: Initial state file {} contains more than one row of data. Please remove the data row(s) that do not describe the initial state.".format(
-                    os.path.join(self._input_folder, 'initial_state.csv')))
+                    os.path.join(self.__input_folder, 'initial_state.csv')))
 
         # Read CSV files
-        self._timeseries = []
-        self._parameters = []
-        self._initial_state = []
+        self.__timeseries = []
+        self.__parameters = []
+        self.__initial_state = []
         if self.csv_ensemble_mode:
-            self._ensemble = np.genfromtxt(os.path.join(
-                self._input_folder, 'ensemble.csv'), delimiter=",", deletechars='', dtype=None, names=True, converters={0: str})
+            self.__ensemble = np.genfromtxt(os.path.join(
+                self.__input_folder, 'ensemble.csv'), delimiter=",", deletechars='', dtype=None, names=True, converters={0: str})
             logger.debug("CSVMixin: Read ensemble description")
 
-            for ensemble_member_name in self._ensemble['name']:
-                _timeseries = csv.load(os.path.join(self._input_folder, ensemble_member_name,
+            for ensemble_member_name in self.__ensemble['name']:
+                _timeseries = csv.load(os.path.join(self.__input_folder, ensemble_member_name,
                                                     'timeseries_import.csv'), delimiter=self.csv_delimiter, with_time=True)
-                self._timeseries_times = _timeseries[_timeseries.dtype.names[0]]
-                self._timeseries.append(
+                self.__timeseries_times = _timeseries[_timeseries.dtype.names[0]]
+                self.__timeseries.append(
                     AliasDict(self.alias_relation, {key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}))
             logger.debug("CSVMixin: Read timeseries")
 
-            for ensemble_member_name in self._ensemble['name']:
+            for ensemble_member_name in self.__ensemble['name']:
                 try:
                     _parameters = csv.load(os.path.join(
-                        self._input_folder, ensemble_member_name, 'parameters.csv'), delimiter=self.csv_delimiter)
+                        self.__input_folder, ensemble_member_name, 'parameters.csv'), delimiter=self.csv_delimiter)
                     _parameters = {key: float(_parameters[key]) for key in _parameters.dtype.names}
                 except IOError:
                     _parameters = {}
-                self._parameters.append(AliasDict(self.alias_relation, _parameters))
+                self.__parameters.append(AliasDict(self.alias_relation, _parameters))
             logger.debug("CSVMixin: Read parameters.")
 
-            for ensemble_member_name in self._ensemble['name']:
+            for ensemble_member_name in self.__ensemble['name']:
                 try:
                     _initial_state = csv.load(os.path.join(
-                        self._input_folder, ensemble_member_name, 'initial_state.csv'), delimiter=self.csv_delimiter)
+                        self.__input_folder, ensemble_member_name, 'initial_state.csv'), delimiter=self.csv_delimiter)
                     check_initial_state_array(_initial_state)
                     _initial_state = {key: float(_initial_state[key]) for key in _initial_state.dtype.names}
                 except IOError:
                     _initial_state = {}
-                self._initial_state.append(AliasDict(self.alias_relation, _initial_state))
+                self.__initial_state.append(AliasDict(self.alias_relation, _initial_state))
             logger.debug("CSVMixin: Read initial state.")
         else:
             _timeseries = csv.load(os.path.join(
-                self._input_folder, 'timeseries_import.csv'), delimiter=self.csv_delimiter, with_time=True)
-            self._timeseries_times = _timeseries[_timeseries.dtype.names[0]]
-            self._timeseries.append(
+                self.__input_folder, 'timeseries_import.csv'), delimiter=self.csv_delimiter, with_time=True)
+            self.__timeseries_times = _timeseries[_timeseries.dtype.names[0]]
+            self.__timeseries.append(
                 AliasDict(self.alias_relation, {key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}))
             logger.debug("CSVMixin: Read timeseries.")
 
             try:
                 _parameters = csv.load(os.path.join(
-                    self._input_folder, 'parameters.csv'), delimiter=self.csv_delimiter)
+                    self.__input_folder, 'parameters.csv'), delimiter=self.csv_delimiter)
                 logger.debug("CSVMixin: Read parameters.")
                 _parameters = {key: float(_parameters[key]) for key in _parameters.dtype.names}
             except IOError:
                 _parameters = {}
-            self._parameters.append(AliasDict(self.alias_relation, _parameters))
+            self.__parameters.append(AliasDict(self.alias_relation, _parameters))
 
             try:
                 _initial_state = csv.load(os.path.join(
-                    self._input_folder, 'initial_state.csv'), delimiter=self.csv_delimiter)
+                    self.__input_folder, 'initial_state.csv'), delimiter=self.csv_delimiter)
                 logger.debug("CSVMixin: Read initial state.")
                 check_initial_state_array(_initial_state)
                 _initial_state = {key: float(_initial_state[key]) for key in _initial_state.dtype.names}
             except IOError:
                 _initial_state = {}
-            self._initial_state.append(AliasDict(self.alias_relation, _initial_state))
+            self.__initial_state.append(AliasDict(self.alias_relation, _initial_state))
 
-        self._timeseries_times_sec = self._datetime_to_sec(
-            self._timeseries_times)
+        self.__timeseries_times_sec = self.__datetime_to_sec(
+            self.__timeseries_times)
 
         # Timestamp check
         if self.csv_validate_timeseries:
-            for i in range(len(self._timeseries_times_sec) - 1):
-                if self._timeseries_times_sec[i] >= self._timeseries_times_sec[i + 1]:
+            for i in range(len(self.__timeseries_times_sec) - 1):
+                if self.__timeseries_times_sec[i] >= self.__timeseries_times_sec[i + 1]:
                     raise Exception(
                         'CSVMixin: Time stamps must be strictly increasing.')
 
         if self.csv_equidistant:
             # Check if the timeseries are truly equidistant
             if self.csv_validate_timeseries:
-                dt = self._timeseries_times_sec[
-                    1] - self._timeseries_times_sec[0]
-                for i in range(len(self._timeseries_times_sec) - 1):
-                    if self._timeseries_times_sec[i + 1] - self._timeseries_times_sec[i] != dt:
+                dt = self.__timeseries_times_sec[
+                    1] - self.__timeseries_times_sec[0]
+                for i in range(len(self.__timeseries_times_sec) - 1):
+                    if self.__timeseries_times_sec[i + 1] - self.__timeseries_times_sec[i] != dt:
                         raise Exception('CSVMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set equidistant=False if this is intended.'.format(
-                            self._timeseries_times[i + 1]))
+                            self.__timeseries_times[i + 1]))
 
     def times(self, variable=None):
-        return self._timeseries_times_sec
+        return self.__timeseries_times_sec
 
     @property
     def equidistant(self):
@@ -168,13 +168,13 @@ class CSVMixin(OptimizationProblem):
     @property
     def ensemble_size(self):
         if self.csv_ensemble_mode:
-            return len(self._ensemble['probability'])
+            return len(self.__ensemble['probability'])
         else:
             return 1
 
     def ensemble_member_probability(self, ensemble_member):
         if self.csv_ensemble_mode:
-            return self._ensemble['probability'][ensemble_member]
+            return self.__ensemble['probability'][ensemble_member]
         else:
             return 1.0
 
@@ -187,7 +187,7 @@ class CSVMixin(OptimizationProblem):
         for parameter in self.dae_variables['parameters']:
             parameter = parameter.name()
             try:
-                parameters[parameter] = self._parameters[ensemble_member][parameter]
+                parameters[parameter] = self.__parameters[ensemble_member][parameter]
             except KeyError:
                 pass
             else:
@@ -206,7 +206,7 @@ class CSVMixin(OptimizationProblem):
             variable = variable.name()
             try:
                 constant_inputs[variable] = Timeseries(
-                    self._timeseries_times_sec, self._timeseries[ensemble_member][variable])
+                    self.__timeseries_times_sec, self.__timeseries[ensemble_member][variable])
             except (KeyError, ValueError):
                 pass
             else:
@@ -228,7 +228,7 @@ class CSVMixin(OptimizationProblem):
 
             timeseries_id = self.min_timeseries_id(variable)
             try:
-                m = self._timeseries[0][timeseries_id]
+                m = self.__timeseries[0][timeseries_id]
             except (KeyError, ValueError):
                 pass
             else:
@@ -237,7 +237,7 @@ class CSVMixin(OptimizationProblem):
 
             timeseries_id = self.max_timeseries_id(variable)
             try:
-                M = self._timeseries[0][timeseries_id]
+                M = self.__timeseries[0][timeseries_id]
             except (KeyError, ValueError):
                 pass
             else:
@@ -247,10 +247,10 @@ class CSVMixin(OptimizationProblem):
             # Replace NaN with +/- inf, and create Timeseries objects
             if m is not None:
                 m[np.isnan(m)] = np.finfo(m.dtype).min
-                m = Timeseries(self._timeseries_times_sec, m)
+                m = Timeseries(self.__timeseries_times_sec, m)
             if M is not None:
                 M[np.isnan(M)] = np.finfo(M.dtype).max
-                M = Timeseries(self._timeseries_times_sec, M)
+                M = Timeseries(self.__timeseries_times_sec, M)
 
             # Store
             if m is not None or M is not None:
@@ -270,7 +270,7 @@ class CSVMixin(OptimizationProblem):
         for variable in self.dae_variables['free_variables']:
             variable = variable.name()
             try:
-                initial_state[variable] = self._initial_state[ensemble_member][variable]
+                initial_state[variable] = self.__initial_state[ensemble_member][variable]
             except (KeyError, ValueError):
                 pass
             else:
@@ -287,7 +287,7 @@ class CSVMixin(OptimizationProblem):
         for variable in self.dae_variables['free_variables']:
             variable = variable.name()
             try:
-                s = Timeseries(self._timeseries_times_sec, self._timeseries[ensemble_member][variable])
+                s = Timeseries(self.__timeseries_times_sec, self.__timeseries[ensemble_member][variable])
             except (KeyError, ValueError):
                 pass
             else:
@@ -310,8 +310,8 @@ class CSVMixin(OptimizationProblem):
             names = ['time'] + sorted(set([sym.name() for sym in self.output_variables]))
             formats = ['O'] + (len(names) - 1) * ['f8']
             dtype = dict(names=names, formats=formats)
-            data = np.zeros(len(self._timeseries_times), dtype=dtype)
-            data['time'] = self._timeseries_times
+            data = np.zeros(len(self.__timeseries_times), dtype=dtype)
+            data['time'] = self.__timeseries_times
             for i, output_variable in enumerate(self.output_variables):
                 output_variable = output_variable.name()
                 try:
@@ -338,32 +338,32 @@ class CSVMixin(OptimizationProblem):
             csv.save(fname, data, delimiter=self.csv_delimiter, with_time=True)
 
         if self.csv_ensemble_mode:
-            for ensemble_member, ensemble_member_name in enumerate(self._ensemble['name']):
+            for ensemble_member, ensemble_member_name in enumerate(self.__ensemble['name']):
                 write_output(ensemble_member, os.path.join(
-                    self._output_folder, ensemble_member_name))
+                    self.__output_folder, ensemble_member_name))
         else:
-            write_output(0, self._output_folder)
+            write_output(0, self.__output_folder)
 
     def _datetime_to_sec(self, d):
         # Return the date/timestamps in seconds since t0.
         if hasattr(d, '__iter__'):
-            return np.array([(t - self._timeseries_times[0]).total_seconds() for t in d])
+            return np.array([(t - self.__timeseries_times[0]).total_seconds() for t in d])
         else:
-            return (d - self._timeseries_times[0]).total_seconds()
+            return (d - self.__timeseries_times[0]).total_seconds()
 
     def _sec_to_datetime(self, s):
         # Return the date/timestamps in seconds since t0 as datetime objects.
         if hasattr(s, '__iter__'):
-            return [self._timeseries_times[0] + timedelta(seconds=t) for t in s]
+            return [self.__timeseries_times[0] + timedelta(seconds=t) for t in s]
         else:
-            return self._timeseries_times[0] + timedelta(seconds=s)
+            return self.__timeseries_times[0] + timedelta(seconds=s)
 
     def get_timeseries(self, variable, ensemble_member=0):
-        return Timeseries(self._timeseries_times_sec, self._timeseries[ensemble_member][variable])
+        return Timeseries(self.__timeseries_times_sec, self.__timeseries[ensemble_member][variable])
 
     def set_timeseries(self, variable, timeseries, ensemble_member=0, output=True, check_consistency=True):
         if output:
-            self._output_timeseries.add(variable)
+            self.__output_timeseries.add(variable)
         if isinstance(timeseries, Timeseries):
             # TODO: add better check on timeseries.times?
             if check_consistency:
@@ -372,16 +372,16 @@ class CSVMixin(OptimizationProblem):
         else:
             timeseries = Timeseries(self.times(), timeseries)
             assert(len(timeseries.times) == len(timeseries.values))
-        self._timeseries[ensemble_member][variable] = timeseries.values
+        self.__timeseries[ensemble_member][variable] = timeseries.values
 
     def timeseries_at(self, variable, t, ensemble_member=0):
-        return self.interpolate(t, self._timeseries_times_sec, self._timeseries[ensemble_member][variable])
+        return self.interpolate(t, self.__timeseries_times_sec, self.__timeseries[ensemble_member][variable])
 
     @property
     def output_variables(self):
         variables = super().output_variables
         variables.extend([ca.MX.sym(variable)
-                          for variable in self._output_timeseries])
+                          for variable in self.__output_timeseries])
         return variables
 
     def min_timeseries_id(self, variable):
