@@ -23,22 +23,22 @@ class LookupTable:
         :param inputs: List of lookup table input variables.
         :param function: Lookup table CasADi :class:`Function`.
         """
-        self._inputs = inputs
-        self._function = function
+        self.__inputs = inputs
+        self.__function = function
 
     @property
     def inputs(self):
         """
         List of lookup table input variables.
         """
-        return self._inputs
+        return self.__inputs
 
     @property
     def function(self):
         """
         Lookup table CasADi :class:`Function`.
         """
-        return self._function
+        return self.__function
 
     def __call__(self, *args):
         """
@@ -71,7 +71,7 @@ class OptimizationProblem(metaclass = ABCMeta):
     """
 
     def __init__(self, **kwargs):
-        self._mixed_integer = False
+        self.__mixed_integer = False
 
     def optimize(self, preprocessing=True, postprocessing=True, log_solver_failure_as_error=True):
         """
@@ -102,7 +102,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         # Create an NLP solver
         logger.debug("Collecting solver options")
 
-        self._mixed_integer = np.any(discrete)
+        self.__mixed_integer = np.any(discrete)
         options = {}
         options.update(self.solver_options()) # Create a copy
 
@@ -116,7 +116,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         del options['optimized_num_dir']
 
         nlpsol_options = {my_solver: options}
-        if self._mixed_integer:
+        if self.__mixed_integer:
             nlpsol_options['discrete'] = discrete
 
         solver = nlpsol('nlp', my_solver, nlp, nlpsol_options)
@@ -127,30 +127,30 @@ class OptimizationProblem(metaclass = ABCMeta):
         results = solver(x0 = x0, lbx = lbx, ubx = ubx, lbg = vertcat(*lbg), ubg = vertcat(*ubg))
 
         # Extract relevant stats
-        self._objective_value = float(results['f'])
-        self._solver_output = results['x']
-        self._solver_stats = solver.stats()
+        self.__objective_value = float(results['f'])
+        self.__solver_output = results['x']
+        self.__solver_stats = solver.stats()
 
         # Get the return status
-        if self._solver_stats['return_status'] in ['Solve_Succeeded', 'Solved_To_Acceptable_Level', 'User_Requested_Stop', 'SUCCESS']:
+        if self.__solver_stats['return_status'] in ['Solve_Succeeded', 'Solved_To_Acceptable_Level', 'User_Requested_Stop', 'SUCCESS']:
             logger.info("Solver succeeded with status {}".format(
-                self._solver_stats['return_status']))
+                self.__solver_stats['return_status']))
 
             success = True
-        elif self._solver_stats['return_status'] in ['Not_Enough_Degrees_Of_Freedom']:
+        elif self.__solver_stats['return_status'] in ['Not_Enough_Degrees_Of_Freedom']:
             logger.warning("Solver failed with status {}".format(
-                self._solver_stats['return_status']))
+                self.__solver_stats['return_status']))
 
             success = False
         else:
             if log_solver_failure_as_error:
                 logger.error("Solver failed with status {}".format(
-                    self._solver_stats['return_status']))
+                    self.__solver_stats['return_status']))
             else:
                 # In this case we expect some higher level process to deal
                 # with the solver failure, so we only log it as info here.
                 logger.info("Solver failed with status {}".format(
-                    self._solver_stats['return_status']))
+                    self.__solver_stats['return_status']))
 
             success = False
 
@@ -193,7 +193,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         :returns: A dictionary of CasADi :class:`NlpSolver` options.  See the CasADi, Ipopt, and Bonmin documentation for details.
         """
         options = {'optimized_num_dir': 3}
-        if self._mixed_integer:
+        if self.__mixed_integer:
             options['solver'] = 'bonmin'
             options['algorithm'] = 'B-BB'
             options['nlp_solver'] = 'Ipopt'
@@ -225,21 +225,21 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         The last obtained objective function value.
         """
-        return self._objective_value
+        return self.__objective_value
 
     @property
     def solver_output(self):
         """
         The raw output from the last NLP solver run.
         """
-        return self._solver_output
+        return self.__solver_output
 
     @property
     def solver_stats(self):
         """
         The stats from the last NLP solver run.
         """
-        return self._solver_stats
+        return self.__solver_stats
 
     def pre(self):
         """
@@ -567,14 +567,14 @@ class OptimizationProblem(metaclass = ABCMeta):
         :returns: The interpolated value.
         """
         if hasattr(t, '__iter__'):
-            f = np.vectorize(lambda t_: self._interpolate(
+            f = np.vectorize(lambda t_: self.__interpolate(
                 t_, ts, fs, f_left, f_right))
             return f(t)
         else:
-            return self._interpolate(t, ts, fs, f_left, f_right, mode)
+            return self.__interpolate(t, ts, fs, f_left, f_right, mode)
 
     @jit
-    def _interpolate(self, t, ts, fs, f_left=np.nan, f_right=np.nan, mode=INTERPOLATION_LINEAR):
+    def __interpolate(self, t, ts, fs, f_left=np.nan, f_right=np.nan, mode=INTERPOLATION_LINEAR):
         """
         Linear interpolation over time.
 

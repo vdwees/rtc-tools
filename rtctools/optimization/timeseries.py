@@ -13,30 +13,30 @@ class Timeseries:
         :param times:  Iterable of time stamps.
         :param values: Iterable of values.
         """
-        self._times = times
+        self.__times = times
         if len(values) == 1:
             values = values[0]
         if hasattr(values, '__iter__'):
-            self._values = np.array(values, dtype=np.float64, copy=True)
+            self.__values = np.array(values, dtype=np.float64, copy=True)
         else:
-            self._values = np.full_like(times, values, dtype=np.float64)
+            self.__values = np.full_like(times, values, dtype=np.float64)
 
     @property
     def times(self):
         """
         Array of time stamps.
         """
-        return self._times
+        return self.__times
 
     @property
     def values(self):
         """
         Array of values.
         """
-        return self._values
+        return self.__values
 
     def __neg__(self):
         return self.__class__(self.times, -self.values)
 
     def __repr__(self):
-        return 'Timeseries({}, {})'.format(self._times, self._values)
+        return 'Timeseries({}, {})'.format(self.__times, self.__values)
