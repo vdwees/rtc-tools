@@ -28,7 +28,7 @@ class HomotopyMixin(OptimizationProblem):
         if self.__theta > 0:
             # Add previous results to seed
             # Do not override any previously seeded values, such as goal programming results.
-            for key, result in self._results[ensemble_member].items():
+            for key, result in self.__results[ensemble_member].items():
                 times = self.times(key)
                 if key not in seed and len(result) == len(times):
                     # Only include seed timeseries which are consistent
@@ -89,7 +89,7 @@ class HomotopyMixin(OptimizationProblem):
 
             success = super().optimize(preprocessing=False, postprocessing=False, log_solver_failure_as_error=False)
             if success:
-                self._results = [self.extract_results(ensemble_member) for ensemble_member in range(self.ensemble_size)]
+                self.__results = [self.extract_results(ensemble_member) for ensemble_member in range(self.ensemble_size)]
 
                 if self.__theta == 0.0:
                     self.check_collocation_linearity = False
