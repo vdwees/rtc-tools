@@ -1,5 +1,9 @@
-__version__ = '2.1.0'
+# Get version
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
 
+# Print header
 print(
 """
 ******************************************************************************
@@ -10,6 +14,7 @@ print(
 ******************************************************************************
 """.format(__version__))
 
+# Import dependencies
 try:
 	import casadi
 except ImportError:

@@ -1,0 +1,2 @@
+include versioneer.py
+include rtctools/_version.py
