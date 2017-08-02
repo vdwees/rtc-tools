@@ -58,12 +58,12 @@ The Model
 
 In OpenModelica Connection Editor, the model looks like this:
 
-.. image:: ../images/simple_storage_openmodelica.png
+.. image:: ../../images/simple_storage_openmodelica.png
 
 In text mode, the Modelica model is as follows (with annotation statements
 removed):
 
-.. literalinclude:: ../_build/mo/ensemble.mo
+.. literalinclude:: ../../_build/mo/ensemble.mo
   :language: modelica
   :lineno-match:
 
@@ -91,7 +91,7 @@ Importing Packages
 
 For this example, the import block is as follows:
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :lines: 1-10
   :lineno-match:
@@ -102,7 +102,7 @@ Declaring Goals
 First, we have a high priority goal to keep the water volume within a minimum
 and maximum.
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :pyobject: WaterVolumeRangeGoal
   :lineno-match:
@@ -110,7 +110,7 @@ and maximum.
 We also want to save energy, so we define a goal to minimize ``Q_release``. This
 goal has a lower priority.
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :pyobject: MinimizeQreleaseGoal
   :lineno-match:
@@ -121,7 +121,7 @@ Optimization Problem
 Next, we construct the class by declaring it and inheriting the desired parent
 classes.
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
@@ -129,7 +129,7 @@ classes.
 
 We turn on ensemble mode by setting ``csv_ensemble_mode = True``:
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :lines: 49-50
   :lineno-match:
@@ -145,14 +145,14 @@ Because the timeseries we set will be the same for both ensemble members, we
 also make sure that the timeseries we set are set for both ensemble members
 using for loops.
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.pre
   :lineno-match:
 
 Now we pass in the goals:
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.path_goals
   :lineno-match:
@@ -163,7 +163,7 @@ allows the control tree to split at every time, but we override this method
 and force it to split at a single timestep. See :ref:`ensemble-results` at
 the bottom of the page for more information.
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.control_tree_options
   :lineno-match:
@@ -171,14 +171,14 @@ the bottom of the page for more information.
 We define the ``priority_completed()`` method. We ensure that it stores the
 results from both ensemble members.
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.priority_completed
   :lineno-match:
 
 We output our intermediate results using the ``post()`` method:
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.post
   :lineno-match:
@@ -186,7 +186,7 @@ We output our intermediate results using the ``post()`` method:
 Finally, we want to apply some additional configuration, reducing the amount of
 information the solver outputs:
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :pyobject: Example.solver_options
   :lineno-match:
@@ -198,7 +198,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_optimization_problem()`` method we imported on the optimization
 problem class we just created.
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -208,7 +208,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../../examples/ensemble/src/example.py
+.. literalinclude:: ../../../examples/ensemble/src/example.py
   :language: python
   :lineno-match:
 

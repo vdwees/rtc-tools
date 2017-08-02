@@ -121,21 +121,29 @@ class AliasRelation:
 
 
 class AliasDict:
-    def __init__(self, relation, other=None):
+    def __init__(self, relation, other=None, signed_values=True):
         self._relation = relation
         self._d = {}
+        self._signed_values = signed_values
         if other:
             self.update(other)
 
-    def __setitem__(self, key, val):
+    def _canonical_signed(self, key):
         var, sign = self._relation.canonical_signed(key)
+        if self._signed_values:
+            return var, sign
+        else:
+            return var, 1
+
+    def __setitem__(self, key, val):
+        var, sign = self._canonical_signed(key)
         if isinstance(val, tuple):
             self._d[var] = [-c if sign < 0 else c for c in val]
         else:
             self._d[var] = -val if sign < 0 else val
 
     def __getitem__(self, key):
-        var, sign = self._relation.canonical_signed(key)
+        var, sign = self._canonical_signed(key)
         val = self._d[var]
         if isinstance(val, tuple):
             return [-c if sign < 0 else c for c in val]
@@ -143,11 +151,11 @@ class AliasDict:
             return -val if sign < 0 else val
 
     def __delitem__(self, key):
-        var, sign = self._relation.canonical_signed(key)
+        var, sign = self._canonical_signed(key)
         del self._d[var]
 
     def __contains__(self, key):
-        var, sign = self._relation.canonical_signed(key)
+        var, sign = self._canonical_signed(key)
         return var in self._d
 
     def __len__(self):

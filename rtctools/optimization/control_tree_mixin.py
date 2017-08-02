@@ -237,11 +237,6 @@ class ControlTreeMixin(OptimizationProblem):
             results[variable] = np.array(self.variable_nominal(
                 variable) * X[self._control_indices[variable][ensemble_member, :], 0]).ravel()
 
-            for alias in self.alias_relation.aliases(variable):
-                if alias == variable:
-                    continue
-                results[alias] = results[variable]
-
         # Done
         return results
 

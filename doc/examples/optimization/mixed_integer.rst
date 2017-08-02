@@ -1,6 +1,11 @@
 Mixed Integer Optimization: Pumps and Orifices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. image:: ../../images/Woudagemaal.jpg
+
+.. :href: https://commons.wikimedia.org/wiki/File:Woudagemaal.jpg
+.. content is released under a CC0 Public Domain licence - no attribution needed
+
 .. note::
 
     This example focuses on how to incorporate mixed integer components into a
@@ -43,12 +48,12 @@ represents a simple water system with the following elements:
 * an orifice
   ``Deltares.ChannelFlow.Hydraulic.Structures.BooleanSubmergedOrifice``
 
-.. image:: ../images/orifice_vs_pump_openmodelica.png
+.. image:: ../../images/orifice_vs_pump_openmodelica.png
 
 In text mode, the Modelica model looks as follows (with annotation statements
 removed):
 
-.. literalinclude:: ../_build/mo/mixed_integer.mo
+.. literalinclude:: ../../_build/mo/mixed_integer.mo
   :language: modelica
   :lineno-match:
 
@@ -94,7 +99,7 @@ Importing Packages
 
 For this example, the import block is as follows:
 
-.. literalinclude:: ../../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../../examples/mixed_integer/src/example.py
   :language: python
   :lines: 1-6
   :lineno-match:
@@ -108,7 +113,7 @@ Optimization Problem
 Next, we construct the class by declaring it and inheriting the desired parent
 classes.
 
-.. literalinclude:: ../../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example
   :lineno-match:
@@ -118,7 +123,7 @@ Now we define an objective function. This is a class method that returns the
 value that needs to be minimized. Here we specify that we want to minimize the
 volume pumped:
 
-.. literalinclude:: ../../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example.objective
   :lineno-match:
@@ -133,7 +138,7 @@ in order to work. They are implemented below in the ``path_constraints()``
 method. their parent classes also declare this method, so we call the
 ``super()`` method so that we don't overwrite their behaviour.
 
-.. literalinclude:: ../../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example.path_constraints
   :lineno-match:
@@ -141,7 +146,7 @@ method. their parent classes also declare this method, so we call the
 Finally, we want to apply some additional configuration, reducing the amount of
 information the solver outputs:
 
-.. literalinclude:: ../../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../../examples/mixed_integer/src/example.py
   :language: python
   :pyobject: Example.solver_options
   :lineno-match:
@@ -153,7 +158,7 @@ To make our script run, at the bottom of our file we just have to call
 the ``run_optimization_problem()`` method we imported on the optimization
 problem class we just created.
 
-.. literalinclude:: ../../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../../examples/mixed_integer/src/example.py
   :language: python
   :lineno-match:
   :start-after: # Run
@@ -163,7 +168,7 @@ The Whole Script
 
 All together, the whole example script is as follows:
 
-.. literalinclude:: ../../examples/mixed_integer/src/example.py
+.. literalinclude:: ../../../examples/mixed_integer/src/example.py
   :language: python
   :lineno-match:
 

@@ -537,6 +537,11 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                     if goal is not existing_constraint.goal and existing_constraint.optimized:
                         constraint.min = max(constraint.min, existing_constraint.min)
                         constraint.max = min(constraint.max, existing_constraint.max)
+
+            # Ensure consistency of bounds.  Bounds may become inconsistent due to
+            # small numerical computation errors.
+            constraint.min = min(constraint.min, constraint.max)
+
             self._subproblem_constraints[ensemble_member][
                 goal.get_function_key(self, ensemble_member)] = [constraint]
 
@@ -617,7 +622,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
             if goal.has_target_bounds:
                 # We use a violation variable formulation, with the violation
                 # variables epsilon bounded between 0 and 1.
-                m, M = np.full_like(times, -np.inf, dtype=np.object), np.full_like(times, np.inf, dtype=np.object)
+                m, M = np.full_like(times, -np.inf, dtype=np.float64), np.full_like(times, np.inf, dtype=np.float64)
 
                 # Compute each min, max value separately for every time step
                 for i, t in enumerate(times):
@@ -658,7 +663,6 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                     m = -np.inf * np.ones(len(times))
                 M = (epsilon + goal.relaxation) / goal.function_nominal
 
-            # TODO it all breaks down here
             constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal: goal.function(
                 problem, ensemble_member) / goal.function_nominal, Timeseries(times, m), Timeseries(times, M), True)
 
@@ -669,6 +673,11 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                     if goal is not existing_constraint.goal and existing_constraint.optimized:
                         constraint.min = Timeseries(times, np.maximum(constraint.min.values, existing_constraint.min.values))
                         constraint.max = Timeseries(times, np.minimum(constraint.max.values, existing_constraint.max.values))
+
+            # Ensure consistency of bounds.  Bounds may become inconsistent due to
+            # small numerical computation errors.
+            constraint.min = Timeseries(times, np.minimum(constraint.min.values, constraint.max.values))
+
             self._subproblem_path_constraints[ensemble_member][
                 goal.get_function_key(self, ensemble_member)] = [constraint]
 

@@ -254,26 +254,30 @@ class ModelicaMixin(OptimizationProblem):
 
             m_ = ca.MX(v.min)
             if not m_.is_constant():
-                [m] = substitute_in_external([m_], self.__mx['parameters'], parameter_values)
-                if m.is_constant():
-                    m = array_from_mx(m)
+                [m_] = substitute_in_external([m_], self.__mx['parameters'], parameter_values)
+                if m_.is_constant():
+                    m_ = array_from_mx(m_)
+                    if np.any(m_ > m):
+                        m = m_
                 else:
                     raise Exception('Could not resolve lower bound for variable {}'.format(sym_name))
             else:
                 m_ = array_from_mx(m_)
-                if np.any(np.isfinite(m_)):
+                if np.any(np.isfinite(m_)) and np.any(m_ > m):
                     m = m_
 
             M_ = ca.MX(v.max)
             if not M_.is_constant():
-                [M] = substitute_in_external([M_], self.__mx['parameters'], parameter_values)
-                if M.is_constant():
-                    M = array_from_mx(M)
+                [M_] = substitute_in_external([M_], self.__mx['parameters'], parameter_values)
+                if M_.is_constant():
+                    M_ = array_from_mx(M_)
+                    if np.any(M_ < M):
+                        M = M_
                 else:
                     raise Exception('Could not resolve upper bound for variable {}'.format(sym_name))
             else:
                 M_ = array_from_mx(M_)
-                if np.any(np.isfinite(M_)):
+                if np.any(np.isfinite(M_)) and np.any(M_ < M):
                     M = M_
 
             # Cast to scalar whenever possibe
