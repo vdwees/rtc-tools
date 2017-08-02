@@ -80,89 +80,89 @@ class OrderedSet(collections.MutableSet):
 
 class AliasRelation:
     def __init__(self):
-        self._aliases = {}
-        self._canonical_variables = OrderedSet()
+        self.__aliases = {}
+        self.__canonical_variables = OrderedSet()
 
     def add(self, a, b):
         aliases = self.aliases(a)
         for v in self.aliases(b):
             aliases.add(v)
         for v in aliases:
-            self._aliases[v] = aliases
-        self._canonical_variables.add(aliases[0])
+            self.__aliases[v] = aliases
+        self.__canonical_variables.add(aliases[0])
         for v in aliases[1:]:
             try:
-                self._canonical_variables.remove(v)
+                self.__canonical_variables.remove(v)
             except KeyError:
                 pass
 
     def aliases(self, a):
-        return self._aliases.get(a, OrderedSet([a]))
+        return self.__aliases.get(a, OrderedSet([a]))
 
     def canonical_signed(self, a):
-        if a in self._aliases:
+        if a in self.__aliases:
             return self.aliases(a)[0], 1
         else:
             if a[0] == '-':
                 b = a[1:]
             else:
                 b = '-' + a
-            if b in self._aliases:
+            if b in self.__aliases:
                 return self.aliases(b)[0], -1
             else:
                 return self.aliases(a)[0], 1
 
     @property
     def canonical_variables(self):
-        return self._canonical_variables
+        return self.__canonical_variables
 
     def __iter__(self):
-        return ((canonical_variable, self.aliases(canonical_variable)[1:]) for canonical_variable in self._canonical_variables)
+        return ((canonical_variable, self.aliases(canonical_variable)[1:]) for canonical_variable in self.__canonical_variables)
 
 
 class AliasDict:
     def __init__(self, relation, other=None, signed_values=True):
-        self._relation = relation
-        self._d = {}
-        self._signed_values = signed_values
+        self.__relation = relation
+        self.__d = {}
+        self.__signed_values = signed_values
         if other:
             self.update(other)
 
-    def _canonical_signed(self, key):
-        var, sign = self._relation.canonical_signed(key)
-        if self._signed_values:
+    def __canonical_signed(self, key):
+        var, sign = self.__relation.canonical_signed(key)
+        if self.__signed_values:
             return var, sign
         else:
             return var, 1
 
     def __setitem__(self, key, val):
-        var, sign = self._canonical_signed(key)
+        var, sign = self.__canonical_signed(key)
         if isinstance(val, tuple):
-            self._d[var] = [-c if sign < 0 else c for c in val]
+            self.__d[var] = [-c if sign < 0 else c for c in val]
         else:
-            self._d[var] = -val if sign < 0 else val
+            self.__d[var] = -val if sign < 0 else val
 
     def __getitem__(self, key):
-        var, sign = self._canonical_signed(key)
-        val = self._d[var]
+        var, sign = self.__canonical_signed(key)
+        val = self.__d[var]
         if isinstance(val, tuple):
             return [-c if sign < 0 else c for c in val]
         else:
             return -val if sign < 0 else val
 
     def __delitem__(self, key):
-        var, sign = self._canonical_signed(key)
-        del self._d[var]
+        var, sign = self.__canonical_signed(key)
+        del self.__d[var]
 
     def __contains__(self, key):
-        var, sign = self._canonical_signed(key)
-        return var in self._d
+        var, sign = self.__canonical_signed(key)
+        return var in self.__d
 
     def __len__(self):
-        return len(self._d)
+        return len(self.__d)
 
     def __iter__(self):
-        return self._d.items()
+        return self.__d.items()
 
     def update(self, other):
         for key, value in other.items():
@@ -182,10 +182,10 @@ class AliasDict:
             return default
 
     def keys(self):
-        return self._d.keys()
+        return self.__d.keys()
 
     def values(self):
-        return self._d.values()
+        return self.__d.values()
 
     def items(self):
         return self.__iter__()
