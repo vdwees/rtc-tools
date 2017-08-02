@@ -1,5 +1,4 @@
 from pymola.backends.casadi.api import transfer_model
-from collections import OrderedDict
 import casadi as ca
 import numpy as np
 import itertools
@@ -40,93 +39,80 @@ class ModelicaMixin(OptimizationProblem):
             else:
                 model_name = self.__class__.__name__
 
-        self._pymola_model = transfer_model(kwargs['model_folder'], model_name, self.compiler_options())
-
-        if logger.getEffectiveLevel() == logging.DEBUG:
-            logger.debug("\n" + repr(self._pymola_model))
+        self.__pymola_model = transfer_model(kwargs['model_folder'], model_name, self.compiler_options())
 
         # Extract the CasADi MX variables used in the model
-        self._mx = {}
-        self._mx['time'] = [self._pymola_model.time]
-        self._mx['states'] = [v.symbol for v in self._pymola_model.states]
-        self._mx['derivatives'] = [v.symbol for v in self._pymola_model.der_states]
-        self._mx['algebraics'] = [v.symbol for v in self._pymola_model.alg_states]
-        self._mx['parameters'] = [v.symbol for v in self._pymola_model.parameters]
-        self._mx['control_inputs'] = []
-        self._mx['constant_inputs'] = []
-        self._mx['lookup_tables'] = []
+        self.__mx = {}
+        self.__mx['time'] = [self.__pymola_model.time]
+        self.__mx['states'] = [v.symbol for v in self.__pymola_model.states]
+        self.__mx['derivatives'] = [v.symbol for v in self.__pymola_model.der_states]
+        self.__mx['algebraics'] = [v.symbol for v in self.__pymola_model.alg_states]
+        self.__mx['parameters'] = [v.symbol for v in self.__pymola_model.parameters]
+        self.__mx['control_inputs'] = []
+        self.__mx['constant_inputs'] = []
+        self.__mx['lookup_tables'] = []
 
         # Merge with user-specified delayed feedback
         delayed_feedback_variables = map(lambda delayed_feedback: delayed_feedback[
                                          1], self.delayed_feedback())
 
-        for v in self._pymola_model.inputs:
+        for v in self.__pymola_model.inputs:
             if v.symbol.name() in delayed_feedback_variables:
                 # Delayed feedback variables are local to each ensemble, and therefore belong to the collection of algebraic variables,
                 # rather than to the control inputs.
-                self._mx['algebraics'].append(v.symbol)
+                self.__mx['algebraics'].append(v.symbol)
             else:
                 if v.symbol.name() in kwargs.get('lookup_tables', []):
-                    self._mx['lookup_tables'].append(v.symbol)
+                    self.__mx['lookup_tables'].append(v.symbol)
                 elif v.fixed == True:
-                    self._mx['constant_inputs'].append(v.symbol)
+                    self.__mx['constant_inputs'].append(v.symbol)
                 else:
-                    self._mx['control_inputs'].append(v.symbol)
-
-        self._output_variables = [v.symbol for v in self._pymola_model.outputs]
-        self._output_variables.extend(self._mx['control_inputs'])
-
-        # Output variables
-        if logger.getEffectiveLevel() == logging.DEBUG:
-            logger.debug("ModelicaMixin: Found states {}".format(
-                ', '.join([var.name() for var in self._mx['states']])))
-            logger.debug("ModelicaMixin: Found derivatives {}".format(
-                ', '.join([var.name() for var in self._mx['derivatives']])))
-            logger.debug("ModelicaMixin: Found algebraics {}".format(
-                ', '.join([var.name() for var in self._mx['algebraics']])))
-            logger.debug("ModelicaMixin: Found control inputs {}".format(
-                ', '.join([var.name() for var in self._mx['control_inputs']])))
-            logger.debug("ModelicaMixin: Found constant inputs {}".format(
-                ', '.join([var.name() for var in self._mx['constant_inputs']])))
-            logger.debug("ModelicaMixin: Found parameters {}".format(
-                ', '.join([var.name() for var in self._mx['parameters']])))
-
-        # Initialize aliases
-        self._aliases = {}
-        self._alias_relation = AliasRelation()
-        for v in itertools.chain(self._pymola_model.states, self._pymola_model.der_states, self._pymola_model.alg_states, self._pymola_model.inputs):
-            for alias in v.aliases:
-                self._alias_relation.add(v.symbol.name(), alias)
-                if logger.getEffectiveLevel() == logging.DEBUG:
-                    logger.debug("ModelicaMixin: Aliased {} to {}".format(
-                        v.symbol.name(), alias))
+                    self.__mx['control_inputs'].append(v.symbol)
 
         # Initialize nominals and types
-        self._nominals = {}
-        self._discrete = {}
-        for v in itertools.chain(self._pymola_model.states, self._pymola_model.alg_states, self._pymola_model.inputs):
+        # These are not in @cached dictionary properties for backwards compatibility.
+        self.__nominals = {}
+        self.__discrete = {}
+        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
             # We need to take care to allow nominal vectors.
             if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero():
-                self._nominals[sym_name] = ca.fabs(v.nominal)
+                self.__nominals[sym_name] = ca.fabs(v.nominal)
 
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
-                        sym_name, self._nominals[sym_name]))
+                        sym_name, self.__nominals[sym_name]))
 
-            self._discrete[sym_name] = v.python_type != float
+            self.__discrete[sym_name] = v.python_type != float
 
         # Initialize dae and initial residuals
+        # These are not in @cached dictionary properties so that we need to create the list
+        # of function arguments only once.
         variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
-        function_arguments = [self._pymola_model.time] + [ca.veccat(*[v.symbol for v in getattr(self._pymola_model, variable_list)]) for variable_list in variable_lists]
+        function_arguments = [self.__pymola_model.time] + [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
 
-        self._dae_residual = self._pymola_model.dae_residual_function(*function_arguments)
-        if self._dae_residual is None:
-            self._dae_residual = ca.MX()
+        self.__dae_residual = self.__pymola_model.dae_residual_function(*function_arguments)
+        if self.__dae_residual is None:
+            self.__dae_residual = ca.MX()
 
-        self._initial_residual = self._pymola_model.initial_residual_function(*function_arguments)
-        if self._initial_residual is None:
-            self._initial_residual = ca.MX()
+        self.__initial_residual = self.__pymola_model.initial_residual_function(*function_arguments)
+        if self.__initial_residual is None:
+            self.__initial_residual = ca.MX()
+
+        # Log variables in debug mode
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            logger.debug("ModelicaMixin: Found states {}".format(
+                ', '.join([var.name() for var in self.__mx['states']])))
+            logger.debug("ModelicaMixin: Found derivatives {}".format(
+                ', '.join([var.name() for var in self.__mx['derivatives']])))
+            logger.debug("ModelicaMixin: Found algebraics {}".format(
+                ', '.join([var.name() for var in self.__mx['algebraics']])))
+            logger.debug("ModelicaMixin: Found control inputs {}".format(
+                ', '.join([var.name() for var in self.__mx['control_inputs']])))
+            logger.debug("ModelicaMixin: Found constant inputs {}".format(
+                ', '.join([var.name() for var in self.__mx['constant_inputs']])))
+            logger.debug("ModelicaMixin: Found parameters {}".format(
+                ', '.join([var.name() for var in self.__mx['parameters']])))
 
         # Call parent class first for default behaviour.
         super().__init__(**kwargs)
@@ -172,20 +158,23 @@ class ModelicaMixin(OptimizationProblem):
 
     def delayed_feedback(self):
         delayed_feedback = super().delayed_feedback()
-        delayed_feedback.extend([(dfb.origin, dfb.name, dfb.delay) for dfb in self._pymola_model.delayed_states])
+        delayed_feedback.extend([(dfb.origin, dfb.name, dfb.delay) for dfb in self.__pymola_model.delayed_states])
         return delayed_feedback
 
     @property
     def dae_residual(self):
-        return self._dae_residual
+        return self.__dae_residual
 
     @property
     def dae_variables(self):
-        return self._mx
+        return self.__mx
 
     @property
+    @cached
     def output_variables(self):
-        return self._output_variables
+        output_variables = [v.symbol for v in self.__pymola_model.outputs]
+        output_variables.extend(self.__mx['control_inputs'])
+        return output_variables
 
     @cached
     def parameters(self, ensemble_member):
@@ -193,7 +182,7 @@ class ModelicaMixin(OptimizationProblem):
         parameters = super().parameters(ensemble_member)
 
         # Return parameter values from pymola model
-        for v in self._pymola_model.parameters:
+        for v in self.__pymola_model.parameters:
             parameters[v.symbol.name()] = v.value
 
         # Done
@@ -206,8 +195,8 @@ class ModelicaMixin(OptimizationProblem):
 
         # Return input values from pymola model
         times = self.times()
-        constant_input_names = set(sym.name() for sym in self._mx['constant_inputs'])
-        for v in self._pymola_model.inputs:
+        constant_input_names = set(sym.name() for sym in self.__mx['constant_inputs'])
+        for v in self.__pymola_model.inputs:
             if v.symbol.name() in constant_input_names:
                 constant_inputs[v.symbol.name()] = Timeseries(
                     times, np.full_like(times, v.value))
@@ -219,10 +208,10 @@ class ModelicaMixin(OptimizationProblem):
 
     @cached
     def history(self, ensemble_member):
-        history = AliasDict(self._alias_relation)
+        history = AliasDict(self.alias_relation)
 
         # Initial conditions obtained from start attributes.
-        for v in self._pymola_model.states:
+        for v in self.__pymola_model.states:
             if v.fixed == True:
                 history[v.symbol.name()] = Timeseries(np.array([self.initial_time]), np.array([v.start]))
 
@@ -230,10 +219,10 @@ class ModelicaMixin(OptimizationProblem):
 
     @cached
     def initial_state(self, ensemble_member):
-        initial_state = AliasDict(self._alias_relation)
+        initial_state = AliasDict(self.alias_relation)
 
         # Initial conditions obtained from start attributes.
-        for v in self._pymola_model.states:
+        for v in self.__pymola_model.states:
             if v.fixed == True:
                 initial_state[v.symbol.name()] = v.start
 
@@ -241,7 +230,7 @@ class ModelicaMixin(OptimizationProblem):
 
     @property
     def initial_residual(self):
-        return self._initial_residual
+        return self.__initial_residual
 
     @cached
     def bounds(self):
@@ -250,14 +239,14 @@ class ModelicaMixin(OptimizationProblem):
 
         # Parameter values
         parameters = self.parameters(0)
-        parameter_values = [parameters.get(param.name(), param) for param in self._mx['parameters']]
+        parameter_values = [parameters.get(param.name(), param) for param in self.__mx['parameters']]
 
         # Load additional bounds from model
-        for v in itertools.chain(self._pymola_model.states, self._pymola_model.alg_states, self._pymola_model.inputs):
+        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
             np_shape = (v.symbol.size1(), v.symbol.size2())
             (m, M) = bounds.get(sym_name, (np.full(np_shape, -np.inf), np.full(np_shape, np.inf)))
-            if self._discrete.get(sym_name, False):
+            if self.__discrete.get(sym_name, False):
                 if np.all(not np.isfinite(m)):
                     m = np.zeros(np_shape)
                 if np.all(not np.isfinite(M)):
@@ -265,7 +254,7 @@ class ModelicaMixin(OptimizationProblem):
 
             m_ = ca.MX(v.min)
             if not m_.is_constant():
-                [m] = substitute_in_external([m_], self._mx['parameters'], parameter_values)
+                [m] = substitute_in_external([m_], self.__mx['parameters'], parameter_values)
                 if m.is_constant():
                     m = array_from_mx(m)
                 else:
@@ -277,7 +266,7 @@ class ModelicaMixin(OptimizationProblem):
 
             M_ = ca.MX(v.max)
             if not M_.is_constant():
-                [M] = substitute_in_external([M_], self._mx['parameters'], parameter_values)
+                [M] = substitute_in_external([M_], self.__mx['parameters'], parameter_values)
                 if M.is_constant():
                     M = array_from_mx(M)
                 else:
@@ -287,6 +276,7 @@ class ModelicaMixin(OptimizationProblem):
                 if np.any(np.isfinite(M_)):
                     M = M_
 
+            # Cast to scalar whenever possibe
             if m.shape[0] * m.shape[1] == 1:
                 m = m[0, 0]
             if M.shape[0] * M.shape[1] == 1:
@@ -296,12 +286,22 @@ class ModelicaMixin(OptimizationProblem):
 
         return bounds
 
-    def variable_is_discrete(self, variable):
-        return self._discrete.get(variable, False)
+    def variable_is__discrete(self, variable):
+        return self.__discrete.get(variable, False)
 
     @property
+    @cached
     def alias_relation(self):
-        return self._alias_relation
+        # Initialize aliases
+        alias_relation = AliasRelation()
+        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.der_states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
+            for alias in v.aliases:
+                alias_relation.add(v.symbol.name(), alias)
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("ModelicaMixin: Aliased {} to {}".format(
+                        v.symbol.name(), alias))
+
+        return alias_relation
 
     def variable_nominal(self, variable):
-        return self._nominals.get(variable, 1)
+        return self.__nominals.get(variable, 1)

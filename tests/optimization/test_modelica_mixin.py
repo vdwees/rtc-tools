@@ -90,6 +90,15 @@ class TestProblemNonConvex(TestProblem):
         return {'u': Timeseries(self.times(), self.u_seed)}
 
 
+class TestProblemScaled(TestProblem):
+
+    def variable_nominal(self, variable):
+        if variable.startswith('x'):
+            return 0.5
+        else:
+            return super().variable_nominal(variable)
+
+
 class TestProblemConstrained(TestProblem):
 
     def constraints(self, ensemble_member):
@@ -321,9 +330,7 @@ class TestModelicaMixin(TestCase):
 class TestModelicaMixinScaled(TestModelicaMixin):
 
     def setUp(self):
-        self.problem = TestProblem()
-        self.problem._nominals['x'] = 0.5
-        self.problem._nominals['x_delayed'] = self.problem._nominals['x']
+        self.problem = TestProblemScaled()
         self.problem.optimize()
         self.results = self.problem.extract_results()
         self.tolerance = 1e-6
