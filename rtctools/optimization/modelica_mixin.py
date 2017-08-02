@@ -1,6 +1,6 @@
-from casadi import MX, substitute, repmat, vertcat, depends_on, veccat
 from pymola.backends.casadi.api import transfer_model
 from collections import OrderedDict
+import casadi as ca
 import numpy as np
 import itertools
 import logging
@@ -9,7 +9,7 @@ import os
 from .timeseries import Timeseries
 from .optimization_problem import OptimizationProblem
 from .alias_tools import AliasRelation, AliasDict
-from .casadi_helpers import substitute_in_external
+from .casadi_helpers import substitute_in_external, array_from_mx
 from .caching import cached
 
 logger = logging.getLogger("rtctools")
@@ -26,9 +26,6 @@ class ModelicaMixin(OptimizationProblem):
 
     # Folder in which the referenced Modelica libraries are found
     modelica_library_folder = os.getenv('DELTARES_LIBRARY_PATH', 'mo')
-
-    def _symbols(self, l):
-        return [v.symbol for v in l]
 
     def __init__(self, **kwargs):
         # Check arguments
@@ -109,8 +106,9 @@ class ModelicaMixin(OptimizationProblem):
         self._discrete = {}
         for v in itertools.chain(self._pymola_model.states, self._pymola_model.alg_states, self._pymola_model.inputs):
             sym_name = v.symbol.name()
-            if v.nominal != 0 and v.nominal != 1:
-                self._nominals[sym_name] = abs(float(v.nominal))
+            # We need to take care to allow nominal vectors.
+            if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero():
+                self._nominals[sym_name] = ca.fabs(v.nominal)
 
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
@@ -120,15 +118,15 @@ class ModelicaMixin(OptimizationProblem):
 
         # Initialize dae and initial residuals
         variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
-        function_arguments = [self._pymola_model.time] + [veccat(*[v.symbol for v in getattr(self._pymola_model, variable_list)]) for variable_list in variable_lists]
+        function_arguments = [self._pymola_model.time] + [ca.veccat(*[v.symbol for v in getattr(self._pymola_model, variable_list)]) for variable_list in variable_lists]
 
         self._dae_residual = self._pymola_model.dae_residual_function(*function_arguments)
         if self._dae_residual is None:
-            self._dae_residual = MX()
+            self._dae_residual = ca.MX()
 
         self._initial_residual = self._pymola_model.initial_residual_function(*function_arguments)
         if self._initial_residual is None:
-            self._initial_residual = MX()
+            self._initial_residual = ca.MX()
 
         # Call parent class first for default behaviour.
         super().__init__(**kwargs)
@@ -257,32 +255,42 @@ class ModelicaMixin(OptimizationProblem):
         # Load additional bounds from model
         for v in itertools.chain(self._pymola_model.states, self._pymola_model.alg_states, self._pymola_model.inputs):
             sym_name = v.symbol.name()
-            (m, M) = bounds.get(sym_name, (None, None))
+            np_shape = (v.symbol.size1(), v.symbol.size2())
+            (m, M) = bounds.get(sym_name, (np.full(np_shape, -np.inf), np.full(np_shape, np.inf)))
             if self._discrete.get(sym_name, False):
-                if m is None:
-                    m = 0
-                if M is None:
-                    M = 1
+                if np.all(not np.isfinite(m)):
+                    m = np.zeros(np_shape)
+                if np.all(not np.isfinite(M)):
+                    M = np.ones(np_shape)
 
-            m_ = MX(v.min)
+            m_ = ca.MX(v.min)
             if not m_.is_constant():
                 [m] = substitute_in_external([m_], self._mx['parameters'], parameter_values)
                 if m.is_constant():
-                    m = float(m)
+                    m = array_from_mx(m)
+                else:
+                    raise Exception('Could not resolve lower bound for variable {}'.format(sym_name))
             else:
-                m_ = float(m_)
-                if np.isfinite(m_): # TODO vector values
+                m_ = array_from_mx(m_)
+                if np.any(np.isfinite(m_)):
                     m = m_
 
-            M_ = MX(v.max)
+            M_ = ca.MX(v.max)
             if not M_.is_constant():
                 [M] = substitute_in_external([M_], self._mx['parameters'], parameter_values)
                 if M.is_constant():
-                    M = float(M)
+                    M = array_from_mx(M)
+                else:
+                    raise Exception('Could not resolve upper bound for variable {}'.format(sym_name))
             else:
-                M_ = float(M_)
-                if np.isfinite(M_):
+                M_ = array_from_mx(M_)
+                if np.any(np.isfinite(M_)):
                     M = M_
+
+            if m.shape[0] * m.shape[1] == 1:
+                m = m[0, 0]
+            if M.shape[0] * M.shape[1] == 1:
+                M = M[0, 0]
 
             bounds[sym_name] = (m, M)
 

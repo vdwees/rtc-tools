@@ -5,6 +5,10 @@ import logging
 logger = logging.getLogger("rtctools")
 
 
+def array_from_mx(e):
+    return np.array([[float(e[i, j]) for j in range(e.size2())] for i in range(e.size1())])
+
+
 def is_affine(e, v):
     Af = Function('f', [v], [jacobian(e, v)])
     return (Af.sparsity_jac(0, 0).nnz() == 0)
