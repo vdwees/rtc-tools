@@ -1,15 +1,16 @@
 from datetime import datetime, timedelta
-from casadi import MX
+import casadi as ca
 import numpy as np
 import logging
 import os
 import sys
 import rtctools.data.csv as csv
 
+from rtctools._internal.alias_tools import AliasDict
+from rtctools._internal.caching import cached
+
 from .timeseries import Timeseries
 from .optimization_problem import OptimizationProblem
-from .alias_tools import AliasDict
-from .caching import cached
 
 logger = logging.getLogger("rtctools")
 
@@ -379,7 +380,7 @@ class CSVMixin(OptimizationProblem):
     @property
     def output_variables(self):
         variables = super().output_variables
-        variables.extend([MX.sym(variable)
+        variables.extend([ca.MX.sym(variable)
                           for variable in self._output_timeseries])
         return variables
 

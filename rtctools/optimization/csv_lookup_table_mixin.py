@@ -2,7 +2,7 @@ from rtctools.data.interpolation.bspline1d import BSpline1D
 from rtctools.data.interpolation.bspline2d import BSpline2D
 import rtctools.data.csv as csv
 from scipy.interpolate import splrep, bisplrep, splev, bisplev
-from casadi import SX, Function
+import casadi as ca
 import numpy as np
 import configparser
 import logging
@@ -172,8 +172,8 @@ class CSVLookupTableMixin(OptimizationProblem):
                                output], linestyle='', marker='x', markersize=10)
                     figure_filename = filename.replace('.csv', '.png')
                     pylab.savefig(figure_filename)
-                symbols = [SX.sym(inputs[0])]
-                function = Function('f', symbols, [BSpline1D(*tck)(symbols[0])])
+                symbols = [ca.SX.sym(inputs[0])]
+                function = ca.Function('f', symbols, [BSpline1D(*tck)(symbols[0])])
                 self._lookup_tables[output] = LookupTable(symbols, function)
 
             elif len(csvinput.dtype.names) == 3:
@@ -205,8 +205,8 @@ class CSVLookupTableMixin(OptimizationProblem):
                     pylab.plot_surface(i1, i2, o)
                     figure_filename = filename.replace('.csv', '.png')
                     pylab.savefig(figure_filename)
-                symbols = [SX.sym(inputs[0]), SX.sym(inputs[1])]
-                function = Function('f', 
+                symbols = [ca.SX.sym(inputs[0]), ca.SX.sym(inputs[1])]
+                function = ca.Function('f', 
                     symbols, [BSpline2D(*tck)(symbols[0], symbols[1])])
                 self._lookup_tables[output] = LookupTable(symbols, function)
 

@@ -5,11 +5,12 @@ import itertools
 import logging
 import os
 
+from rtctools._internal.alias_tools import AliasRelation, AliasDict
+from rtctools._internal.caching import cached
+from rtctools._internal.casadi_helpers import substitute_in_external, array_from_mx
+
 from .timeseries import Timeseries
 from .optimization_problem import OptimizationProblem
-from .alias_tools import AliasRelation, AliasDict
-from .casadi_helpers import substitute_in_external, array_from_mx
-from .caching import cached
 
 logger = logging.getLogger("rtctools")
 

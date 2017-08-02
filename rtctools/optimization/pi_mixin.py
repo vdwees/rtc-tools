@@ -1,5 +1,5 @@
 from datetime import timedelta
-from casadi import MX
+import casadi as ca
 import numpy as np
 import logging
 import bisect
@@ -7,10 +7,11 @@ import bisect
 import rtctools.data.rtc as rtc
 import rtctools.data.pi as pi
 
+from rtctools._internal.alias_tools import AliasDict
+from rtctools._internal.caching import cached
+
 from .optimization_problem import OptimizationProblem
 from .timeseries import Timeseries
-from .alias_tools import AliasDict
-from .caching import cached
 
 logger = logging.getLogger("rtctools")
 
@@ -431,7 +432,7 @@ class PIMixin(OptimizationProblem):
     @property
     def output_variables(self):
         variables = super().output_variables
-        variables.extend([MX.sym(variable)
+        variables.extend([ca.MX.sym(variable)
                           for variable in self._output_timeseries])
         return variables
 

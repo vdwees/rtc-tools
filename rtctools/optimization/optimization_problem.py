@@ -1,12 +1,13 @@
-from casadi import Function, nlpsol, MX, vertcat
 from abc import ABCMeta, abstractmethod, abstractproperty
 from numba import jit
+import casadi as ca
 import numpy as np
 import itertools
 import logging
 
+from rtctools._internal.alias_tools import AliasDict
+
 from .timeseries import Timeseries
-from .alias_tools import AliasDict
 
 logger = logging.getLogger("rtctools")
 
@@ -91,7 +92,7 @@ class OptimizationProblem(metaclass = ABCMeta):
             self.pre()
 
             # Check if control inputs are bounded
-            self._check_bounds_control_input()
+            self.__check_bounds_control_input()
         else:
             logger.debug(
                 'Skipping Preprocessing in OptimizationProblem.optimize()')
@@ -119,12 +120,12 @@ class OptimizationProblem(metaclass = ABCMeta):
         if self.__mixed_integer:
             nlpsol_options['discrete'] = discrete
 
-        solver = nlpsol('nlp', my_solver, nlp, nlpsol_options)
+        solver = ca.nlpsol('nlp', my_solver, nlp, nlpsol_options)
 
         # Solve NLP
         logger.info("Calling solver")
 
-        results = solver(x0 = x0, lbx = lbx, ubx = ubx, lbg = vertcat(*lbg), ubg = vertcat(*ubg))
+        results = solver(x0 = x0, lbx = lbx, ubx = ubx, lbg = ca.veccat(*lbg), ubg = ca.veccat(*ubg))
 
         # Extract relevant stats
         self.__objective_value = float(results['f'])
@@ -166,7 +167,7 @@ class OptimizationProblem(metaclass = ABCMeta):
 
         return success
 
-    def _check_bounds_control_input(self):
+    def __check_bounds_control_input(self):
         # Checks if at the control inputs have bounds, log warning when a control input is not bounded.
         bounds = self.bounds()
 
@@ -440,7 +441,7 @@ class OptimizationProblem(metaclass = ABCMeta):
 
         :returns: An :class:`MX` object representing F in the initial equation F = 0.
         """
-        return MX(0)
+        return ca.MX()
 
     def seed(self, ensemble_member):
         """
@@ -470,7 +471,7 @@ class OptimizationProblem(metaclass = ABCMeta):
                 return self.state_at('x', times[-1], ensemble_member)
 
         """
-        return MX(0)
+        return ca.MX()
 
     def path_objective(self, ensemble_member):
         """
@@ -489,7 +490,7 @@ class OptimizationProblem(metaclass = ABCMeta):
                 return self.state('x')
 
         """
-        return MX(0)
+        return ca.MX()
 
     def constraints(self, ensemble_member):
         """

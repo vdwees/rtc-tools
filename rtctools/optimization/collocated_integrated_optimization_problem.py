@@ -4,10 +4,11 @@ import numpy as np
 import itertools
 import logging
 
+from rtctools._internal.alias_tools import AliasDict
+from rtctools._internal.casadi_helpers import *
+
 from .optimization_problem import OptimizationProblem
 from .timeseries import Timeseries
-from .casadi_helpers import *
-from .alias_tools import AliasDict
 
 logger = logging.getLogger("rtctools")
 
