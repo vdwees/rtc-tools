@@ -344,14 +344,14 @@ class CSVMixin(OptimizationProblem):
         else:
             write_output(0, self.__output_folder)
 
-    def _datetime_to_sec(self, d):
+    def __datetime_to_sec(self, d):
         # Return the date/timestamps in seconds since t0.
         if hasattr(d, '__iter__'):
             return np.array([(t - self.__timeseries_times[0]).total_seconds() for t in d])
         else:
             return (d - self.__timeseries_times[0]).total_seconds()
 
-    def _sec_to_datetime(self, s):
+    def __sec_to_datetime(self, s):
         # Return the date/timestamps in seconds since t0 as datetime objects.
         if hasattr(s, '__iter__'):
             return [self.__timeseries_times[0] + timedelta(seconds=t) for t in s]

@@ -350,14 +350,14 @@ class PIMixin(OptimizationProblem):
         # Write output file to disk
         self.__timeseries_export.write()
 
-    def _datetime_to_sec(self, d):
+    def __datetime_to_sec(self, d):
         # Return the date/timestamps in seconds since t0.
         if hasattr(d, '__iter__'):
             return np.array([(t - self.__timeseries_import.forecast_datetime).total_seconds() for t in d])
         else:
             return (d - self.__timeseries_import.forecast_datetime).total_seconds()
 
-    def _sec_to_datetime(self, s):
+    def __sec_to_datetime(self, s):
         # Return the date/timestamps in seconds since t0 as datetime objects.
         if hasattr(s, '__iter__'):
             return [self.__timeseries_import.forecast_datetime + timedelta(seconds=t) for t in s]
