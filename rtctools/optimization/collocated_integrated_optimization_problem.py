@@ -937,11 +937,14 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         # Default implementation: One single set of control inputs for all
         # ensembles
         count = 0
-        for variable in self.controls:
-            times = self.times(variable)
+        for variable in self.dae_variables['control_inputs']:
+            variable_name = variable.name()
+            variable_numel = variable.numel()
+
+            times = self.times(variable_name)
             n_times = len(times)
 
-            count += n_times
+            count += n_times * variable_numel
 
         # We assume the seed for the controls to be identical for the entire ensemble.
         # After all, we don't use a stochastic tree if we end up here.
@@ -955,40 +958,43 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         x0 = np.zeros(count, dtype=np.float64)
 
         offset = 0
-        for variable in self.controls:
-            times = self.times(variable)
+        for variable in self.dae_variables['control_inputs']:
+            variable_name = variable.name()
+            variable_numel = variable.numel()
+
+            times = self.times(variable_name)
             n_times = len(times)
 
             discrete[offset:offset +
-                     n_times] = self.variable_is_discrete(variable)
+                     n_times * variable_numel] = self.variable_is_discrete(variable_name)
 
             try:
-                bound = resolved_bounds[variable]
+                bound = resolved_bounds[variable_name]
             except KeyError:
                 pass
             else:
-                nominal = self.variable_nominal(variable)
+                nominal = self.variable_nominal(variable_name)
                 if bound[0] is not None:
                     if isinstance(bound[0], Timeseries):
-                        lbx[offset:offset + n_times] = self.interpolate(
+                        lbx[offset:offset + n_times * variable_numel] = self.interpolate(
                             times, bound[0].times, bound[0].values, -np.inf, -np.inf) / nominal
                     else:
-                        lbx[offset:offset + n_times] = bound[0] / nominal
+                        lbx[offset:offset + n_times * variable_numel] = bound[0] / nominal
                 if bound[1] is not None:
                     if isinstance(bound[1], Timeseries):
-                        ubx[offset:offset + n_times] = self.interpolate(
+                        ubx[offset:offset + n_times * variable_numel] = self.interpolate(
                             times, bound[1].times, bound[1].values, +np.inf, +np.inf) / nominal
                     else:
-                        ubx[offset:offset + n_times] = bound[1] / nominal
+                        ubx[offset:offset + n_times * variable_numel] = bound[1] / nominal
 
                 try:
-                    seed_k = seed[variable]
-                    x0[offset:offset + n_times] = self.interpolate(
+                    seed_k = seed[variable_name]
+                    x0[offset:offset + n_times * variable_numel] = self.interpolate(
                         times, seed_k.times, seed_k.values, 0, 0) / nominal
                 except KeyError:
                     pass
 
-            offset += n_times
+            offset += n_times * variable_numel
 
         # Return number of control variables
         return count, discrete, lbx, ubx, x0
@@ -1086,17 +1092,20 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         ensemble_member_size = 0
 
         # Space for collocated states
-        for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
-            if variable in self.integrated_states:
-                ensemble_member_size += 1  # Initial state
+        for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.path_variables):
+            variable_name = variable.name()
+            if variable_name in self.integrated_states:
+                ensemble_member_size += variable.numel()  # Initial state
             else:
-                ensemble_member_size += len(self.times(variable))
+                ensemble_member_size += len(self.times(variable_name)) * variable.numel()
 
         # Space for extra variables
-        ensemble_member_size += len(self.extra_variables)
+        for variable in self.extra_variables:
+            ensemble_member_size += variable.numel()
 
         # Space for initial states and derivatives
-        ensemble_member_size += len(self.dae_variables['derivatives'])
+        for variable in self.dae_variables['derivatives']:
+            ensemble_member_size += variable.numel()
 
         # Total space requirement
         count = self.ensemble_size * ensemble_member_size
@@ -1112,123 +1121,145 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
         # Types
         for ensemble_member in range(self.ensemble_size):
             offset = ensemble_member * ensemble_member_size
-            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
-                if variable in self.integrated_states:
-                    discrete[offset] = self.variable_is_discrete(variable)
+            for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.path_variables):
+                variable_name = variable.name()
+                variable_numel = variable.numel()
+                if variable_name in self.integrated_states:
+                    discrete[offset:offset + variable_numel] = self.variable_is_discrete(variable_name)
 
-                    offset += 1
+                    offset += variable_numel
 
                 else:
-                    times = self.times(variable)
+                    times = self.times(variable_name)
                     n_times = len(times)
 
                     discrete[offset:offset +
-                             n_times] = self.variable_is_discrete(variable)
+                             n_times * variable_numel] = self.variable_is_discrete(variable_name)
 
-                    offset += n_times
+                    offset += n_times * variable_numel
 
-            for k in range(len(self.extra_variables)):
-                discrete[
-                    offset + k] = self.variable_is_discrete(self.extra_variables[k].name())
+            for variable in self.extra_variables:
+                variable_name = variable.name()
+                variable_numel = variable.numel()
+
+                discrete[offset:offset + variable_numel] = self.variable_is_discrete(variable_name)
+
+                offset += variable_numel
 
         # Bounds, defaulting to +/- inf, if not set
         for ensemble_member in range(self.ensemble_size):
             offset = ensemble_member * ensemble_member_size
-            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
-                if variable in self.integrated_states:
+            for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.path_variables):
+                variable_name = variable.name()
+                variable_numel = variable.numel()
+
+                if variable_name in self.integrated_states:
                     try:
-                        bound = resolved_bounds[variable]
+                        bound = resolved_bounds[variable_name]
                     except KeyError:
                         pass
                     else:
-                        nominal = self.variable_nominal(variable)
+                        nominal = self.variable_nominal(variable_name)
                         if bound[0] is not None:
                             if isinstance(bound[0], Timeseries):
-                                lbx[offset] = self.interpolate(self.initial_time, bound[0].times, bound[
+                                lbx[offset:offset + variable_numel] = self.interpolate(self.initial_time, bound[0].times, bound[
                                                                 0].values, -np.inf, -np.inf) / nominal
                             else:
-                                lbx[offset] = bound[0] / nominal
+                                lbx[offset:offset + variable_numel] = bound[0] / nominal
                         if bound[1] is not None:
                             if isinstance(bound[1], Timeseries):
-                                ubx[offset] = self.interpolate(self.initial_time, bound[1].times, bound[
+                                ubx[offset:offset + variable_numel] = self.interpolate(self.initial_time, bound[1].times, bound[
                                                                 1].values, +np.inf, +np.inf) / nominal
                             else:
-                                ubx[offset] = bound[1] / nominal
+                                ubx[offset:offset + variable_numel] = bound[1] / nominal
 
-                    offset += 1
+                    offset += variable_numel
 
                 else:
-                    times = self.times(variable)
+                    times = self.times(variable_name)
                     n_times = len(times)
 
                     try:
-                        bound = resolved_bounds[variable]
+                        bound = resolved_bounds[variable_name]
                     except KeyError:
                         pass
                     else:
-                        nominal = self.variable_nominal(variable)
+                        nominal = self.variable_nominal(variable_name)
                         if bound[0] is not None:
                             if isinstance(bound[0], Timeseries):
-                                lbx[offset:offset + n_times] = self.interpolate(
+                                lbx[offset:offset + n_times * variable_numel] = self.interpolate(
                                     times, bound[0].times, bound[0].values, -np.inf, -np.inf) / nominal
                             else:
-                                lbx[offset:offset + n_times] = bound[0] / nominal
+                                lbx[offset:offset + n_times * variable_numel] = bound[0] / nominal
                         if bound[1] is not None:
                             if isinstance(bound[1], Timeseries):
-                                ubx[offset:offset + n_times] = self.interpolate(
+                                ubx[offset:offset + n_times * variable_numel] = self.interpolate(
                                     times, bound[1].times, bound[1].values, +np.inf, +np.inf) / nominal
                             else:
-                                ubx[offset:offset + n_times] = bound[1] / nominal
+                                ubx[offset:offset + n_times * variable_numel] = bound[1] / nominal
 
-                    offset += n_times
+                    offset += n_times * variable_numel
 
-            for k in range(len(self.extra_variables)):
+            for variable in self.extra_variables:
+                variable_name = variable.name()
+                variable_numel = variable.numel()
+
                 try:
-                    bound = resolved_bounds[self.extra_variables[k].name()]
+                    bound = resolved_bounds[variable_name]
                 except KeyError:
                     pass
                 else:
                     if bound[0] is not None:
-                        lbx[offset + k] = bound[0]
+                        lbx[offset:offset + variable_numel] = bound[0]
                     if bound[1] is not None:
-                        ubx[offset + k] = bound[1]
+                        ubx[offset:offset + variable_numel] = bound[1]
+
+                offset += variable_numel
 
             # Initial guess based on provided seeds, defaulting to zero if no
             # seed is given
             seed = self.seed(ensemble_member)
 
             offset = ensemble_member * ensemble_member_size
-            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
-                if variable in self.integrated_states:
+            for variable in itertools.chain(self.dae_variables['states'], self.dae_variables['algebraics'], self.path_variables):
+                variable_name = variable.name()
+                variable_numel = variable.numel()
+
+                if variable_name in self.integrated_states:
                     try:
-                        seed_k = seed[variable]
-                        nominal = self.variable_nominal(variable)
-                        x0[offset] = self.interpolate(
+                        seed_k = seed[variable_name]
+                        nominal = self.variable_nominal(variable_name)
+                        x0[offset:offset + variable_numel] = self.interpolate(
                             self.initial_time, seed_k.times, seed_k.values, 0, 0) / nominal
                     except KeyError:
                         pass
 
-                    offset += 1
+                    offset += variable_numel
 
                 else:
                     times = self.times(variable)
                     n_times = len(times)
 
                     try:
-                        seed_k = seed[variable]
-                        nominal = self.variable_nominal(variable)
-                        x0[offset:offset + n_times] = self.interpolate(
+                        seed_k = seed[variable_name]
+                        nominal = self.variable_nominal(variable_name)
+                        x0[offset:offset + n_times * variable_numel] = self.interpolate(
                             times, seed_k.times, seed_k.values, 0, 0) / nominal
                     except KeyError:
                         pass
 
-                    offset += n_times
+                    offset += n_times * variable_numel
 
-            for k in range(len(self.extra_variables)):
+            for variable in self.extra_variables:
+                variable_name = variable.name()
+                variable_numel = variable.numel()
+
                 try:
-                    x0[offset + k] = seed[self.extra_variables[k].name()]
+                    x0[offset:offset + variable_numel] = seed[variable_name]
                 except KeyError:
                     pass
+
+                offset += variable_numel
 
         # Return number of state variables
         return count, discrete, lbx, ubx, x0

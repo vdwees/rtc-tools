@@ -164,18 +164,21 @@ class ControlTreeMixin(OptimizationProblem):
         # (variable, (ensemble member, step)) -> control_index
         self._control_indices = {}
         count = 0
-        for control_input in self.controls:
-            times = self.times(control_input)
-            self._control_indices[control_input] = np.zeros(
+        for variable in self.dae_variables['control_inputs']:
+            variable_name = variable.name()
+            variable_numel = variable.numel()
+
+            times = self.times(variable_name)
+            self._control_indices[variable_name] = np.zeros(
                 (self.ensemble_size, len(times)), dtype=np.int16)
             for branch, members in branches.items():
                 branching_time_0 = branching_times[len(branch) + 0]
                 branching_time_1 = branching_times[len(branch) + 1]
                 els = np.logical_and(
                     times >= branching_time_0, times < branching_time_1)
-                nnz = np.count_nonzero(els)
+                nnz = np.count_nonzero(els) * variable_numel
                 for member in members:
-                    self._control_indices[control_input][
+                    self._control_indices[variable_name][
                         member, els] = list(range(count, count + nnz))
                 count += nnz
 
@@ -190,36 +193,39 @@ class ControlTreeMixin(OptimizationProblem):
         for ensemble_member in range(self.ensemble_size):
             seed = self.seed(ensemble_member)
 
-            for variable in self.controls:
-                times = self.times(variable)
+            for variable in self.dae_variables['control_inputs']:
+                variable_name = variable.name()
+                variable_numel = variable.numel()
 
-                discrete[self._control_indices[variable][
-                    ensemble_member, :]] = self.variable_is_discrete(variable)
+                times = self.times(variable_name)
+
+                discrete[self._control_indices[variable_name][
+                    ensemble_member, :]] = self.variable_is_discrete(variable_name)
 
                 try:
-                    bound = resolved_bounds[variable]
+                    bound = resolved_bounds[variable_name]
                 except KeyError:
                     pass
                 else:
-                    nominal = self.variable_nominal(variable)
+                    nominal = self.variable_nominal(variable_name)
                     if bound[0] is not None:
                         if isinstance(bound[0], Timeseries):
-                            lbx[self._control_indices[variable][ensemble_member, :]] = self.interpolate(
+                            lbx[self._control_indices[variable_name][ensemble_member, :]] = self.interpolate(
                                 times, bound[0].times, bound[0].values, -sys.float_info.max, -sys.float_info.max) / nominal
                         else:
-                            lbx[self._control_indices[variable][
+                            lbx[self._control_indices[variable_name][
                                 ensemble_member, :]] = bound[0] / nominal
                     if bound[1] is not None:
                         if isinstance(bound[1], Timeseries):
-                            ubx[self._control_indices[variable][ensemble_member, :]] = self.interpolate(
+                            ubx[self._control_indices[variable_name][ensemble_member, :]] = self.interpolate(
                                 times, bound[1].times, bound[1].values, +sys.float_info.max, +sys.float_info.max) / nominal
                         else:
-                            ubx[self._control_indices[variable][
+                            ubx[self._control_indices[variable_name][
                                 ensemble_member, :]] = bound[1] / nominal
 
                     try:
-                        seed_k = seed[variable]
-                        x0[self._control_indices[variable][ensemble_member, :]] = self.interpolate(
+                        seed_k = seed[variable_name]
+                        x0[self._control_indices[variable_name][ensemble_member, :]] = self.interpolate(
                             times, seed_k.times, seed_k.values, 0, 0) / nominal
                     except KeyError:
                         pass
