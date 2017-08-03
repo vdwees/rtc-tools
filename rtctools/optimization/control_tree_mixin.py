@@ -233,12 +233,9 @@ class ControlTreeMixin(OptimizationProblem):
 
         # Extract control inputs
         results = {}
-        for variable in self.dae_variables['control_inputs']:
-            variable_name = variable.name()
-            variable_numel = variable.numel()
-            n_times = len(self.times(variable_name))
-            results[variable_name] = np.array(self.variable_nominal(
-                variable_name) * X[self._control_indices[variable][ensemble_member, :], 0]).reshape((n_times, variable_numel))
+        for variable in self.controls:
+            results[variable] = np.array(self.variable_nominal(
+                variable) * X[self._control_indices[variable][ensemble_member, :], 0]).ravel()
 
         # Done
         return results
