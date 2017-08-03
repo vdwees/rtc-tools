@@ -1,10 +1,3 @@
-"""
-Commonly used utility functions.
-
-Author:  Jorn Baayen
-Date  :  March 16, 2016
-"""
-
 import casadi
 import logging
 import sys
