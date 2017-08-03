@@ -12,8 +12,8 @@ import re
 import pstats
 import cProfile
 
+from ._internal.alias_tools import OrderedSet
 from .data import pi
-from .optimization.alias_tools import OrderedSet
 from .optimization.pi_mixin import PIMixin
 from . import __version__
 
