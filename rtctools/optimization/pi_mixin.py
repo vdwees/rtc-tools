@@ -295,8 +295,6 @@ class PIMixin(OptimizationProblem):
         self.__timeseries_export.times = self.__timeseries_import.times[self.__timeseries_import.forecast_index:]
 
         # Write other time settings
-        self.__timeseries_export.start_datetime = self.__timeseries_import.forecast_datetime
-        self.__timeseries_export.end_datetime  = self.__timeseries_import.end_datetime
         self.__timeseries_export.forecast_datetime  = self.__timeseries_import.forecast_datetime
         self.__timeseries_export.dt = self.__timeseries_import.dt
         self.__timeseries_export.timezone = self.__timeseries_import.timezone
@@ -304,11 +302,6 @@ class PIMixin(OptimizationProblem):
         # Write the ensemble properties for the export file.
         self.__timeseries_export.ensemble_size = self.ensemble_size
         self.__timeseries_export.contains_ensemble = self.__timeseries_import.contains_ensemble
-        while self.__timeseries_export.ensemble_size > len(self.__timeseries_export.values):
-            self.__timeseries_export.values.append({})
-
-        # Transfer units from import timeseries
-        self.__timeseries_export.units = self.__timeseries_import.units
 
         # Start looping over the ensembles for extraction of the output values.
         times = self.times()
@@ -338,13 +331,13 @@ class PIMixin(OptimizationProblem):
 
                 # Check if ID mapping is present
                 try:
-                    location_parameter_id = self.__timeseries_export._data_config.pi_variable_ids(variable)
+                    location_parameter_id = self.__data_config.pi_variable_ids(variable)
                 except KeyError:
                     logger.debug('PIMixIn: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(variable))
                     continue
 
                 # Add series to output file
-                self.__timeseries_export.set(variable, values, ensemble_member=ensemble_member)
+                self.__timeseries_export.set(variable, values, unit=self.__timeseries_import.get_unit(variable, ensemble_member=ensemble_member), ensemble_member=ensemble_member)
 
         # Write output file to disk
         self.__timeseries_export.write()

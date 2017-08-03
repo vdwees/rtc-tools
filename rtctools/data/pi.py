@@ -435,7 +435,7 @@ class Timeseries:
                 else:
                     contains_ensemble = False
                 if self.__contains_ensemble == False:
-                # Only overwrite when _contains_ensemble was False before
+                    # Only overwrite when _contains_ensemble was False before
                     self.__contains_ensemble = contains_ensemble
 
             # Define the times, and floor the global forecast_datetime to the
@@ -537,7 +537,7 @@ class Timeseries:
                     ensemble_member][variable] == miss_val] = np.nan
 
                 unit = header.find('pi:units', ns).text
-                self.__set_unit(variable, unit=unit, ensemble_member=ensemble_member)
+                self.set_unit(variable, unit=unit, ensemble_member=ensemble_member)
 
                 if make_virtual_ensemble:
                     # Make references to the original input series for the virtual
@@ -681,7 +681,7 @@ class Timeseries:
             for ensemble_member in range(len(self.__values)):
                 for variable in self.__values[ensemble_member].keys():
                     location_parameter_id = self.__data_config.pi_variable_ids(variable)
-                    unit = self.__get_unit(variable, ensemble_member)
+                    unit = self.get_unit(variable, ensemble_member)
                     self.__add_header(variable, location_parameter_id, ensemble_member=ensemble_member, miss_val=-999, unit=unit)
 
         for ensemble_member in range(len(self.__values)):
@@ -711,7 +711,7 @@ class Timeseries:
 
                 # Update the header, which may have changed
                 el = header.find('pi:units', ns)
-                el.text = self.__get_unit(variable, ensemble_member)
+                el.text = self.get_unit(variable, ensemble_member)
 
                 # No values to be written, so the entire element is removed from
                 # the XML, and the loop restarts.
@@ -773,12 +773,26 @@ class Timeseries:
         """
         return self.__contains_ensemble
 
+    @contains_ensemble.setter
+    def contains_ensemble(self, contains_ensemble):
+        if not contains_ensemble:
+            assert self.ensemble_size == 1
+        self.__contains_ensemble = contains_ensemble
+
     @property
     def ensemble_size(self):
         """
         Ensemble size.
         """
         return self.__ensemble_size
+
+    @ensemble_size.setter
+    def ensemble_size(self, ensemble_size):
+        if ensemble_size > 1:
+            assert self.contains_ensemble
+        self.__ensemble_size = ensemble_size
+        while self.__ensemble_size > len(self.__values):
+            self.__values.append({})
 
     @property
     def start_datetime(self):
@@ -801,12 +815,17 @@ class Timeseries:
         """
         return self.__forecast_datetime
 
+    @forecast_datetime.setter
+    def forecast_datetime(self, forecast_datetime):
+        self.__forecast_datetime = forecast_datetime
+        self.__forecast_index = self.__times.index(forecast_datetime)
+
     @property
     def forecast_index(self):
         """
         Forecast time (t0) index.
         """
-        return self.__forecast_index
+        return self.__forecast_index    
 
     @property
     def dt(self):
@@ -815,6 +834,10 @@ class Timeseries:
         """
         return self.__dt
 
+    @dt.setter
+    def dt(self, dt):
+        self.__dt = dt
+
     @property
     def times(self):
         """
@@ -822,12 +845,22 @@ class Timeseries:
         """
         return self.__times
 
+    @times.setter
+    def times(self, times):
+        self.__times = times
+        self.__start_datetime = times[0]
+        self.__end_datetime = times[-1]
+
     @property
     def timezone(self):
         """
         Time zone in decimal hours shift from GMT.
         """
         return self.__timezone
+
+    @timezone.setter
+    def timezone(self, timezone):
+        self.__timezone = timezone
 
     def get(self, variable, ensemble_member=0):
         """
@@ -851,10 +884,10 @@ class Timeseries:
         """
         self.__values[ensemble_member][variable] = new_values
         if unit is None:
-            unit = self.__get_unit(variable, ensemble_member)
-        self.__set_unit(variable, unit, ensemble_member)
+            unit = self.get_unit(variable, ensemble_member)
+        self.set_unit(variable, unit, ensemble_member)
 
-    def __get_unit(self, variable, ensemble_member=0):
+    def get_unit(self, variable, ensemble_member=0):
         """
         Look up the unit of a time series.
 
@@ -868,7 +901,7 @@ class Timeseries:
         except KeyError:
             return 'unit_unknown'
 
-    def __set_unit(self, variable, unit, ensemble_member=0):
+    def set_unit(self, variable, unit, ensemble_member=0):
         """
         Set the unit of a time series.
 
