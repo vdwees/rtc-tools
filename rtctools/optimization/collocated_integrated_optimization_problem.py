@@ -1,11 +1,11 @@
-from casadi import MX, Function, rootfinder, vertcat, horzcat, jacobian, vec, substitute, sum1, sum2, transpose, repmat, depends_on, reshape, veccat
+from casadi import MX, Function, rootfinder, vertcat, horzcat, jacobian, vec, substitute, sum1, sum2, transpose, repmat, depends_on, reshape, veccat, interp1d
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import itertools
 import logging
 
 from rtctools._internal.alias_tools import AliasDict
-from rtctools._internal.casadi_helpers import *
+from rtctools._internal.casadi_helpers import is_affine, nullvertcat, reduce_matvec, substitute_in_external
 
 from .optimization_problem import OptimizationProblem
 from .timeseries import Timeseries
@@ -670,8 +670,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 values = self.state_vector(
                     variable, ensemble_member=ensemble_member)
                 if len(collocation_times) != len(times):
-                    interpolated = interpolate(
-                        times, values, collocation_times, self.equidistant, interpolation_method)
+                    interpolated = interp1d(
+                        times, values, collocation_times, interpolation_method, self.equidistant)
                 else:
                     interpolated = values
                 nominal = self.variable_nominal(variable)
@@ -786,13 +786,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
                 # Set up delay constraints
                 if len(collocation_times) != len(in_times):
                     interpolation_method = self.interpolation_method(in_canonical)
-                    x_in = interpolate(in_times, in_values,
-                                    collocation_times, self.equidistant, interpolation_method)
+                    x_in = interp1d(in_times, in_values,
+                                    collocation_times, interpolation_method, self.equidistant)
                 else:
                     x_in = in_values
                 interpolation_method = self.interpolation_method(out_canonical)
-                x_out_delayed = interpolate(
-                    out_times, out_values, collocation_times - delay, self.equidistant, interpolation_method)
+                x_out_delayed = interp1d(
+                    out_times, out_values, collocation_times - delay, interpolation_method, self.equidistant)
 
                 nominal = 0.5 * (in_nominal + out_nominal)
 
@@ -1657,7 +1657,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass = A
             interpolation_method = self.interpolation_method(state)
             values = self.state_vector(state, ensemble_member)
             if len(times) != n_collocation_times:
-                accumulation_states[i] = interpolate(times, values, collocation_times, interpolation_method)
+                accumulation_states[i] = interp1d(times, values, collocation_times, interpolation_method, self.equidistant)
             else:
                 accumulation_states[i] = values
             nominal = self.variable_nominal(state)

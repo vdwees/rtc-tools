@@ -548,9 +548,9 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return False
 
-    INTERPOLATION_LINEAR = 0
-    INTERPOLATION_PIECEWISE_CONSTANT_FORWARD = 1
-    INTERPOLATION_PIECEWISE_CONSTANT_BACKWARD = 2
+    INTERPOLATION_LINEAR = 'linear'
+    INTERPOLATION_PIECEWISE_CONSTANT_FORWARD = 'floor'
+    INTERPOLATION_PIECEWISE_CONSTANT_BACKWARD = 'ceil'
 
     def interpolate(self, t, ts, fs, f_left=np.nan, f_right=np.nan, mode=INTERPOLATION_LINEAR):
         """

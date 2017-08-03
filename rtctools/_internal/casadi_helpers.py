@@ -1,4 +1,4 @@
-from casadi import MX, Function, jacobian, vertcat, reshape, mtimes, substitute, interpolant, transpose, repmat
+from casadi import MX, Function, jacobian, vertcat, reshape, mtimes
 import numpy as np
 import logging
 
@@ -38,24 +38,3 @@ def reduce_matvec(e, v):
 def substitute_in_external(expr, symbols, values):
     f = Function('f', symbols, expr)
     return f.call(values, True, False)
-
-
-def interpolate(ts, xs, t, equidistant, mode=0):
-    if False: # TODO mode == 0:
-        print(ts)
-        print(xs)
-        return interpolant('interpolant', 'linear', [ts], xs, {'lookup_mode': 'exact'})(t)
-    else:
-        if mode == 1:
-            xs = xs[:-1] # block-forward
-        else:
-            xs = xs[1:] # block-backward
-        t = MX(t)
-        if t.size1() > 1:
-            t_ = MX.sym('t')
-            xs_ = MX.sym('xs', xs.size1())
-            f = Function('interpolant', [t_, xs_], [mtimes(transpose((t_ >= ts[:-1]) * (t_ < ts[1:])), xs_)])
-            f = f.map(t.size1(), 'serial')
-            return transpose(f(transpose(t), repmat(xs, 1, t.size1())))
-        else:
-            return mtimes(transpose((t >= ts[:-1]) * (t < ts[1:])), xs)
