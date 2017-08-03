@@ -41,14 +41,19 @@ class Example(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
         constraints.append((self.state('H_sea') - self.state('storage.HQ.H') +
                             self.state('is_downhill') * M, 0.0, inf))
 
-        # Orifice flow upper bound. Uses the equation:
-        # Q = width * C * height * (2 * g * (HQUp.H - HQDown.H)) ^ 0.5
-        # orifice.LHS is the left-hand-side of this equation in standard form:
-        # ((Q / (width * height * C)) ^ 2) / (g * 2) + HQDown.H - HQUp.H = 0
+        # Orifice flow constraint. Uses the equation:
+        # Q(HUp, HDown, d) = width * C * d * (2 * g * (HUp - HDown)) ^ 0.5
+        # Note that this equation is only valid for orifices that are submerged
+                  # units:  description:
+        w = 3.0   # m       width of orifice
+        d = 0.8   # m       hight of orifice
+        C = 1.0   # none    orifice constant
+        g = 9.8   # m/s^2   gravitational acceleration
         constraints.append(
-            (self.state('orifice.LHS') - M * (1.0 - self.state('is_downhill')),
+            (((self.state('Q_orifice') / (w * C * d)) ** 2) / (2 * g) +
+             self.state('orifice.HQDown.H') - self.state('orifice.HQUp.H') -
+             M * (1 - self.state('is_downhill')),
              -inf, 0.0))
-        # Note that this element is only valid for orifices that are submerged!
 
         return constraints
 

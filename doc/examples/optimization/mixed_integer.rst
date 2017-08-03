@@ -45,8 +45,8 @@ represents a simple water system with the following elements:
   ``Deltares.ChannelFlow.Hydraulic.BoundaryConditions.Level``,
 * a pump
   ``Deltares.ChannelFlow.Hydraulic.Structures.Pump``
-* an orifice
-  ``Deltares.ChannelFlow.Hydraulic.Structures.BooleanSubmergedOrifice``
+* an orifice modeled as a pump
+  ``Deltares.ChannelFlow.Hydraulic.Structures.Pump``
 
 .. image:: ../../images/orifice_vs_pump_openmodelica.png
 
@@ -70,9 +70,8 @@ connector ``HQPort``.
 In addition to elements, the input variables ``Q_in``, ``H_sea``, ``Q_pump``,
 and ``Q_orifice`` are also defined. Because we want to view the water levels in
 the storage element in the output file, we also define output
-variables ``storage_level`` and ``sea_level``. In the ``equation`` section,
-equations are defined to relate the inputs and outputs  to the appropriate water
-system elements.
+variables ``storage_level`` and ``sea_level``. It is usually easiest to set input
+and output variables equal to their corresponding model variable in the same line.
 
 To maintain the linearity of the model, we input the Boolean ``is_downhill`` as
 a way to keep track of whether water can flow by gravity to the sea. This
