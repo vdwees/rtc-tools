@@ -129,6 +129,9 @@ class ModelicaMixin(OptimizationProblem):
         # Default options
         compiler_options = {}
 
+        # Expand vector states to multiple scalar component states.
+        compiler_options['expand_vectors'] = True
+
         # Where imported model libraries are located.
         compiler_options['library_folders'] = [self.modelica_library_folder]
 
