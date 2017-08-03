@@ -12,31 +12,6 @@ ns = {'fews': 'http://www.wldelft.nl/fews',
       'pi': 'http://www.wldelft.nl/fews/PI'}
 
 
-def _parse_date_time(el):
-    # Parse a PI date time element.
-    return datetime.datetime.strptime(el.get('date') + ' ' + el.get('time'), '%Y-%m-%d %H:%M:%S')
-
-
-def _parse_time_step(el):
-    # Parse a PI time step element.
-    if el.get('unit') == 'second':
-        return datetime.timedelta(seconds=int(el.get('multiplier')))
-    elif el.get('unit') == 'nonequidistant':
-        return None
-    else:
-        raise Exception('Unsupported unit type: ' + el.get('unit'))
-
-
-def _floor_date_time(dt=datetime.datetime.now(), tdel=datetime.timedelta(minutes=1)):
-    # Floor a PI date time based on a PI time step
-    roundTo = tdel.total_seconds()
-
-    seconds = (dt - dt.min).seconds
-    # // is a floor division:
-    rounding = (seconds + roundTo / 2) // roundTo * roundTo
-    return dt + datetime.timedelta(0, rounding - seconds, -dt.microsecond)
-
-
 class Diag:
     """
     diag wrapper.
@@ -250,6 +225,10 @@ class ParameterConfig:
         """
         self.__tree.write(self.__path_xml)
 
+    @property
+    def path(self):
+        return self.__path_xml
+
     def __parse_type(self, fews_type):
         # Parse a FEWS type to an np type
         if fews_type == 'double':
@@ -402,7 +381,7 @@ class Timeseries:
                 variable = self.__data_config.variable(header)
 
                 try:
-                    dt = _parse_time_step(header.find('pi:timeStep', ns))
+                    dt = self.__parse_time_step(header.find('pi:timeStep', ns))
                 except ValueError:
                     raise Exception('PI: Multiplier of time step of variable {} must be a positive integer per the PI schema.'.format(variable))
                 if self.__dt is None:
@@ -412,7 +391,7 @@ class Timeseries:
                         raise Exception(
                             'PI: Not all timeseries have the same time step size.')
                 try:
-                    start_datetime = _parse_date_time(
+                    start_datetime = self.__parse_date_time(
                         header.find('pi:startDate', ns))
                     if self.__start_datetime is None:
                         self.__start_datetime = start_datetime
@@ -424,7 +403,7 @@ class Timeseries:
                         variable, os.path.join(self.__folder, basename + '.xml')))
 
                 try:
-                    end_datetime = _parse_date_time(header.find('pi:endDate', ns))
+                    end_datetime = self.__parse_date_time(header.find('pi:endDate', ns))
                     if self.__end_datetime is None:
                         self.__end_datetime = end_datetime
                     else:
@@ -436,7 +415,7 @@ class Timeseries:
 
                 el = header.find('pi:forecastDate', ns)
                 if el is not None:
-                    forecast_datetime = _parse_date_time(el)
+                    forecast_datetime = self.__parse_date_time(el)
                 else:
                     # the timeseries has no forecastDate, so the forecastDate
                     # is set to the startDate (per the PI-schema)
@@ -474,20 +453,20 @@ class Timeseries:
                     # a complete 'slice' of datetimes between start and end. The
                     # longest timeseries then contains all datetimes between start and end.
                     if len(events) > len(self.__times):
-                        self.__times = [__parse_date_time(e) for e in events]
+                        self.__times = [self.__parse_date_time(e) for e in events]
 
             # Check if the time steps of all series match the time steps of the global
             # time range.
             if pi_validate_times:
                 for series in self.__xml_root.findall('pi:series', ns):
                     events = series.findall('pi:event', ns)
-                    times = [__parse_date_time(e) for e in events]
+                    times = [self.__parse_date_time(e) for e in events]
                     if not set(self.__times).issuperset(set(times)):
                         raise Exception('PI: Not all timeseries share the same time step spacing. Make sure the time steps of all series are a subset of the global time steps.')
 
             if self.__forecast_datetime is not None:
                 if self.__dt:
-                    self.__forecast_datetime = _floor_date_time(
+                    self.__forecast_datetime = self.__floor_date_time(
                         dt=self.__forecast_datetime, tdel=self.__dt)
                 try:
                     self.__forecast_index = self.__times.index(
@@ -504,9 +483,9 @@ class Timeseries:
 
                 variable = self.__data_config.variable(header)
 
-                dt = _parse_time_step(header.find('pi:timeStep', ns))
-                start_datetime = _parse_date_time(header.find('pi:startDate', ns))
-                end_datetime = _parse_date_time(header.find('pi:endDate', ns))
+                dt = self.__parse_time_step(header.find('pi:timeStep', ns))
+                start_datetime = self.__parse_date_time(header.find('pi:startDate', ns))
+                end_datetime = self.__parse_date_time(header.find('pi:endDate', ns))
 
                 make_virtual_ensemble = False
                 el = header.find('pi:ensembleMemberIndex', ns)
@@ -601,7 +580,30 @@ class Timeseries:
             if f is not None and self.__binary:
                 f.close()
 
-    def _add_header(self, variable, location_parameter_id, ensemble_member=0, miss_val=-999, unit='unit_unknown'):
+    def __parse_date_time(self, el):
+        # Parse a PI date time element.
+        return datetime.datetime.strptime(el.get('date') + ' ' + el.get('time'), '%Y-%m-%d %H:%M:%S')
+
+    def __parse_time_step(self, el):
+        # Parse a PI time step element.
+        if el.get('unit') == 'second':
+            return datetime.timedelta(seconds=int(el.get('multiplier')))
+        elif el.get('unit') == 'nonequidistant':
+            return None
+        else:
+            raise Exception('Unsupported unit type: ' + el.get('unit'))
+
+
+    def __floor_date_time(self, dt=datetime.datetime.now(), tdel=datetime.timedelta(minutes=1)):
+        # Floor a PI date time based on a PI time step
+        roundTo = tdel.total_seconds()
+
+        seconds = (dt - dt.min).seconds
+        # // is a floor division:
+        rounding = (seconds + roundTo / 2) // roundTo * roundTo
+        return dt + datetime.timedelta(0, rounding - seconds, -dt.microsecond)
+
+    def __add_header(self, variable, location_parameter_id, ensemble_member=0, miss_val=-999, unit='unit_unknown'):
         """
         Add a timeseries header to the timeseries object.
         """

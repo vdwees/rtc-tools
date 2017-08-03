@@ -167,7 +167,7 @@ class PIMixin(OptimizationProblem):
 
                 if self.pi_check_for_duplicate_parameters:
                     if parameter in parameters.keys():
-                        logger.warning("PIMixin: parameter {} defined in file {} was already present. Using value {}.".format(parameter, parameter_config._path_xml, value))
+                        logger.warning("PIMixin: parameter {} defined in file {} was already present. Using value {}.".format(parameter, parameter_config.path, value))
 
                 parameters[parameter] = value
 
