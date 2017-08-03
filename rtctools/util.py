@@ -34,6 +34,8 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
     :param base_folder:                Base folder.
     :param log_level:                  The log level to use.
     :param profile:                    Whether or not to enable profiling.
+
+    :returns: :class:`OptimizationProblem` instance.
     """
 
 
@@ -91,6 +93,7 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
             s.strip_dirs().sort_stats("time").print_stats()
         else:
             prob.optimize()
+        return prob
     except Exception as e:
         logger.error(str(e))
         if isinstance(e, TypeError):
@@ -117,6 +120,8 @@ def run_simulation_problem(simulation_problem_class, base_folder='..', log_level
     :param simulation_problem_class: Optimization problem class to solve.
     :param base_folder:              Folder within which subfolders "input", "output", and "model" exist, containing input and output data, and the model, respectively.
     :param log_level:                The log level to use.
+
+    :returns: :class:`SimulationProblem` instance.
     """
 
     if base_folder is None:
@@ -153,3 +158,4 @@ def run_simulation_problem(simulation_problem_class, base_folder='..', log_level
     prob = simulation_problem_class(
         model_folder=model_folder, input_folder=input_folder, output_folder=output_folder)
     prob.simulate()
+    return prob
