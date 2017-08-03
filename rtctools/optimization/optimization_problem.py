@@ -2,7 +2,6 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from numba import jit
 import casadi as ca
 import numpy as np
-import itertools
 import logging
 
 from rtctools._internal.alias_tools import AliasDict
