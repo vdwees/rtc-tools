@@ -7,7 +7,7 @@ import os
 
 from rtctools._internal.alias_tools import AliasRelation, AliasDict
 from rtctools._internal.caching import cached
-from rtctools._internal.casadi_helpers import substitute_in_external, array_from_mx
+from rtctools._internal.casadi_helpers import substitute_in_external
 
 from .timeseries import Timeseries
 from .optimization_problem import OptimizationProblem
@@ -73,7 +73,7 @@ class ModelicaMixin(OptimizationProblem):
         # Initialize nominals and types
         # These are not in @cached dictionary properties for backwards compatibility.
         self.__nominals = {}
-        self.__discrete = {}
+        self.__python_types = {}
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
             # We need to take care to allow nominal vectors.
@@ -84,7 +84,7 @@ class ModelicaMixin(OptimizationProblem):
                     logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
                         sym_name, self.__nominals[sym_name]))
 
-            self.__discrete[sym_name] = v.python_type != float
+            self.__python_types[sym_name] = v.python_type
 
         # Initialize dae and initial residuals
         # These are not in @cached dictionary properties so that we need to create the list
@@ -248,52 +248,39 @@ class ModelicaMixin(OptimizationProblem):
         # Load additional bounds from model
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
-            discrete = self.__discrete.get(sym_name, False)
-            np_shape = (v.symbol.size1(), v.symbol.size2())
             
             try:
                 (m, M) = bounds[sym_name]
             except KeyError:
-                (m, M) = (np.full(np_shape, -np.inf), np.full(np_shape, np.inf))
+                if self.__python_types.get(sym_name, float) == bool:
+                    (m, M) = (0, 1)
+                else:
+                    (m, M) = (-np.inf, np.inf)
 
             m_ = ca.MX(v.min)
             if not m_.is_constant():
                 [m_] = substitute_in_external([m_], self.__mx['parameters'], parameter_values)
                 if not m_.is_constant():
                     raise Exception('Could not resolve lower bound for variable {}'.format(sym_name))
-            m_ = array_from_mx(m_)
+            m_ = float(m_)
 
             M_ = ca.MX(v.max)
             if not M_.is_constant():
                 [M_] = substitute_in_external([M_], self.__mx['parameters'], parameter_values)
                 if not M_.is_constant():
                     raise Exception('Could not resolve upper bound for variable {}'.format(sym_name))
-            M_ = array_from_mx(M_)
+            M_ = float(M_)
 
             # We take the intersection of all provided bounds
-            for i in range(np_shape[0]):
-                for j in range(np_shape[1]):
-                    m[i, j] = max(m[i, j], m_[i, j])
-                    M[i, j] = min(M[i, j], M_[i, j])
-
-                    if discrete:
-                        if not np.isfinite(m[i, j]):
-                            m[i, j] = 0
-                        if not np.isfinite(M[i, j]):
-                            M[i, j] = 1
-
-            # Cast to scalar whenever possibe
-            if m.shape[0] * m.shape[1] == 1:
-                m = m[0, 0]
-            if M.shape[0] * M.shape[1] == 1:
-                M = M[0, 0]
+            m = max(m, m_)
+            M = min(M, M_)
 
             bounds[sym_name] = (m, M)
 
         return bounds
 
     def variable_is__discrete(self, variable):
-        return self.__discrete.get(variable, False)
+        return self.__python_types.get(variable, float) != float
 
     @property
     @cached
