@@ -34,8 +34,6 @@ class DataConfig:
         self.__location_parameter_ids = {}
         self.__parameter_map = {}
         self.__model_parameter_ids = {}
-        self.__basename_import = None
-        self.__basename_export = None
 
         path = os.path.join(folder, "rtcDataConfig.xml")
         try:
@@ -94,7 +92,7 @@ class DataConfig:
                 'No rtcDataConfig.xml file was found in "{}".'.format(folder))
             raise
 
-    def _pi_timeseries_id(self, el, namespace):
+    def __pi_timeseries_id(self, el, namespace):
         location_id = el.find(namespace + ':locationId', ns).text
         parameter_id = el.find(namespace + ':parameterId', ns).text
 
@@ -112,7 +110,7 @@ class DataConfig:
         else:
             return timeseries_id
 
-    def _pi_location_parameter_id(self, el, namespace):
+    def __pi_location_parameter_id(self, el, namespace):
         qualifier_ids = []
         qualifiers = el.findall(namespace + ':qualifierId', ns)
         for qualifier in qualifiers:
@@ -123,14 +121,14 @@ class DataConfig:
                                         qualifier_id = qualifier_ids)
         return location_parameter_ids
 
-    def _pi_parameter_id(self, el, namespace):
+    def __pi_parameter_id(self, el, namespace):
         model_id = el.find(namespace + ':modelId', ns).text
         location_id = el.find(namespace + ':locationId', ns).text
         parameter_id = el.find(namespace + ':parameterId', ns).text
 
         return self.__long_parameter_id(parameter_id, location_id, model_id)
 
-    def _pi_model_parameter_id(self, el, namespace):
+    def __pi_model_parameter_id(self, el, namespace):
         model_id = el.find(namespace + ':modelId', ns).text
         location_id = el.find(namespace + ':locationId', ns).text
         parameter_id = el.find(namespace + ':parameterId', ns).text
@@ -141,7 +139,7 @@ class DataConfig:
 
         return model_parameter_ids
 
-    def _long_parameter_id(self, parameter_id, location_id=None, model_id=None):
+    def __long_parameter_id(self, parameter_id, location_id=None, model_id=None):
         """
         Convert a model, location and parameter combination to a single parameter id
         of the form model:location:parameter.

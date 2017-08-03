@@ -69,10 +69,9 @@ class PIMixin(SimulationProblem):
             raise Exception(
                 "PI: {}.xml not found in {}.".format(pi_parameter_config_basename, self.__input_folder))
 
-        # timeseries_{import,export}.xml. rtcDataConfig can override (if not
-        # falsy)
-        basename_import = self.__data_config._basename_import or 'timeseries_import'
-        basename_export = self.__data_config._basename_export or 'timeseries_export'
+        # timeseries_{import,export}.xml.
+        basename_import = 'timeseries_import'
+        basename_export = 'timeseries_export'
 
         try:
             self.__timeseries_import = pi.Timeseries(

@@ -85,10 +85,9 @@ class PIMixin(OptimizationProblem):
         except IOError:
             self.__parameter_config_numerical = None
 
-        # timeseries_{import,export}.xml. rtcDataConfig can override (if not
-        # falsy)
-        basename_import = self.__data_config._basename_import or 'timeseries_import'
-        basename_export = self.__data_config._basename_export or 'timeseries_export'
+        # timeseries_{import,export}.xml.
+        basename_import = 'timeseries_import'
+        basename_export = 'timeseries_export'
 
         try:
             self.__timeseries_import = pi.Timeseries(
@@ -133,7 +132,7 @@ class PIMixin(OptimizationProblem):
 
     @property
     def equidistant(self):
-        if self.__timeseries_import._dt is not None:
+        if self.__timeseries_import.dt is not None:
             return True
         else:
             return False
@@ -293,23 +292,23 @@ class PIMixin(OptimizationProblem):
 
         # Start of write output
         # Write the time range for the export file.
-        self.__timeseries_export._times = self.__timeseries_import.times[self.__timeseries_import.forecast_index:]
+        self.__timeseries_export.times = self.__timeseries_import.times[self.__timeseries_import.forecast_index:]
 
         # Write other time settings
-        self.__timeseries_export._start_datetime = self.__timeseries_import._forecast_datetime
-        self.__timeseries_export._end_datetime  = self.__timeseries_import._end_datetime
-        self.__timeseries_export._forecast_datetime  = self.__timeseries_import._forecast_datetime
-        self.__timeseries_export._dt = self.__timeseries_import._dt
-        self.__timeseries_export._timezone = self.__timeseries_import._timezone
+        self.__timeseries_export.start_datetime = self.__timeseries_import.forecast_datetime
+        self.__timeseries_export.end_datetime  = self.__timeseries_import.end_datetime
+        self.__timeseries_export.forecast_datetime  = self.__timeseries_import.forecast_datetime
+        self.__timeseries_export.dt = self.__timeseries_import.dt
+        self.__timeseries_export.timezone = self.__timeseries_import.timezone
 
         # Write the ensemble properties for the export file.
-        self.__timeseries_export._ensemble_size = self.ensemble_size
-        self.__timeseries_export._contains_ensemble = self.__timeseries_import.contains_ensemble
-        while self.__timeseries_export._ensemble_size > len(self.__timeseries_export._values):
-            self.__timeseries_export._values.append({})
+        self.__timeseries_export.ensemble_size = self.ensemble_size
+        self.__timeseries_export.contains_ensemble = self.__timeseries_import.contains_ensemble
+        while self.__timeseries_export.ensemble_size > len(self.__timeseries_export.values):
+            self.__timeseries_export.values.append({})
 
         # Transfer units from import timeseries
-        self.__timeseries_export._units = self.__timeseries_import._units
+        self.__timeseries_export.units = self.__timeseries_import.units
 
         # Start looping over the ensembles for extraction of the output values.
         times = self.times()
@@ -387,7 +386,7 @@ class PIMixin(OptimizationProblem):
             if not np.array_equal(self.__timeseries_import_times, timeseries.times):
                 if check_consistency:
                     if not set(self.__timeseries_import_times).issuperset(timeseries.times):
-                        raise Exception("PI: Trying to set/append timeseries {} with different times (in seconds) than the imported timeseries. Please make sure the timeseries covers startDate through endDate of the longest imported timeseries with timestep {}..".format(variable, self.__timeseries_import._dt))
+                        raise Exception("PI: Trying to set/append timeseries {} with different times (in seconds) than the imported timeseries. Please make sure the timeseries covers startDate through endDate of the longest imported timeseries with timestep {}..".format(variable, self.__timeseries_import.dt))
 
                 # Determine position of first times of added timeseries within the
                 # import times. For this we assume that both time ranges are ordered,
@@ -403,7 +402,7 @@ class PIMixin(OptimizationProblem):
                 try:
                     assert(len(self.times()) == len(timeseries))
                 except AssertionError:
-                    raise Exception("PI: Trying to set/append values {} with a different length than the forecast length. Please make sure the values cover forecastDate through endDate with timestep {}.".format(variable, self.__timeseries_import._dt))
+                    raise Exception("PI: Trying to set/append values {} with a different length than the forecast length. Please make sure the values cover forecastDate through endDate with timestep {}.".format(variable, self.__timeseries_import.dt))
 
             # If times is not supplied with the timeseries, we add the
             # forecast times range to a new Timeseries object. Hereby

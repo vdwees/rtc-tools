@@ -12,12 +12,12 @@ ns = {'fews': 'http://www.wldelft.nl/fews',
       'pi': 'http://www.wldelft.nl/fews/PI'}
 
 
-def __parse_date_time(el):
+def _parse_date_time(el):
     # Parse a PI date time element.
     return datetime.datetime.strptime(el.get('date') + ' ' + el.get('time'), '%Y-%m-%d %H:%M:%S')
 
 
-def __parse_time_step(el):
+def _parse_time_step(el):
     # Parse a PI time step element.
     if el.get('unit') == 'second':
         return datetime.timedelta(seconds=int(el.get('multiplier')))
@@ -27,7 +27,7 @@ def __parse_time_step(el):
         raise Exception('Unsupported unit type: ' + el.get('unit'))
 
 
-def __floor_date_time(dt=datetime.datetime.now(), tdel=datetime.timedelta(minutes=1)):
+def _floor_date_time(dt=datetime.datetime.now(), tdel=datetime.timedelta(minutes=1)):
     # Floor a PI date time based on a PI time step
     roundTo = tdel.total_seconds()
 
@@ -402,7 +402,7 @@ class Timeseries:
                 variable = self.__data_config.variable(header)
 
                 try:
-                    dt = __parse_time_step(header.find('pi:timeStep', ns))
+                    dt = _parse_time_step(header.find('pi:timeStep', ns))
                 except ValueError:
                     raise Exception('PI: Multiplier of time step of variable {} must be a positive integer per the PI schema.'.format(variable))
                 if self.__dt is None:
@@ -412,7 +412,7 @@ class Timeseries:
                         raise Exception(
                             'PI: Not all timeseries have the same time step size.')
                 try:
-                    start_datetime = __parse_date_time(
+                    start_datetime = _parse_date_time(
                         header.find('pi:startDate', ns))
                     if self.__start_datetime is None:
                         self.__start_datetime = start_datetime
@@ -424,7 +424,7 @@ class Timeseries:
                         variable, os.path.join(self.__folder, basename + '.xml')))
 
                 try:
-                    end_datetime = __parse_date_time(header.find('pi:endDate', ns))
+                    end_datetime = _parse_date_time(header.find('pi:endDate', ns))
                     if self.__end_datetime is None:
                         self.__end_datetime = end_datetime
                     else:
@@ -436,7 +436,7 @@ class Timeseries:
 
                 el = header.find('pi:forecastDate', ns)
                 if el is not None:
-                    forecast_datetime = __parse_date_time(el)
+                    forecast_datetime = _parse_date_time(el)
                 else:
                     # the timeseries has no forecastDate, so the forecastDate
                     # is set to the startDate (per the PI-schema)
@@ -487,7 +487,7 @@ class Timeseries:
 
             if self.__forecast_datetime is not None:
                 if self.__dt:
-                    self.__forecast_datetime = __floor_date_time(
+                    self.__forecast_datetime = _floor_date_time(
                         dt=self.__forecast_datetime, tdel=self.__dt)
                 try:
                     self.__forecast_index = self.__times.index(
@@ -504,9 +504,9 @@ class Timeseries:
 
                 variable = self.__data_config.variable(header)
 
-                dt = __parse_time_step(header.find('pi:timeStep', ns))
-                start_datetime = __parse_date_time(header.find('pi:startDate', ns))
-                end_datetime = __parse_date_time(header.find('pi:endDate', ns))
+                dt = _parse_time_step(header.find('pi:timeStep', ns))
+                start_datetime = _parse_date_time(header.find('pi:startDate', ns))
+                end_datetime = _parse_date_time(header.find('pi:endDate', ns))
 
                 make_virtual_ensemble = False
                 el = header.find('pi:ensembleMemberIndex', ns)
@@ -852,7 +852,7 @@ class Timeseries:
             unit = self.__get_unit(variable, ensemble_member)
         self.__set_unit(variable, unit, ensemble_member)
 
-    def _get_unit(self, variable, ensemble_member=0):
+    def __get_unit(self, variable, ensemble_member=0):
         """
         Look up the unit of a time series.
 
@@ -866,7 +866,7 @@ class Timeseries:
         except KeyError:
             return 'unit_unknown'
 
-    def _set_unit(self, variable, unit, ensemble_member=0):
+    def __set_unit(self, variable, unit, ensemble_member=0):
         """
         Set the unit of a time series.
 
