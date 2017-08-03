@@ -3,7 +3,7 @@ import casadi as ca
 import numpy as np
 import logging
 import os
-import sys
+
 import rtctools.data.csv as csv
 
 from rtctools._internal.alias_tools import AliasDict

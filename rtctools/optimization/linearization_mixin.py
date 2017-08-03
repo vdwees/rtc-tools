@@ -1,8 +1,4 @@
-import logging
-
 from .optimization_problem import OptimizationProblem
-
-logger = logging.getLogger("rtctools")
 
 
 class LinearizationMixin(OptimizationProblem):

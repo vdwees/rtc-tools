@@ -1,6 +1,5 @@
 import numpy as np
 import logging
-import sys
 
 from .optimization_problem import OptimizationProblem
 from .timeseries import Timeseries
@@ -182,10 +181,10 @@ class ControlTreeMixin(OptimizationProblem):
         # Construct bounds and initial guess
         discrete = np.zeros(count, dtype=np.bool)
 
-        lbx = -sys.float_info.max * np.ones(count)
-        ubx = sys.float_info.max * np.ones(count)
+        lbx = np.full(count, -np.inf, dtype=np.float64)
+        ubx = np.full(count, np.inf, dtype=np.float64)
 
-        x0 = np.zeros(count)
+        x0 = np.zeros(count, dtype=np.float64)
 
         for ensemble_member in range(self.ensemble_size):
             seed = self.seed(ensemble_member)
@@ -205,14 +204,14 @@ class ControlTreeMixin(OptimizationProblem):
                     if bound[0] is not None:
                         if isinstance(bound[0], Timeseries):
                             lbx[self._control_indices[variable][ensemble_member, :]] = self.interpolate(
-                                times, bound[0].times, bound[0].values, -sys.float_info.max, -sys.float_info.max) / nominal
+                                times, bound[0].times, bound[0].values, -np.inf, -np.inf) / nominal
                         else:
                             lbx[self._control_indices[variable][
                                 ensemble_member, :]] = bound[0] / nominal
                     if bound[1] is not None:
                         if isinstance(bound[1], Timeseries):
                             ubx[self._control_indices[variable][ensemble_member, :]] = self.interpolate(
-                                times, bound[1].times, bound[1].values, +sys.float_info.max, +sys.float_info.max) / nominal
+                                times, bound[1].times, bound[1].values, +np.inf, +np.inf) / nominal
                         else:
                             ubx[self._control_indices[variable][
                                 ensemble_member, :]] = bound[1] / nominal

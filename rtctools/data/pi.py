@@ -1,11 +1,9 @@
 import xml.etree.ElementTree as ET
 import numpy as np
 import datetime
-import struct
 import io
 import os
 import logging
-import copy
 import bisect
 
 ns = {'fews': 'http://www.wldelft.nl/fews',

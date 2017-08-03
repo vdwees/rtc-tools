@@ -1,4 +1,3 @@
-import itertools
 import logging
 
 from .optimization_problem import OptimizationProblem
