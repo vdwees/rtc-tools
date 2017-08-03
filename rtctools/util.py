@@ -5,6 +5,7 @@ Author:  Jorn Baayen
 Date  :  March 16, 2016
 """
 
+import casadi
 import logging
 import sys
 import os
@@ -66,6 +67,8 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
     # Log version info
     logger.info(
         "Using RTC-Tools {}, released as open source software under the GNU General Public License.".format(__version__))
+    logger.debug(
+        "Using CasADi {}.".format(casadi.__version__))
 
     # Check for some common mistakes in inheritance order
     suggested_order = OrderedSet(['HomotopyMixin', 'GoalProgrammingMixin', 'PIMixin', 'CSVMixin', 'ModelicaMixin', 'CollocatedIntegratedOptimizationProblem', 'OptimizationProblem'])
@@ -143,6 +146,8 @@ def run_simulation_problem(simulation_problem_class, base_folder='..', log_level
 
     logger.info(
         "Using RTC-Tools {}, released as open source software under the GNU General Public License.".format(__version__))
+    logger.debug(
+        "Using CasADi {}.".format(casadi.__version__))
 
     # Run
     prob = simulation_problem_class(

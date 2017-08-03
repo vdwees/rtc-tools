@@ -1,4 +1,5 @@
-from pymola.backends.casadi.api import transfer_model
+import pymola
+import pymola.backends.casadi.api
 import casadi as ca
 import numpy as np
 import itertools
@@ -31,6 +32,9 @@ class ModelicaMixin(OptimizationProblem):
         # Check arguments
         assert('model_folder' in kwargs)
 
+        # Log pymola version
+        logger.debug("Using pymola {}.".format(pymola.__version__))
+
         # Transfer model from the Modelica .mo file to CasADi using pymola
         if 'model_name' in kwargs:
             model_name = kwargs['model_name']
@@ -40,7 +44,7 @@ class ModelicaMixin(OptimizationProblem):
             else:
                 model_name = self.__class__.__name__
 
-        self.__pymola_model = transfer_model(kwargs['model_folder'], model_name, self.compiler_options())
+        self.__pymola_model = pymola.backends.casadi.api.transfer_model(kwargs['model_folder'], model_name, self.compiler_options())
 
         # Extract the CasADi MX variables used in the model
         self.__mx = {}
