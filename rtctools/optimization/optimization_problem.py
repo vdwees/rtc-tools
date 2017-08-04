@@ -1,10 +1,11 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from numba import jit
+from typing import Dict, Union, Tuple, List, Any, Iterator
 import casadi as ca
 import numpy as np
 import logging
 
-from rtctools._internal.alias_tools import AliasDict
+from rtctools._internal.alias_tools import AliasDict, AliasRelation
 
 from .timeseries import Timeseries
 
@@ -16,7 +17,7 @@ class LookupTable:
     Lookup table.
     """
 
-    def __init__(self, inputs, function):
+    def __init__(self, inputs: List[ca.MX], function: ca.Function):
         """
         Create a new lookup table object.
 
@@ -27,20 +28,20 @@ class LookupTable:
         self.__function = function
 
     @property
-    def inputs(self):
+    def inputs(self) -> List[ca.MX]:
         """
         List of lookup table input variables.
         """
         return self.__inputs
 
     @property
-    def function(self):
+    def function(self) -> ca.Function:
         """
         Lookup table CasADi :class:`Function`.
         """
         return self.__function
 
-    def __call__(self, *args):
+    def __call__(self, *args: List[Union[float, Timeseries]]) -> Union[float, Timeseries]:
         """
         Evaluate the lookup table.
 
@@ -73,7 +74,7 @@ class OptimizationProblem(metaclass = ABCMeta):
     def __init__(self, **kwargs):
         self.__mixed_integer = False
 
-    def optimize(self, preprocessing=True, postprocessing=True, log_solver_failure_as_error=True):
+    def optimize(self, preprocessing: bool=True, postprocessing: bool=True, log_solver_failure_as_error: bool=True) -> bool:
         """
         Perform one initialize-transcribe-solve-finalize cycle.
 
@@ -166,7 +167,7 @@ class OptimizationProblem(metaclass = ABCMeta):
 
         return success
 
-    def __check_bounds_control_input(self):
+    def __check_bounds_control_input(self) -> None:
         # Checks if at the control inputs have bounds, log warning when a control input is not bounded.
         bounds = self.bounds()
 
@@ -177,14 +178,14 @@ class OptimizationProblem(metaclass = ABCMeta):
                     "OptimizationProblem: control input {} has no bounds.".format(variable))
 
     @abstractmethod
-    def transcribe(self):
+    def transcribe(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict[str, ca.MX]]:
         """
         Transcribe the continuous optimization problem to a discretized, solver-ready
         optimization problem.
         """
         pass
 
-    def solver_options(self):
+    def solver_options(self) -> Dict[str, Union[str, int, float, bool, str]]:
         """
         Returns a dictionary of CasADi optimization problem solver options.
 
@@ -205,14 +206,14 @@ class OptimizationProblem(metaclass = ABCMeta):
         return options
 
     @abstractproperty
-    def solver_input(self):
+    def solver_input(self) -> ca.MX:
         """
         The symbolic input to the NLP solver.
         """
         pass
 
     @abstractmethod
-    def extract_results(self, ensemble_member=0):
+    def extract_results(self, ensemble_member: int=0) -> Dict[str, np.ndarray]:
         """
         Extracts state and control input time series from optimizer results.
 
@@ -221,55 +222,55 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @property
-    def objective_value(self):
+    def objective_value(self) -> float:
         """
         The last obtained objective function value.
         """
         return self.__objective_value
 
     @property
-    def solver_output(self):
+    def solver_output(self) -> ca.DM:
         """
         The raw output from the last NLP solver run.
         """
         return self.__solver_output
 
     @property
-    def solver_stats(self):
+    def solver_stats(self) -> Dict[str, Any]:
         """
         The stats from the last NLP solver run.
         """
         return self.__solver_stats
 
-    def pre(self):
+    def pre(self) -> None:
         """
         Preprocessing logic is performed here.
         """
         pass
 
     @abstractproperty
-    def dae_residual(self):
+    def dae_residual(self) -> ca.MX:
         """
         Symbolic DAE residual of the model.
         """
         pass
 
     @abstractproperty
-    def dae_variables(self):
+    def dae_variables(self) -> Dict[str, List[ca.MX]]:
         """
         Dictionary of symbolic variables for the DAE residual.
         """
         pass
 
     @property
-    def path_variables(self):
+    def path_variables(self) -> List[ca.MX]:
         """
         List of additional, time-dependent optimization variables, not covered by the DAE model.
         """
         return []
 
     @abstractmethod
-    def variable(self, variable):
+    def variable(self, variable: str) -> ca.MX:
         """
         Returns an :class:`MX` symbol for the given variable.
 
@@ -280,20 +281,20 @@ class OptimizationProblem(metaclass = ABCMeta):
         raise NotImplementedError
 
     @property
-    def extra_variables(self):
+    def extra_variables(self) -> List[ca.MX]:
         """
         List of additional, time-independent optimization variables, not covered by the DAE model.
         """
         return []
 
     @property
-    def output_variables(self):
+    def output_variables(self) -> List[ca.MX]:
         """
         List of variables that the user requests to be included in the output files.
         """
         return []
 
-    def delayed_feedback(self):
+    def delayed_feedback(self) -> List[Tuple[str, str, float]]:
         """
         Returns the delayed feedback mappings.  These are given as a list of triples :math:`(x, y, \\tau)`,
         to indicate that :math:`y = x(t - \\tau)`.
@@ -311,13 +312,13 @@ class OptimizationProblem(metaclass = ABCMeta):
         return []
 
     @property
-    def ensemble_size(self):
+    def ensemble_size(self) -> int:
         """
         The number of ensemble members.
         """
         return 1
 
-    def ensemble_member_probability(self, ensemble_member):
+    def ensemble_member_probability(self, ensemble_member: int) -> float:
         """
         The probability of an ensemble member occurring.
 
@@ -329,7 +330,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return 1.0
 
-    def parameters(self, ensemble_member):
+    def parameters(self, ensemble_member: int) -> AliasDict:
         """
         Returns a dictionary of parameters.
 
@@ -339,7 +340,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return AliasDict(self.alias_relation)
 
-    def constant_inputs(self, ensemble_member):
+    def constant_inputs(self, ensemble_member: int) -> AliasDict:
         """
         Returns a dictionary of constant inputs.
 
@@ -349,7 +350,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return AliasDict(self.alias_relation)
 
-    def lookup_tables(self, ensemble_member):
+    def lookup_tables(self, ensemble_member: int) -> AliasDict:
         """
         Returns a dictionary of lookup tables.
 
@@ -359,7 +360,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return AliasDict(self.alias_relation)
 
-    def bounds(self):
+    def bounds(self) -> AliasDict:
         """
         Returns variable bounds as a dictionary mapping variable names to a pair of bounds.
         A bound may be a constant, or a time series.
@@ -374,7 +375,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return AliasDict(self.alias_relation)
 
-    def history(self, ensemble_member):
+    def history(self, ensemble_member: int) -> AliasDict:
         """
         Returns the state history.  Uses the initial_state() method by default.
 
@@ -386,10 +387,10 @@ class OptimizationProblem(metaclass = ABCMeta):
         return AliasDict(self.alias_relation, {variable: Timeseries(np.array([self.initial_time]), np.array([state])) for variable, state in initial_state.items()})
 
     @abstractproperty
-    def alias_relation(self):
+    def alias_relation(self) -> AliasRelation:
         raise NotImplementedError
 
-    def variable_is_discrete(self, variable):
+    def variable_is_discrete(self, variable: str) -> bool:
         """
         Returns ``True`` if the provided variable is discrete.
 
@@ -399,7 +400,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return False
 
-    def variable_nominal(self, variable):
+    def variable_nominal(self, variable: str) -> float:
         """
         Returns the nominal value of the variable.  Variables are scaled by replacing them with
         their nominal value multiplied by the new variable.
@@ -411,13 +412,13 @@ class OptimizationProblem(metaclass = ABCMeta):
         return 1
 
     @property
-    def initial_time(self):
+    def initial_time(self) -> float:
         """
         The initial time in seconds.
         """
         return self.times()[0]
 
-    def initial_state(self, ensemble_member):
+    def initial_state(self, ensemble_member: int) -> AliasDict:
         """
         The initial state.
 
@@ -429,10 +430,10 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         t0 = self.initial_time
         history = self.history(ensemble_member)
-        return {variable: self.interpolate(t0, timeseries.times, timeseries.values) for variable, timeseries in history.items()}
+        return AliasDict({variable: self.interpolate(t0, timeseries.times, timeseries.values) for variable, timeseries in history.items()})
 
     @property
-    def initial_residual(self):
+    def initial_residual(self) -> ca.MX:
         """
         The initial equation residual.
 
@@ -442,7 +443,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return ca.MX()
 
-    def seed(self, ensemble_member):
+    def seed(self, ensemble_member: int) -> AliasDict:
         """
         Seeding data.  The optimization algorithm is seeded with the data returned by this method.
 
@@ -452,7 +453,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return AliasDict(self.alias_relation)
 
-    def objective(self, ensemble_member):
+    def objective(self, ensemble_member: int) -> ca.MX:
         """
         The objective function for the given ensemble member.
 
@@ -472,7 +473,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return ca.MX()
 
-    def path_objective(self, ensemble_member):
+    def path_objective(self, ensemble_member: int) -> ca.MX:
         """
         Returns a path objective the given ensemble member.  Path objectives apply to all times and ensemble members simultaneously.
 
@@ -491,7 +492,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return ca.MX()
 
-    def constraints(self, ensemble_member):
+    def constraints(self, ensemble_member: int) -> List[Tuple[ca.MX, Union[float, np.ndarray], Union[float, np.ndarray]]]:
         """
         Returns a list of constraints for the given ensemble member.
 
@@ -512,7 +513,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return []
 
-    def path_constraints(self, ensemble_member):
+    def path_constraints(self, ensemble_member: int) -> List[Tuple[ca.MX, Union[float, np.ndarray], Union[float, np.ndarray]]]:
         """
         Returns a list of path constraints.  Path constraints apply to all times and ensemble members simultaneously.
 
@@ -534,14 +535,14 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return []
 
-    def post(self):
+    def post(self) -> None:
         """
         Postprocessing logic is performed here.
         """
         pass
 
     @property
-    def equidistant(self):
+    def equidistant(self) -> bool:
         """
         ``True`` if all time series are equidistant.
         """
@@ -551,7 +552,7 @@ class OptimizationProblem(metaclass = ABCMeta):
     INTERPOLATION_PIECEWISE_CONSTANT_FORWARD = 1
     INTERPOLATION_PIECEWISE_CONSTANT_BACKWARD = 2
 
-    def interpolate(self, t, ts, fs, f_left=np.nan, f_right=np.nan, mode=INTERPOLATION_LINEAR):
+    def interpolate(self, t: Union[float, np.ndarray], ts: np.ndarray, fs: np.ndarray, f_left: float=np.nan, f_right: float=np.nan, mode: int=INTERPOLATION_LINEAR) -> Union[float, np.ndarray]:
         """
         Linear interpolation over time.
 
@@ -649,14 +650,14 @@ class OptimizationProblem(metaclass = ABCMeta):
                 return fs[-1]
 
     @abstractproperty
-    def controls(self):
+    def controls(self) -> List[str]:
         """
         List of names of the control variables (excluding aliases).
         """
         pass
 
     @abstractmethod
-    def discretize_controls(self, resolved_bounds):
+    def discretize_controls(self, resolved_bounds: AliasDict) -> Tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Performs the discretization of the control inputs, filling lower and upper
         bound vectors for the resulting optimization variables, as well as an initial guess.
@@ -669,7 +670,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractmethod
-    def extract_controls(self, ensemble_member=0):
+    def extract_controls(self, ensemble_member: int=0) -> Dict[str, np.ndarray]:
         """
         Extracts state time series from optimizer results.
 
@@ -682,7 +683,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractmethod
-    def control_vector(self, variable, ensemble_member=0):
+    def control_vector(self, variable: str, ensemble_member: int=0) -> Union[ca.MX, List[ca.MX]]:
         """
         Return the optimization variables for the entire time horizon of the given state.
 
@@ -695,7 +696,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         pass
 
-    def control(self, variable):
+    def control(self, variable: str) -> ca.MX:
         """
         Returns an :class:`MX` symbol for the given control input, not bound to any time.
 
@@ -708,7 +709,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         return self.variable(variable)
 
     @abstractmethod
-    def control_at(self, variable, t, ensemble_member=0, scaled=False):
+    def control_at(self, variable: str, t: float, ensemble_member: int=0, scaled: bool=False) -> ca.MX:
         """
         Returns an :class:`MX` symbol representing the given control input at the given time.
 
@@ -724,21 +725,21 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractproperty
-    def differentiated_states(self):
+    def differentiated_states(self) -> List[str]:
         """
         List of names of the differentiated state variables (excluding aliases).
         """
         pass
 
     @abstractproperty
-    def algebraic_states(self):
+    def algebraic_states(self) -> List[str]:
         """
         List of names of the algebraic state variables (excluding aliases).
         """
         pass
 
     @abstractmethod
-    def discretize_states(self, resolved_bounds):
+    def discretize_states(self, resolved_bounds: AliasDict) -> Tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Perform the discretization of the states, filling lower and upper
         bound vectors for the resulting optimization variables, as well as an initial guess.
@@ -751,7 +752,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractmethod
-    def extract_states(self, ensemble_member=0):
+    def extract_states(self, ensemble_member: int=0) -> Dict[str, np.ndarray]:
         """
         Extracts state time series from optimizer results.
 
@@ -764,7 +765,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractmethod
-    def state_vector(self, variable, ensemble_member=0):
+    def state_vector(self, variable: str, ensemble_member: int=0) -> Union[ca.MX, List[ca.MX]]:
         """
         Return the optimization variables for the entire time horizon of the given state.
 
@@ -777,7 +778,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         pass
 
-    def state(self, variable):
+    def state(self, variable: str) -> ca.MX:
         """
         Returns an :class:`MX` symbol for the given state, not bound to any time.
 
@@ -790,7 +791,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         return self.variable(variable)
 
     @abstractmethod
-    def state_at(self, variable, t, ensemble_member=0, scaled=False):
+    def state_at(self, variable: str, t: float, ensemble_member: int=0, scaled: bool=False) -> ca.MX:
         """
         Returns an :class:`MX` symbol representing the given variable at the given time.
 
@@ -806,7 +807,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractmethod
-    def extra_variable(self, variable, ensemble_member=0):
+    def extra_variable(self, variable: str, ensemble_member: int=0) -> ca.MX:
         """
         Returns an :class:`MX` symbol representing the extra variable inside the state vector.
 
@@ -820,7 +821,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractmethod
-    def states_in(self, variable, t0=None, tf=None, ensemble_member=0):
+    def states_in(self, variable: str, t0: float=None, tf: float=None, ensemble_member: int=0) -> Iterator[ca.MX]:
         """
         Iterates over symbols for states in the interval [t0, tf].
 
@@ -834,7 +835,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractmethod
-    def integral(self, variable, t0=None, tf=None, ensemble_member=0):
+    def integral(self, variable: str, t0: float=None, tf: float=None, ensemble_member: int=0) -> ca.MX:
         """
         Returns an expression for the integral over the interval [t0, tf].
 
@@ -850,7 +851,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractmethod
-    def der(self, variable):
+    def der(self, variable: str) -> ca.MX:
         """
         Returns an :class:`MX` symbol for the time derivative given state, not bound to any time.
 
@@ -863,7 +864,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractmethod
-    def der_at(self, variable, t, ensemble_member=0):
+    def der_at(self, variable: str, t: float, ensemble_member: int=0) -> ca.MX:
         """
         Returns an expression for the time derivative of the specified variable at time t.
 
@@ -877,7 +878,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         pass
 
-    def get_timeseries(self, variable, ensemble_member=0):
+    def get_timeseries(self, variable: str, ensemble_member: int=0) -> Timeseries:
         """
         Looks up a timeseries from the internal data store.
 
@@ -891,7 +892,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         raise NotImplementedError
 
-    def set_timeseries(self, variable, timeseries, ensemble_member=0, output=True, check_consistency=True):
+    def set_timeseries(self, variable: str, timeseries: Timeseries, ensemble_member: int=0, output: bool=True, check_consistency: bool=True) -> None:
         """
         Sets a timeseries in the internal data store.
 
@@ -904,7 +905,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         raise NotImplementedError
 
-    def timeseries_at(self, variable, t, ensemble_member=0):
+    def timeseries_at(self, variable: str, t: float, ensemble_member: int=0) -> float:
         """
         Return the value of a time series at the given time.
 
@@ -918,7 +919,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         raise NotImplementedError
 
-    def map_path_expression(self, expr, ensemble_member):
+    def map_path_expression(self, expr: ca.MX, ensemble_member: int) -> ca.MX:
         """
         Maps the path expression `expr` over the entire time horizon of the optimization problem.
 

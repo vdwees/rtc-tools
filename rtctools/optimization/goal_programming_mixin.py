@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import Callable, Dict, List, Union
 import casadi as ca
 import numpy as np
 import itertools
@@ -97,7 +98,7 @@ class Goal(metaclass = ABCMeta):
     """
 
     @abstractmethod
-    def function(self, optimization_problem, ensemble_member):
+    def function(self, optimization_problem: OptimizationProblem, ensemble_member: int) -> ca.MX:
         """
         This method returns a CasADi :class:`MX` object describing the goal function.
 
@@ -141,7 +142,7 @@ class Goal(metaclass = ABCMeta):
     violation_timeseries_id = None
 
     @property
-    def has_target_min(self):
+    def has_target_min(self) -> bool:
         """
         ``True`` if the user goal has min bounds.
         """
@@ -151,7 +152,7 @@ class Goal(metaclass = ABCMeta):
             return np.isfinite(self.target_min)
 
     @property
-    def has_target_max(self):
+    def has_target_max(self) -> bool:
         """
         ``True`` if the user goal has max bounds.
         """
@@ -161,19 +162,19 @@ class Goal(metaclass = ABCMeta):
             return np.isfinite(self.target_max)
 
     @property
-    def has_target_bounds(self):
+    def has_target_bounds(self) -> bool:
         """
         ``True`` if the user goal has min/max bounds.
         """
         return (self.has_target_min or self.has_target_max)
 
     @property
-    def is_empty(self):
+    def is_empty(self) -> bool:
         min_empty = (isinstance(self.target_min, Timeseries) and not np.any(np.isfinite(self.target_min.values)))
         max_empty = (isinstance(self.target_max, Timeseries) and not np.any(np.isfinite(self.target_max.values)))
         return min_empty and max_empty
 
-    def get_function_key(self, optimization_problem, ensemble_member):
+    def get_function_key(self, optimization_problem: OptimizationProblem, ensemble_member: int) -> str:
         """
         Returns a key string uniquely identifying the goal function.  This
         is used to eliminate linearly dependent constraints from the optimization problem.
@@ -189,7 +190,7 @@ class Goal(metaclass = ABCMeta):
 
         return self.function_key
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '{}(priority={}, target_min={}, target_max={})'.format(self.__class__, self.priority, self.target_min, self.target_max)
 
 
@@ -269,9 +270,9 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
     Adds lexicographic goal programming to your optimization problem.
     """
 
-    class _GoalConstraint:
+    class __GoalConstraint:
 
-        def __init__(self, goal, function, m, M, optimized):
+        def __init__(self, goal: Goal, function: Callable[[OptimizationProblem], ca.MX], m: Union[float, Timeseries], M: Union[float, Timeseries], optimized: bool):
             self.goal = goal
             self.function = function
             self.min = m
@@ -376,7 +377,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         # Done
         return options
 
-    def goal_programming_options(self):
+    def goal_programming_options(self) -> Dict[str, Union[float, bool]]:
         """
         Returns a dictionary of options controlling the goal programming process.
 
@@ -433,7 +434,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
 
         return options
 
-    def goals(self):
+    def goals(self) -> List[Goal]:
         """
         User problem returns list of :class:`Goal` objects.
 
@@ -441,7 +442,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         """
         return []
 
-    def path_goals(self):
+    def path_goals(self) -> List[Goal]:
         """
         User problem returns list of path :class:`Goal` objects.
 
@@ -449,7 +450,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         """
         return []
 
-    def _add_goal_constraint(self, goal, epsilon, ensemble_member, options):
+    def __add_goal_constraint(self, goal, epsilon, ensemble_member, options):
         # Check existing constraints for this state.
         constraints = self.__subproblem_constraints[
             ensemble_member].get(goal.get_function_key(self, ensemble_member), [])
@@ -479,11 +480,11 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                 # We use a violation variable formulation, with the violation
                 # variables epsilon bounded between 0 and 1.
                 if goal.has_target_min:
-                    constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(problem, ensemble_member) - problem.extra_variable(
+                    constraint = self.__GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(problem, ensemble_member) - problem.extra_variable(
                         epsilon.name(), ensemble_member=ensemble_member) * (goal.function_range[0] - goal.target_min) - goal.target_min) / goal.function_nominal, 0.0, np.inf, False)
                     constraints.append(constraint)
                 if goal.has_target_max:
-                    constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(problem, ensemble_member) - problem.extra_variable(
+                    constraint = self.__GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: (goal.function(problem, ensemble_member) - problem.extra_variable(
                         epsilon.name(), ensemble_member=ensemble_member) * (goal.function_range[1] - goal.target_max) - goal.target_max) / goal.function_nominal, -np.inf, 0.0, False)
                     constraints.append(constraint)
 
@@ -496,7 +497,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         else:
             fix_value = False
 
-            constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal: goal.function(
+            constraint = self.__GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal: goal.function(
                 problem, ensemble_member) / goal.function_nominal, -np.inf, np.inf, True)
             if goal.has_target_bounds:
                 # We use a violation variable formulation, with the violation
@@ -544,7 +545,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
             self.__subproblem_constraints[ensemble_member][
                 goal.get_function_key(self, ensemble_member)] = [constraint]
 
-    def _add_path_goal_constraint(self, goal, epsilon, ensemble_member, options, min_series=None, max_series=None):
+    def __add_path_goal_constraint(self, goal, epsilon, ensemble_member, options, min_series=None, max_series=None):
         # Generate list of min and max values
         times = self.times()
 
@@ -601,11 +602,11 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                 # We use a violation variable formulation, with the violation
                 # variables epsilon bounded between 0 and 1.
                 if goal.has_target_min:
-                    constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: ca.if_else(problem.variable(min_series.name()) > -sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
+                    constraint = self.__GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: ca.if_else(problem.variable(min_series.name()) > -sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
                         epsilon.name()) * (goal.function_range[0] - problem.variable(min_series.name())) - problem.variable(min_series.name())) / goal.function_nominal, 0.0), 0.0, np.inf, False)
                     constraints.append(constraint)
                 if goal.has_target_max:
-                    constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: ca.if_else(problem.variable(max_series.name()) < sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
+                    constraint = self.__GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: ca.if_else(problem.variable(max_series.name()) < sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
                         epsilon.name()) * (goal.function_range[1] - problem.variable(max_series.name())) - problem.variable(max_series.name())) / goal.function_nominal, 0.0), -np.inf, 0.0, False)
                     constraints.append(constraint)
 
@@ -662,7 +663,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                     m = -np.inf * np.ones(len(times))
                 M = (epsilon + goal.relaxation) / goal.function_nominal
 
-            constraint = self._GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal: goal.function(
+            constraint = self.__GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal: goal.function(
                 problem, ensemble_member) / goal.function_nominal, Timeseries(times, m), Timeseries(times, M), True)
 
             # Epsilon is fixed. Propagate/override previous {min,max}
@@ -759,7 +760,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
 
                 if goal.has_target_bounds:
                     for ensemble_member in range(self.ensemble_size):
-                        self._add_goal_constraint(
+                        self.__add_goal_constraint(
                             goal, epsilon, ensemble_member, options)
 
             for j, goal in enumerate(path_goals):
@@ -809,7 +810,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
 
                 if goal.has_target_bounds:
                     for ensemble_member in range(self.ensemble_size):
-                        self._add_path_goal_constraint(
+                        self.__add_path_goal_constraint(
                             goal, epsilon, ensemble_member, options, min_series, max_series)
 
             # Solve subproblem
@@ -866,7 +867,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                         epsilon = function_value
 
                     # Add inequality constraint
-                    self._add_goal_constraint(
+                    self.__add_goal_constraint(
                         goal, epsilon, ensemble_member, options)
 
                 for j, goal in enumerate(path_goals):
@@ -910,7 +911,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                         epsilon = function_value
 
                     # Add inequality constraint
-                    self._add_path_goal_constraint(
+                    self.__add_path_goal_constraint(
                         goal, epsilon, ensemble_member, options)
 
         logger.info("Done goal programming")
@@ -922,7 +923,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         # Done
         return success
 
-    def priority_started(self, priority):
+    def priority_started(self, priority: int) -> None:
         """
         Called when optimization for goals of certain priority is started.
 
@@ -930,7 +931,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         """
         pass
 
-    def priority_completed(self, priority):
+    def priority_completed(self, priority: int) -> None:
         """
         Called after optimization for goals of certain priority is completed.
 

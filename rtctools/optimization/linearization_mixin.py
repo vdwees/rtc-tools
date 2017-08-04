@@ -18,7 +18,7 @@ class LinearizationMixin(OptimizationProblem):
 
         return parameters
 
-    def linearization_parameters(self):
+    def linearization_parameters(self) -> Dict[str, str]:
         """
         :returns: A dictionary of parameter names mapping to time series identifiers.
         """

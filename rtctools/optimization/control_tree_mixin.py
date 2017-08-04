@@ -1,3 +1,4 @@
+from typing import Dict, List, Union
 import numpy as np
 import logging
 
@@ -12,7 +13,7 @@ class ControlTreeMixin(OptimizationProblem):
     Adds a stochastic control tree to your optimization problem.
     """
 
-    def control_tree_options(self):
+    def control_tree_options(self) -> Dict[str, Union[List[str], List[float], int]]:
         """
         Returns a dictionary of options controlling the creation of a k-ary stochastic tree.
 

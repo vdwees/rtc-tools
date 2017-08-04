@@ -384,7 +384,7 @@ class CSVMixin(OptimizationProblem):
                           for variable in self.__output_timeseries])
         return variables
 
-    def min_timeseries_id(self, variable):
+    def min_timeseries_id(self, variable: str) -> str:
         """
         Returns the name of the lower bound timeseries for the specified variable.
 
@@ -392,7 +392,7 @@ class CSVMixin(OptimizationProblem):
         """
         return '_'.join((variable, 'Min'))
 
-    def max_timeseries_id(self, variable):
+    def max_timeseries_id(self, variable: str) -> str:
         """
         Returns the name of the upper bound timeseries for the specified variable.
 

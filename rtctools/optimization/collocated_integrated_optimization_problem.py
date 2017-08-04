@@ -1728,7 +1728,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
             nominal = self.variable_nominal(state)
             if nominal != 1:
                 accumulation_states[i] *= nominal
-        accumulation_states = ca.transpose(horzcat(*accumulation_states))
+        accumulation_states = ca.transpose(ca.horzcat(*accumulation_states))
 
         # Prepare derivatives (backwards differencing, consistent with the evaluation of path expressions during transcription)
         accumulation_derivatives = [None] * len(derivatives)
@@ -1760,11 +1760,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                     collocation_times, constant_input.times, values, 0.0, 0.0)
 
         accumulation_constant_inputs = ca.transpose(
-            horzcat(*accumulation_constant_inputs))
+            ca.horzcat(*accumulation_constant_inputs))
 
         # Map
         values = fmap(accumulation_states, accumulation_derivatives,
                       accumulation_constant_inputs, ca.repmat(
-                          vertcat(*self.__parameter_values_ensemble_member_0), 1, n_collocation_times),
+                          ca.vertcat(*self.__parameter_values_ensemble_member_0), 1, n_collocation_times),
                       np.transpose(collocation_times))
         return ca.transpose(values)

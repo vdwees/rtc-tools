@@ -1,4 +1,6 @@
 import numpy as np
+import casadi as ca
+from typing import Union
 
 
 class Timeseries:
@@ -6,7 +8,7 @@ class Timeseries:
     Time series object, bundling time stamps with values.
     """
 
-    def __init__(self, times, values):
+    def __init__(self, times: np.ndarray, values: Union[np.ndarray, list, ca.DM]):
         """
         Create a new time series object.
 
@@ -22,21 +24,21 @@ class Timeseries:
             self.__values = np.full_like(times, values, dtype=np.float64)
 
     @property
-    def times(self):
+    def times(self) -> np.ndarray:
         """
         Array of time stamps.
         """
         return self.__times
 
     @property
-    def values(self):
+    def values(self) -> np.ndarray:
         """
         Array of values.
         """
         return self.__values
 
-    def __neg__(self):
+    def __neg__(self) -> 'Timeseries':
         return self.__class__(self.times, -self.values)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'Timeseries({}, {})'.format(self.__times, self.__values)

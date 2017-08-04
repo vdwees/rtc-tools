@@ -1,3 +1,4 @@
+from typing import Dict, Union
 import pymola
 import pymola.backends.casadi.api
 import casadi as ca
@@ -123,7 +124,7 @@ class ModelicaMixin(OptimizationProblem):
         super().__init__(**kwargs)
 
     @cached
-    def compiler_options(self):
+    def compiler_options(self) -> Dict[str, Union[str, bool]]:
         """
         Subclasses can configure the `pymola <http://github.com/jgoppert/pymola>`_ compiler options here.
 

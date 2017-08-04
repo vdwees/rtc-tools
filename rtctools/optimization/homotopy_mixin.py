@@ -1,3 +1,4 @@
+from typing import Dict
 import logging
 
 from .optimization_problem import OptimizationProblem
@@ -43,7 +44,7 @@ class HomotopyMixin(OptimizationProblem):
 
         return parameters
 
-    def homotopy_options(self):
+    def homotopy_options(self) -> Dict[str, Union[str, float]]:
         """
         Returns a dictionary of options controlling the homotopy process.
 

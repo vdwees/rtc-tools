@@ -1,3 +1,4 @@
+from typing import List, Tuple, Union
 from .goal_programming_mixin import GoalProgrammingMixin, Goal
 
 
@@ -51,7 +52,7 @@ class InitialStateEstimationMixin(GoalProgrammingMixin):
 
     """
 
-    def initial_state_measurements(self):
+    def initial_state_measurements(self) -> List[Union[Tuple[str, str], Tuple[str, str, float]]]:
         """
         List of pairs ``(state, measurement_id)`` or triples ``(state, measurement_id, max_deviation)``,
         relating states to measurement time series IDs.
@@ -60,7 +61,7 @@ class InitialStateEstimationMixin(GoalProgrammingMixin):
         """
         return []
 
-    def initial_state_smoothing_pairs(self):
+    def initial_state_smoothing_pairs(self) -> List[Union[Tuple[str, str], Tuple[str, str, float]]]:
         """
         List of pairs ``(state1, state2)`` or triples ``(state1, state2, max_deviation)``, relating
         states the distance of which is to be minimized.
