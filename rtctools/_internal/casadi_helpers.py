@@ -4,6 +4,13 @@ import logging
 
 logger = logging.getLogger("rtctools")
 
+try:
+    # interp1d is only available in the yacoda1 branch at the moment.
+    from casadi import interp1d
+except ImportError:
+    logger.warning('interp1d not available in this version of CasADi.  Linear interpolation will not work.')
+    interp1d = None
+
 
 def is_affine(e, v):
     Af = ca.Function('f', [v], [ca.jacobian(e, v)])
@@ -37,10 +44,14 @@ def substitute_in_external(expr, symbols, values):
 
 
 def interpolate(ts, xs, t, equidistant, mode=0):
-    if False: # TODO mode == 0:
-        print(ts)
-        print(xs)
-        return ca.interpolant('interpolant', 'linear', [ts], xs, {'lookup_mode': 'exact'})(t)
+    if interp1d != None:
+        if mode == 0:
+            mode_str = 'linear'
+        elif mode == 1:
+            mode_str = 'floor'
+        else:
+            mode_str = 'ceil'
+        return interp1d(ts, xs, t, mode_str, equidistant)
     else:
         if mode == 1:
             xs = xs[:-1] # block-forward
