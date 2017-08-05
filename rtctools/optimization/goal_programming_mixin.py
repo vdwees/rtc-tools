@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from collections import OrderedDict
 from typing import Callable, Dict, List, Union
 import casadi as ca
 import numpy as np
@@ -721,8 +722,8 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
 
         options = self.goal_programming_options()
 
-        self.__subproblem_constraints = [{} for ensemble_member in range(self.ensemble_size)]
-        self.__subproblem_path_constraints = [{} for ensemble_member in range(self.ensemble_size)]
+        self.__subproblem_constraints = [OrderedDict() for ensemble_member in range(self.ensemble_size)]
+        self.__subproblem_path_constraints = [OrderedDict() for ensemble_member in range(self.ensemble_size)]
         self.__first_run = True
         self.__results_are_current = False
         for i, (priority, goals, path_goals) in enumerate(subproblems):
