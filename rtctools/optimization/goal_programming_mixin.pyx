@@ -1,7 +1,6 @@
 # cython: embedsignature=True
 
 from casadi import MX, MXFunction, sumRows, sumCols, vertcat, transpose, substitute, constpow, if_else
-from collections import OrderedDict
 from abc import ABCMeta, abstractmethod
 import numpy as np
 cimport numpy as np
@@ -728,8 +727,8 @@ class GoalProgrammingMixin(OptimizationProblem):
 
         options = self.goal_programming_options()
 
-        self._subproblem_constraints = [OrderedDict() for ensemble_member in range(self.ensemble_size)]
-        self._subproblem_path_constraints = [OrderedDict() for ensemble_member in range(self.ensemble_size)]
+        self._subproblem_constraints = [{} for ensemble_member in range(self.ensemble_size)]
+        self._subproblem_path_constraints = [{} for ensemble_member in range(self.ensemble_size)]
         self._first_run = True
         self._results_are_current = False
         for i, (priority, goals, path_goals) in enumerate(subproblems):
