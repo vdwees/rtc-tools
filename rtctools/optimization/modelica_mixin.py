@@ -216,17 +216,6 @@ class ModelicaMixin(OptimizationProblem):
         return constant_inputs
 
     @cached
-    def history(self, ensemble_member):
-        history = AliasDict(self.alias_relation)
-
-        # Initial conditions obtained from start attributes.
-        for v in self.__pymola_model.states:
-            if v.fixed == True:
-                history[v.symbol.name()] = Timeseries(np.array([self.initial_time]), np.array([v.start]))
-
-        return history
-
-    @cached
     def initial_state(self, ensemble_member):
         initial_state = AliasDict(self.alias_relation)
 
