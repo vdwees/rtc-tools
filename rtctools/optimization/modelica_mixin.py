@@ -157,7 +157,8 @@ class ModelicaMixin(OptimizationProblem):
         compiler_options['eliminable_variable_expression'] = r'_\w+'
 
         # Automatically detect and eliminate alias variables.
-        compiler_options['detect_aliases'] = True
+        # TODO: Alias detection can remove output aliases. Fix and reenable.
+        compiler_options['detect_aliases'] = False
 
         # Cache the model on disk
         compiler_options['cache'] = True
