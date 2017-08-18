@@ -292,4 +292,14 @@ class ModelicaMixin(OptimizationProblem):
         return alias_relation
 
     def variable_nominal(self, variable):
-        return self.__nominals.get(variable, 1)
+        nominal = self.__nominals.get(variable, 1)
+
+        try:
+            _nominal = float(nominal)
+        except:
+            pass
+        else:
+            if not np.isnan(_nominal):
+                nominal = _nominal
+
+        return nominal
