@@ -288,7 +288,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         return []
 
     @property
-    def output_variables(self) -> List[ca.MX]:
+    def output_variables(self) -> List[str]:
         """
         List of variables that the user requests to be included in the output files.
         """

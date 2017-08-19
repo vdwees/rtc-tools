@@ -157,8 +157,7 @@ class ModelicaMixin(OptimizationProblem):
         compiler_options['eliminable_variable_expression'] = r'_\w+'
 
         # Automatically detect and eliminate alias variables.
-        # TODO: Alias detection can remove output aliases. Fix and reenable.
-        compiler_options['detect_aliases'] = False
+        compiler_options['detect_aliases'] = True
 
         # Cache the model on disk
         compiler_options['cache'] = True
@@ -182,8 +181,8 @@ class ModelicaMixin(OptimizationProblem):
     @property
     @cached
     def output_variables(self):
-        output_variables = [v.symbol for v in self.__pymola_model.outputs]
-        output_variables.extend(self.__mx['control_inputs'])
+        output_variables = list(self.__pymola_model.outputs)
+        output_variables.extend([x.name() for x in self.__mx['control_inputs']])
         return output_variables
 
     @cached

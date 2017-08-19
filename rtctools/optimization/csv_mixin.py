@@ -307,13 +307,12 @@ class CSVMixin(OptimizationProblem):
 
         def write_output(ensemble_member, folder):
             results = self.extract_results(ensemble_member)
-            names = ['time'] + sorted(set([sym.name() for sym in self.output_variables]))
+            names = ['time'] + sorted(set([x for x in self.output_variables]))
             formats = ['O'] + (len(names) - 1) * ['f8']
             dtype = dict(names=names, formats=formats)
             data = np.zeros(len(self.__timeseries_times), dtype=dtype)
             data['time'] = self.__timeseries_times
-            for i, output_variable in enumerate(self.output_variables):
-                output_variable = output_variable.name()
+            for output_variable in self.output_variables:
                 try:
                     values = results[output_variable]
                     if len(values) != len(times):
@@ -380,8 +379,7 @@ class CSVMixin(OptimizationProblem):
     @property
     def output_variables(self):
         variables = super().output_variables
-        variables.extend([ca.MX.sym(variable)
-                          for variable in self.__output_timeseries])
+        variables.extend(list(self.__output_timeseries))
         return variables
 
     def min_timeseries_id(self, variable: str) -> str:

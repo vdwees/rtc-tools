@@ -424,8 +424,7 @@ class PIMixin(OptimizationProblem):
     @property
     def output_variables(self):
         variables = super().output_variables
-        variables.extend([ca.MX.sym(variable)
-                          for variable in self.__output_timeseries])
+        variables.extend(list(self.__output_timeseries))
         return variables
 
     def min_timeseries_id(self, variable: str) -> str:
