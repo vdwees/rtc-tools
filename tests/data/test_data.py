@@ -88,13 +88,13 @@ class TestPI(TestCase):
         # Change unit
         timeseries = pi.Timeseries(
             self.data_config, data_path(), "timeseries_import", binary=False)
-        timeseries._set_unit('S', unit='kcfs', ensemble_member=0)
+        timeseries.set_unit('S', unit='kcfs', ensemble_member=0)
         timeseries.write()
 
         timeseries = pi.Timeseries(
             self.data_config, data_path(), "timeseries_import", binary=False)
-        self.assertEqual(timeseries._get_unit('S', ensemble_member=0), 'kcfs')
-        timeseries._set_unit('S', unit='m3/s', ensemble_member=0)
+        self.assertEqual(timeseries.get_unit('S', ensemble_member=0), 'kcfs')
+        timeseries.set_unit('S', unit='m3/s', ensemble_member=0)
         timeseries.write()
 
         # Remove last item
@@ -164,8 +164,8 @@ class TestPI(TestCase):
         timeseries.set('S', orig_values, ensemble_member=0)
         # Because we don't support extension of nonequidistant series, we need
         # to reset the times manually.
-        timeseries._times = orig_times
-        timeseries._end_datetime = orig_end
+        timeseries.times = orig_times
+        timeseries.end_datetime = orig_end
         timeseries.write()
 
         # Increase start date time
