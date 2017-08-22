@@ -165,7 +165,6 @@ class TestPI(TestCase):
         # Because we don't support extension of nonequidistant series, we need
         # to reset the times manually.
         timeseries.times = orig_times
-        timeseries.end_datetime = orig_end
         timeseries.write()
 
         # Increase start date time
@@ -186,8 +185,7 @@ class TestPI(TestCase):
         timeseries.set('S', orig_values, ensemble_member=0)
         # Because we don't support extension of nonequidistant series, we need
         # to reset the times manually.
-        timeseries._times = orig_times
-        timeseries._start_datetime = orig_start
+        timeseries.times = orig_times
         timeseries.write()
 
     def test_placeholder_timeseries(self):
