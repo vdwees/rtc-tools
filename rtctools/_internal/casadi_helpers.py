@@ -22,7 +22,7 @@ def nullvertcat(*L):
     Like vertcat, but creates an MX with consistent dimensions even if L is empty.
     """
     if len(L) == 0:
-        return 0
+        return ca.DM(0, 1)
     else:
         return ca.vertcat(*L)
 
