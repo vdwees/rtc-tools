@@ -105,7 +105,7 @@ class BSpline1D(BSpline):
         sq_diff = Function('sq_diff', [xpt, ypt], [
                              (ypt - bspline(c, xpt)[0])**2])
         sq_diff = sq_diff.map(N, 'serial')
-        f = sum2(sq_diff(SX(x), SX(y))[0])
+        f = sum2(sq_diff(SX(x), SX(y)))
 
         # Setup Curvature Constraints
         delta_c_max = np.full(num_knots - 1, inf)
@@ -142,4 +142,4 @@ class BSpline1D(BSpline):
             raise Exception("Spline fitting failed with status {}".format(return_status))
 
         # Return the new tck tuple
-        return (t, sol['x'], k)
+        return (t, np.array(sol['x']).ravel(), k)

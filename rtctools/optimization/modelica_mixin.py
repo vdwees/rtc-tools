@@ -77,8 +77,8 @@ class ModelicaMixin(OptimizationProblem):
 
         # Initialize nominals and types
         # These are not in @cached dictionary properties for backwards compatibility.
-        self.__nominals = {}
-        self.__python_types = {}
+        self.__nominals = AliasDict(self.alias_relation)
+        self.__python_types = AliasDict(self.alias_relation)
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
             # We need to take care to allow nominal vectors.
@@ -273,7 +273,7 @@ class ModelicaMixin(OptimizationProblem):
 
         return bounds
 
-    def variable_is__discrete(self, variable):
+    def variable_is_discrete(self, variable):
         return self.__python_types.get(variable, float) != float
 
     @property
