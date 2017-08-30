@@ -130,26 +130,28 @@ class CSVLookupTableMixin(OptimizationProblem):
 
             tck = None
             # If tck file is newer than the csv file, first try to load the cached values from the tck file
-            try:
+            tck_filename = filename.replace('.csv', '.tck')
+            valid_cache = False
+            if os.path.exists(tck_filename):
                 if no_curvefit_options:
-                    valid_cache = os.path.getmtime(filename) < os.path.getmtime(filename.replace('.csv', '.tck'))
+                    valid_cache = os.path.getmtime(filename) < os.path.getmtime(tck_filename)
                 else:
-                    valid_cache = (os.path.getmtime(filename) < os.path.getmtime(filename.replace('.csv', '.tck'))) and \
-                                  (os.path.getmtime(ini_path) < os.path.getmtime(filename.replace('.csv', '.tck')))
+                    valid_cache = (os.path.getmtime(filename) < os.path.getmtime(tck_filename)) and \
+                                  (os.path.getmtime(ini_path) < os.path.getmtime(tck_filename))
                 if valid_cache:
                     logger.debug(
-                        'CSVLookupTableMixin: Attempting to use cashed tck values for {}'.format(output))
-                    tck = pickle.load(open(filename.replace('.csv', '.tck'), 'rb'))
-                else:
-                    logger.info(
-                        'CSVLookupTableMixin: Recalculating tck values for {}'.format(output))
-            except OSError:
-                valid_cache = False
-                logger.debug(
-                    'CSVLookupTableMixin: Cached tck values for {} not found'.format(output))
+                        'CSVLookupTableMixin: Attempting to use cached tck values for {}'.format(output))
+                    with open(tck_filename, 'rb') as f:
+                        try:
+                            tck = pickle.load(f)
+                        except OSError:
+                            valid_cache = False
+            if not valid_cache:
+                logger.info(
+                    'CSVLookupTableMixin: Recalculating tck values for {}'.format(output))
 
             if len(csvinput.dtype.names) == 2:
-                if tck is None:
+                if not valid_cache:
                     k = 3  # default value
                     # 1D spline fitting needs k+1 data points
                     if len(csvinput[output]) >= k + 1:
