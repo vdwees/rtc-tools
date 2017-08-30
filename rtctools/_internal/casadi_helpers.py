@@ -22,7 +22,7 @@ def nullvertcat(*L):
     Like vertcat, but creates an MX with consistent dimensions even if L is empty.
     """
     if len(L) == 0:
-        return ca.MX(0, 1)
+        return 0
     else:
         return ca.vertcat(*L)
 
@@ -39,8 +39,11 @@ def reduce_matvec(e, v):
 
 
 def substitute_in_external(expr, symbols, values):
-    f = ca.Function('f', symbols, expr)
-    return f.call(values, True, False)
+    if len(symbols) == 0:
+        return expr
+    else:
+        f = ca.Function('f', symbols, expr)
+        return f.call(values, True, False)
 
 
 def interpolate(ts, xs, t, equidistant, mode=0):
