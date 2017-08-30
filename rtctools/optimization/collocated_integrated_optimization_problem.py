@@ -484,10 +484,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         # Set up accumulation over time (integration, and generation of
         # collocation constraints)
         if len(integrated_variables) > 0:
-            # When using mapaccum, we also feed back the current
-            # collocation constraints through accumulated_X.
-            accumulated_X = ca.MX.sym('accumulated_X', len(
-                integrated_variables) + dae_residual_collocated_size + len(path_constraints) + 1)
+            accumulated_X = ca.MX.sym('accumulated_X', len(integrated_variables))
         else:
             accumulated_X = ca.MX.sym('accumulated_X', 0)
         accumulated_U = ca.MX.sym('accumulated_U', 2 * (len(collocated_variables) + len(
@@ -602,15 +599,17 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         # Use map/mapaccum to capture integration and collocation constraint generation over the entire
         # time horizon with one symbolic operation.  This saves a lot of
         # memory.
-        accumulated = ca.Function('accumulated',
-                                  [accumulated_X, accumulated_U, symbolic_parameters], [ca.vertcat(*accumulated_Y)], function_options)
-
         if len(integrated_variables) > 0:
-            accumulation = accumulated.mapaccum(
-                'accumulation', n_collocation_times - 1)
+            accumulated = ca.Function('accumulated',
+                                      [accumulated_X, accumulated_U, symbolic_parameters],
+                                      [accumulated_Y[0], ca.vertcat(*accumulated_Y[1:])], function_options)
+            accumulation = accumulated.mapaccum('accumulation', n_collocation_times - 1)
         else:
             # Fully collocated problem.  Use map(), so that we can use
             # parallelization along the time axis.
+            accumulated = ca.Function('accumulated',
+                                      [accumulated_X, accumulated_U, symbolic_parameters],
+                                      [ca.vertcat(*accumulated_Y)], function_options)
             accumulation = accumulated.map(n_collocation_times - 1, 'openmp')
 
         # Start collecting constraints
@@ -690,9 +689,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                 if nominal != 1:
                     value *= nominal
                 accumulation_X0.append(value)
-            if len(self.integrated_states) > 0:
-                accumulation_X0.extend(
-                    [0.0] * (dae_residual_collocated_size + 1))
+            #if len(self.integrated_states) > 0:
+            #    accumulation_X0.extend(
+            #        [0.0] * (dae_residual_collocated_size + 1))
             accumulation_X0 = ca.vertcat(*accumulation_X0)
 
             # Input for map
@@ -761,18 +760,17 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
 
             integrators_and_collocation_and_path_constraints = accumulation(
                 accumulation_X0, accumulation_U, ca.repmat(parameters, 1, n_collocation_times - 1))
-            if integrators_and_collocation_and_path_constraints.size2() > 0:
-                integrators = integrators_and_collocation_and_path_constraints[:len(
-                    integrated_variables), :]
-                collocation_constraints = ca.vec(integrators_and_collocation_and_path_constraints[len(integrated_variables):len(
-                    integrated_variables) + dae_residual_collocated_size, 0:n_collocation_times - 1])
-                discretized_path_objective = ca.vec(integrators_and_collocation_and_path_constraints[len(
-                    integrated_variables) + dae_residual_collocated_size:len(
-                    integrated_variables) + dae_residual_collocated_size + path_objective.size1(), 0:n_collocation_times - 1])
-                discretized_path_constraints = ca.vec(integrators_and_collocation_and_path_constraints[len(
-                    integrated_variables) + dae_residual_collocated_size + path_objective.size1():, 0:n_collocation_times - 1])
+            if len(integrated_variables) > 0:
+                integrators = integrators_and_collocation_and_path_constraints[0]
+                integrators_and_collocation_and_path_constraints = integrators_and_collocation_and_path_constraints[1]
+            if integrators_and_collocation_and_path_constraints.numel() > 0:
+                collocation_constraints = ca.vec(integrators_and_collocation_and_path_constraints[:
+                    dae_residual_collocated_size, 0:n_collocation_times - 1])
+                discretized_path_objective = ca.vec(integrators_and_collocation_and_path_constraints[
+                    dae_residual_collocated_size:dae_residual_collocated_size + path_objective.size1(), 0:n_collocation_times - 1])
+                discretized_path_constraints = ca.vec(integrators_and_collocation_and_path_constraints[
+                    dae_residual_collocated_size + path_objective.size1():, 0:n_collocation_times - 1])
             else:
-                integrators = ca.MX()
                 collocation_constraints = ca.MX()
                 discretized_path_objective = ca.MX()
                 discretized_path_constraints = ca.MX()
