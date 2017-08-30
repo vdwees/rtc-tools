@@ -4,7 +4,7 @@ from test_case import TestCase
 from rtctools.optimization.collocated_integrated_optimization_problem import CollocatedIntegratedOptimizationProblem
 from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.timeseries import Timeseries
-from rtctools.optimization.alias_tools import AliasDict
+from rtctools._internal.alias_tools import AliasDict
 from casadi import MX, vertcat
 from unittest import expectedFailure
 import numpy as np
@@ -39,7 +39,7 @@ class TestProblem(ModelicaMixin, CollocatedIntegratedOptimizationProblem):
 
     def constant_inputs(self, ensemble_member):
         # Constant inputs
-        return AliasDict({'constant_input': Timeseries(self.times(), 1 - self.times())})
+        return AliasDict(self.alias_relation, {'constant_input': Timeseries(self.times(), 1 - self.times())})
 
     def seed(self, ensemble_member):
         # No particular seeding
