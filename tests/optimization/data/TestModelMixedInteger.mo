@@ -1,15 +1,8 @@
 model TestModelMixedInteger
-	input Boolean choice (fixed=false);
+	input Boolean choice(fixed=false);
 	Boolean other_choice;
 	Real y;
-
 equation
-	if choice then
-		y = 1.0;
-		other_choice = false;
-	else
-		y = -1.0;
-		other_choice = true;
-	end if;
-
+	y = choice + (choice - 1);
+	other_choice = 1 - choice;
 end TestModelMixedInteger;
