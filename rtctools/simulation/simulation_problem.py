@@ -1,11 +1,109 @@
 import os
 import logging
 import numpy as np
-import pyfmi.fmi
-from pymodelica.compiler import compile_fmu
-from pymodelica.compiler_exceptions import *
+from datetime import timedelta
+import bisect
+
+import casadi as ca
+import itertools
+import pymola
+import rtctools.data.csv as csv
+import pymola.backends.casadi.api
+
 
 logger = logging.getLogger("rtctools")
+
+import rtctools.data.rtc as rtc
+import rtctools.data.pi as pi
+
+
+class Model(object): # TODO: inherit from pymola model? (could be the cleanest way)
+    """Model to track state and parameters of simulation problem. Replaces FMU with some FMI carryovers"""
+
+    # Default solver tolerance
+    solver_tol = 1e-10
+
+    def __init__(self, mx, dae_residual, start, stop, default_dt):
+        super(Model, self).__init__()
+
+        self.default_dt = default_dt
+        self.mx = mx
+
+        self.time = start
+
+        X = ca.vertcat(*mx['states'])
+        X_prev = ca.MX.sym("prev_states", len(mx['states']))
+        dt = ca.MX.sym("delta_t")
+
+        derivatives = ca.vertcat(*mx['derivatives'])
+
+        derivative_approximations = []
+
+        for derivative_state in mx['derivatives']:
+            index = next((i for i, s in enumerate(X) if s.name() == derivative_state.name()[4:-1]))
+            derivative_approximations.append((X[index] - X_prev[index]) / dt)
+
+        derivative_approximations = ca.vertcat(*derivative_approximations)
+
+        dae_residual_substituted_ders = ca.substitute(dae_residual, derivatives, derivative_approximations)
+
+        # TODO: implement lookup_tables
+
+        # Construct state array
+        self.__sym_iter = self.mx['states'] + self.mx['constant_inputs'] + self.mx['parameters']
+        self.__state_array = np.full(len(self.__sym_iter), np.nan)
+
+        # Construct function parameters
+        parameters = ca.vertcat(dt, X_prev, *mx['constant_inputs'], *mx['parameters'])
+
+        # Use rootfinder() to make a function that takes a step forward in time
+        f = ca.Function("f", [X, parameters], [dae_residual_substituted_ders])
+        self.__do_step = ca.rootfinder("s", "newton", f, self.solver_options())
+
+    def do_step(self, dt):
+        if any(np.isnan(self.__state_array)):
+            arr = zip(self.__sym_iter, self.__state_array)
+            print("State Array:")
+            for sym, val in arr:
+                print(str(sym) + ': ' + str(val))
+            raise ValueError("Missing inputs or parameters")
+
+        # take a step
+        self.__do_step(state, ca.vertcat(state, dt, *self.__state_array))
+
+        # increment time
+        self.time += dt
+
+    def solver_options(self):
+        opts = {}
+        opts["abstol"] = self.solver_tol
+        opts["linear_solver"] = "csparse"
+        return opts
+
+    def set(self, variable, value):
+        index = self.__get_state_array_index(variable)
+        self.__state_array[index] = float(value) # TODO: handle booleans & ints?
+
+    def initialize(self):
+        # TODO: find consistant t0 values
+
+
+        pass
+
+    def __get_state_array_index(self, variable):
+        # TODO: cache these indices
+        index =  next((i for i, sym in enumerate(self.__sym_iter) if sym.name() == variable), None)
+        if index is None:
+            raise KeyError(str(variable) + "does not exist!") # Perhaps only warn?
+        return index
+
+    def get(self, variable):
+        index = self.__get_state_array_index(variable)
+        return self.__state_array[index]
+
+
+
+
 
 
 class SimulationProblem:
@@ -22,7 +120,10 @@ class SimulationProblem:
         # Check arguments
         assert('model_folder' in kwargs)
 
-        # Determine the name of the model
+        # Log pymola version
+        logger.debug("Using pymola {}.".format(pymola.__version__))
+
+        # Transfer model from the Modelica .mo file to CasADi using pymola
         if 'model_name' in kwargs:
             model_name = kwargs['model_name']
         else:
@@ -31,44 +132,82 @@ class SimulationProblem:
             else:
                 model_name = self.__class__.__name__
 
-        # Load the FMU, compiling it if needed
-        model_folder = kwargs['model_folder']
-        if not os.path.isdir(model_folder):
-            raise RuntimeError("Directory does not exist" + model_folder)
+        self.__pymola_model = pymola.backends.casadi.api.transfer_model(kwargs['model_folder'], model_name, self.compiler_options())
 
-        need_compilation = False
+        # Extract the CasADi MX variables used in the model
+        self.__mx = {}
+        self.__mx['time'] = [self.__pymola_model.time]
+        self.__mx['states'] = [v.symbol for v in self.__pymola_model.states]
+        self.__mx['outputs'] = [v.symbol for v in self.__pymola_model.outputs]
+        self.__mx['derivatives'] = [v.symbol for v in self.__pymola_model.der_states]
+        self.__mx['algebraics'] = [v.symbol for v in self.__pymola_model.alg_states]
+        self.__mx['parameters'] = [v.symbol for v in self.__pymola_model.parameters]
+        self.__mx['constant_inputs'] = []
+        self.__mx['lookup_tables'] = []
 
-        fmu_filename = os.path.join(model_folder, model_name + '.fmu')
-        if os.path.isfile(fmu_filename):
-            fmu_mtime = os.path.getmtime(fmu_filename)
-        else:
-            need_compilation = True
+        # Merge with user-specified delayed feedback
+        # TODO: get this working
+        delayed_feedback_variables = [] #map(lambda delayed_feedback: delayed_feedback[1], self.delayed_feedback())
 
-        mo_filenames = []
-        for f in os.listdir(model_folder):
-            if f.endswith(".mo"):
-                mo_filename = os.path.join(model_folder, f)
-                mo_filenames.append(mo_filename)
+        for v in self.__pymola_model.inputs:
+            if v.symbol.name() in delayed_feedback_variables:
+                # Delayed feedback variables are local to each ensemble, and therefore belong to the collection of algebraic variables,
+                # rather than to the control inputs.
+                self.__mx['algebraics'].append(v.symbol)
+            else:
+                if v.symbol.name() in kwargs.get('lookup_tables', []):
+                    self.__mx['lookup_tables'].append(v.symbol)
+                else:
+                    # All inputs are constant inputs
+                    self.__mx['constant_inputs'].append(v.symbol)
 
-                if not need_compilation and os.path.getmtime(mo_filename) > fmu_mtime:
-                    need_compilation = True
+        # Initialize nominals and types
+        # These are not in @cached dictionary properties for backwards compatibility.
+        self.__nominals = {}
+        self.__python_types = {}
+        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
+            sym_name = v.symbol.name()
+            # We need to take care to allow nominal vectors.
+            if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero():
+                self.__nominals[sym_name] = ca.fabs(v.nominal)
 
-        if need_compilation:
-            # compile .mo files into .fmu
-            logger.info("Compiling FMU")
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
+                        sym_name, self.__nominals[sym_name]))
 
-            try:
-                compile_fmu(model_name, mo_filenames, version=2.0, target='cs',
-                            compiler_options=self.compiler_options(), compiler_log_level='i:compile_fmu_log.txt',
-                            compile_to=fmu_filename)
-            except ModelicaClassNotFoundError:
-                raise RuntimeError("Could not find files to compile FMU.")
+            self.__python_types[sym_name] = v.python_type
 
-        self.__model = pyfmi.load_fmu(fmu_filename)
-        if self.__model is None:
-            raise RuntimeError("FMU could not be loaded")
-        self.__model_types = {0: 'float', 1: 'int',
-                             2: 'bool', 3: 'str', 4: 'dict'}
+        # Initialize dae and initial residuals
+        # These are not in @cached dictionary properties so that we need to create the list
+        # of function arguments only once.
+        variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
+        function_arguments = [self.__pymola_model.time] + [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
+
+        self.__dae_residual = self.__pymola_model.dae_residual_function(*function_arguments)
+        if self.__dae_residual is None:
+            self.__dae_residual = ca.MX()
+
+        self.__initial_residual = self.__pymola_model.initial_residual_function(*function_arguments)
+        if self.__initial_residual is None:
+            self.__initial_residual = ca.MX()
+
+        import code; code.interact(local=locals())
+
+        # Log variables in debug mode
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            logger.debug("ModelicaMixin: Found states {}".format(
+                ', '.join([var.name() for var in self.__mx['states']])))
+            logger.debug("ModelicaMixin: Found derivatives {}".format(
+                ', '.join([var.name() for var in self.__mx['derivatives']])))
+            logger.debug("ModelicaMixin: Found algebraics {}".format(
+                ', '.join([var.name() for var in self.__mx['algebraics']])))
+            logger.debug("ModelicaMixin: Found constant inputs {}".format(
+                ', '.join([var.name() for var in self.__mx['constant_inputs']])))
+            logger.debug("ModelicaMixin: Found parameters {}".format(
+                ', '.join([var.name() for var in self.__mx['parameters']])))
+
+        # Call parent class first for default behaviour.
+        super().__init__()
 
     def initialize(self, config_file=None):
         """
@@ -104,12 +243,15 @@ class SimulationProblem:
         :param dt:    Time step size.
         :param tol:   Tolerance of the underlying FMU method.
         """
-        if tol is None:
-            tol = self.__model.get_default_experiment_tolerance()
+
         self.__start = start
         self.__stop = stop
         self.__dt = dt
-        self.__model.setup_experiment(tol, tol, start, stop, stop)
+        self._dt = dt # backward compatibility for now
+        self.__model = Model(self.__mx, self.__dae_residual, start, stop, dt)
+
+        if tol is not None:
+            self.__model.solver_tol = tol
 
     def finalize(self):
         """
@@ -129,7 +271,7 @@ class SimulationProblem:
             dt = self.__dt
 
         logger.debug("Taking a step at {} with size {}".format(self.get_current_time(), dt))
-        return self.__model.do_step(self.__model.time, dt, True)
+        return self.__model.do_step(dt)
 
     def simulate(self):
         """ 
@@ -142,11 +284,11 @@ class SimulationProblem:
         self.pre()
 
         # Initialize model
-        logger.info("Initializing FMU")
+        logger.info("Initializing")
         self.initialize()
 
         # Perform all timesteps
-        logger.info("Running FMU")
+        logger.info("Running")
         while self.get_current_time() < self.get_end_time():
             self.update(-1)
 
@@ -252,13 +394,13 @@ class SimulationProblem:
         return self.__model.get_model_variables()
 
     def get_parameter_variables(self):
-        return self.__model.get_model_variables(causality=1)
+        return {sym.name(): sym for sym in self.__mx['parameters']}
 
     def get_input_variables(self):
-        return self.__model.get_model_variables(causality=2)
+        return {sym.name(): sym for sym in self.__mx['constant_inputs']}
 
     def get_output_variables(self):
-        return self.__model.get_model_variables(causality=3)
+        return {sym.name(): sym for sym in self.__mx['outputs']}
 
     def set_var(self, name, val):
         """
@@ -295,20 +437,41 @@ class SimulationProblem:
 
     def compiler_options(self):
         """
-        Subclasses can configure the `JModelica.org <http://www.jmodelica.org/>`_ compiler options here.
+        Subclasses can configure the `pymola <http://github.com/jgoppert/pymola>`_ compiler options here.
 
-        :returns: A dictionary of JModelica.org compiler options.  See the JModelica.org documentation for details.
+        :returns: A dictionary of pymola compiler options.  See the pymola documentation for details.
         """
 
         # Default options
         compiler_options = {}
 
-        # No automatic division with variables please.  Our variables may
-        # sometimes equal to zero.
-        compiler_options['divide_by_vars_in_tearing'] = False
+        # Expand vector states to multiple scalar component states.
+        compiler_options['expand_vectors'] = True
 
-        # Include the 'mo' folder as library dir by default.
-        compiler_options['extra_lib_dirs'] = self.modelica_library_folder
+        # Where imported model libraries are located.
+        compiler_options['library_folders'] = [self.modelica_library_folder]
+
+        # Eliminate equations of the type 'var = const'.
+        compiler_options['eliminate_constant_assignments'] = True
+
+        # Eliminate constant symbols from model, replacing them with the values
+        # specified in the model.
+        compiler_options['replace_constant_values'] = True
+
+        # Replace any constant expressions into the model.
+        compiler_options['replace_constant_expressions'] = True
+
+        # Replace any parameter expressions into the model.
+        compiler_options['replace_parameter_expressions'] = True
+
+        # Eliminate variables starting with underscores.
+        compiler_options['eliminable_variable_expression'] = r'_\w+'
+
+        # Automatically detect and eliminate alias variables.
+        compiler_options['detect_aliases'] = True
+
+        # Cache the model on disk
+        compiler_options['cache'] = False #TODO: fix file suffix error when caching
 
         # Done
         return compiler_options

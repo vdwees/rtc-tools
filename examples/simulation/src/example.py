@@ -38,7 +38,7 @@ class Example(CSVMixin, SimulationProblem):
         self.set_var('P_control', bounded_control)
 
         # Call the super class so that everything else continues as normal
-    	super(Example, self).update(dt)
+        super(Example, self).update(dt)
 
 # Run
 run_simulation_problem(Example, log_level=logging.DEBUG)
