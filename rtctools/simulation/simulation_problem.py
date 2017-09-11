@@ -52,6 +52,7 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         # Construct state array
         self.__sym_iter = self.mx['states'] + self.mx['constant_inputs'] + self.mx['parameters']
         self.__state_array = np.full(len(self.__sym_iter), np.nan)
+        self.__states_end_index = len(self.mx['states'])
 
         # Construct function parameters
         parameters = ca.vertcat(dt, X_prev, *mx['constant_inputs'], *mx['parameters'])
@@ -69,7 +70,9 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
             raise ValueError("Missing inputs or parameters")
 
         # take a step
-        self.__do_step(state, ca.vertcat(state, dt, *self.__state_array))
+        guess = self.__state_array[:self.__states_end_index]
+        next_state = self.__do_step(guess, ca.vertcat(dt, *self.__state_array))
+        self.__state_array[:self.__states_end_index] = next_state
 
         # increment time
         self.time += dt
@@ -86,9 +89,9 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
 
     def initialize(self):
         # TODO: find consistant t0 values
-
-
-        pass
+        # for now, initialize variables manually (from the simulation example)
+        self.set('storage.V', self.get('storage_V_init'))
+        self.set('storage.n_QForcing', 0)
 
     def __get_state_array_index(self, variable):
         # TODO: cache these indices
@@ -190,8 +193,6 @@ class SimulationProblem:
         self.__initial_residual = self.__pymola_model.initial_residual_function(*function_arguments)
         if self.__initial_residual is None:
             self.__initial_residual = ca.MX()
-
-        import code; code.interact(local=locals())
 
         # Log variables in debug mode
         if logger.getEffectiveLevel() == logging.DEBUG:
