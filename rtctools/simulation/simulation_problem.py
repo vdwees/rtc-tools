@@ -23,23 +23,23 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
     # Default solver tolerance
     solver_tol = 1e-10
 
-    def __init__(self, mx, dae_residual, start, stop, default_dt):
+    def __init__(self, mx, dae_residual, initial_residual, start, stop, default_dt):
         super(Model, self).__init__()
 
         self.default_dt = default_dt
-        self.mx = mx
+        self.__mx = mx
 
         self.time = start
 
-        X = ca.vertcat(*mx['states'])
-        X_prev = ca.MX.sym("prev_states", len(mx['states']))
+        X = ca.vertcat(*self.__mx['states'])
+        X_prev = ca.MX.sym("prev_states", len(self.__mx['states']))
         dt = ca.MX.sym("delta_t")
 
-        derivatives = ca.vertcat(*mx['derivatives'])
+        derivatives = ca.vertcat(*self.__mx['derivatives'])
 
         derivative_approximations = []
 
-        for derivative_state in mx['derivatives']:
+        for derivative_state in self.__mx['derivatives']:
             index = next((i for i, s in enumerate(X) if s.name() == derivative_state.name()[4:-1]))
             derivative_approximations.append((X[index] - X_prev[index]) / dt)
 
@@ -50,12 +50,12 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         # TODO: implement lookup_tables
 
         # Construct state array
-        self.__sym_iter = self.mx['states'] + self.mx['constant_inputs'] + self.mx['parameters']
+        self.__sym_iter = self.__mx['states'] + self.__mx['constant_inputs'] + self.__mx['parameters']
         self.__state_array = np.full(len(self.__sym_iter), np.nan)
-        self.__states_end_index = len(self.mx['states'])
+        self.__states_end_index = len(self.__mx['states'])
 
         # Construct function parameters
-        parameters = ca.vertcat(dt, X_prev, *mx['constant_inputs'], *mx['parameters'])
+        parameters = ca.vertcat(dt, X_prev, *self.__mx['constant_inputs'], *self.__mx['parameters'])
 
         # Use rootfinder() to make a function that takes a step forward in time
         f = ca.Function("f", [X, parameters], [dae_residual_substituted_ders])
