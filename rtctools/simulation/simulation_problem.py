@@ -27,6 +27,8 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         super(Model, self).__init__()
 
         self.default_dt = default_dt
+        self.__initial_residual = initial_residual
+        self.__dae_residual = dae_residual
         self.__mx = mx
 
         self.time = start
@@ -45,7 +47,7 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
 
         derivative_approximations = ca.vertcat(*derivative_approximations)
 
-        dae_residual_substituted_ders = ca.substitute(dae_residual, derivatives, derivative_approximations)
+        dae_residual_substituted_ders = ca.substitute(self.__dae_residual, derivatives, derivative_approximations)
 
         # TODO: implement lookup_tables
 
@@ -249,7 +251,7 @@ class SimulationProblem:
         self.__stop = stop
         self.__dt = dt
         self._dt = dt # backward compatibility for now
-        self.__model = Model(self.__mx, self.__dae_residual, start, stop, dt)
+        self.__model = Model(self.__mx, self.__dae_residual, self.__initial_residual, start, stop, dt)
 
         if tol is not None:
             self.__model.solver_tol = tol
