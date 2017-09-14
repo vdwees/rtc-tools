@@ -142,9 +142,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         self.__path_variable_names = [variable.name()
                                       for variable in self.path_variables]
 
-        # Set up state vector cache
-        self.__state_vector_cache = [{} for i in range(self.ensemble_size)]
-
         # Collocation times
         collocation_times = self.times()
         n_collocation_times = len(collocation_times)
@@ -221,13 +218,23 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                 lb, ca.MX) else lb, float(ub) if isinstance(ub, ca.MX) else ub)
 
         # Initialize control discretization
-        control_size, discrete_control, lbx_control, ubx_control, x0_control = self.discretize_controls(
+        control_size, discrete_control, lbx_control, ubx_control, x0_control, indices_control = self.discretize_controls(
             resolved_bounds)
 
         # Initialize state discretization
-        state_size, discrete_state, lbx_state, ubx_state, x0_state = self.discretize_states(
+        state_size, discrete_state, lbx_state, ubx_state, x0_state, indices_state = self.discretize_states(
             resolved_bounds)
 
+        # Merge state vector offset dictionary
+        self.__indices = indices_control
+        for ensemble_member in range(self.ensemble_size):
+            for key, value in indices_state[ensemble_member].items():
+                if isinstance(value, slice):
+                    value = slice(value.start + control_size, value.stop + control_size)
+                else:
+                    value += control_size
+                self.__indices[ensemble_member][key] = value
+        
         # Initialize vector of optimization symbols
         X = ca.MX.sym('X', control_size + state_size)
         self.__solver_input = X
@@ -997,6 +1004,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         # After all, we don't use a stochastic tree if we end up here.
         seed = self.seed(ensemble_member=0)
 
+        indices = [{} for ensemble_member in range(self.ensemble_size)]
+
         discrete = np.zeros(count, dtype=np.bool)
 
         lbx = np.full(count, -np.inf, dtype=np.float64)
@@ -1008,6 +1017,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         for variable in self.controls:
             times = self.times(variable)
             n_times = len(times)
+
+            for ensemble_member in range(self.ensemble_size):
+                indices[ensemble_member][variable] = slice(offset, offset + n_times)
 
             discrete[offset:offset +
                      n_times] = self.variable_is_discrete(variable)
@@ -1041,7 +1053,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
             offset += n_times
 
         # Return number of control variables
-        return count, discrete, lbx, ubx, x0
+        return count, discrete, lbx, ubx, x0, indices
 
     def extract_controls(self, ensemble_member=0):
         # Solver output
@@ -1058,23 +1070,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
 
         # Done
         return results
-
-    def control_vector(self, variable, ensemble_member=0):
-        # Default implementation: One single set of control inputs for all
-        # ensembles
-        t0 = self.initial_time
-        X = self.solver_input
-
-        # Return array of indexes for control
-        offset = 0
-        for control_input in self.controls:
-            times = self.times(control_input)
-            n_times = len(times)
-            if control_input == variable:
-                return X[offset:offset + n_times]
-            offset += n_times
-
-        raise KeyError(variable)
 
     def control_at(self, variable, t, ensemble_member=0, scaled=False, extrapolate=True):
         # Default implementation: One single set of control inputs for all
@@ -1152,12 +1147,36 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         count = self.ensemble_size * ensemble_member_size
 
         # Allocate arrays
+        indices = [{} for ensemble_member in range(self.ensemble_size)]
+
         discrete = np.zeros(count, dtype=np.bool)
 
         lbx = -np.inf * np.ones(count)
         ubx = np.inf * np.ones(count)
 
         x0 = np.zeros(count)
+
+        # Indices
+        for ensemble_member in range(self.ensemble_size):
+            offset = ensemble_member * ensemble_member_size
+            for variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
+                if variable in self.integrated_states:
+                    indices[ensemble_member][variable] = offset
+
+                    offset += 1
+
+                else:
+                    times = self.times(variable)
+                    n_times = len(times)
+
+                    indices[ensemble_member][variable] = slice(offset, offset + n_times)
+
+                    offset += n_times
+
+            for extra_variable in self.extra_variables:
+                indices[ensemble_member][extra_variable.name()] = offset
+
+                offset += 1
 
         # Types
         for ensemble_member in range(self.ensemble_size):
@@ -1281,7 +1300,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                     pass
 
         # Return number of state variables
-        return count, discrete, lbx, ubx, x0
+        return count, discrete, lbx, ubx, x0, indices
 
     def extract_states(self, ensemble_member=0):
         # Solver output
@@ -1350,38 +1369,17 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         return results
 
     def state_vector(self, variable, ensemble_member=0):
-        if variable in self.__state_vector_cache[ensemble_member]:
-            return self.__state_vector_cache[ensemble_member][variable]
-
         # Look up transcribe_problem() state.
         X = self.solver_input
         control_size = self.__control_size
         ensemble_member_size = int(self.__state_size / self.ensemble_size)
 
-        # Find state vector
-        vector = None
-        offset = control_size + ensemble_member * ensemble_member_size
-        for free_variable in itertools.chain(self.differentiated_states, self.algebraic_states, self.__path_variable_names):
-            times = self.times(free_variable)
-            n_times = len(times)
-            if free_variable == variable:
-                if free_variable in self.integrated_states:
-                    vector = X[offset]
-                    break
-                else:
-                    vector = X[offset:offset + n_times]
-                    break
-            if free_variable in self.integrated_states:
-                offset += 1
-            else:
-                offset += n_times
+        # Extract state vector
+        indices = self.__indices[ensemble_member][variable]
+        times = self.times(variable)
+        n_times = len(times)
+        vector = X[indices]
 
-        if vector is None:
-            # Could not find state.  Try controls.
-            vector = self.control_vector(
-                variable, ensemble_member=ensemble_member)
-
-        self.__state_vector_cache[ensemble_member][variable] = vector
         return vector
 
     def state_at(self, variable, t, ensemble_member=0, scaled=False, extrapolate=True):
