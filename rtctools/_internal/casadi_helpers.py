@@ -33,7 +33,7 @@ def reduce_matvec(e, v):
 
     This reduces the number of nodes required to represent the linear operations.
     """
-    return ca.reshape(ca.jtimes(e, v, v), e.shape)
+    return ca.linearize(e, v, ca.DM.zeros(v.size()))
 
 
 def substitute_in_external(expr, symbols, values):
