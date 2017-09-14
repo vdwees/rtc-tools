@@ -23,33 +23,58 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
     # Default solver tolerance
     solver_tol = 1e-10
 
-    def __init__(self, mx, dae_residual, initial_residual, start, stop, default_dt):
+    def __init__(self, mx, pymola_model, start, stop, default_dt):
         super(Model, self).__init__()
 
-        self.default_dt = default_dt
-        self.__initial_residual = initial_residual
-        self.__dae_residual = dae_residual
         self.__mx = mx
-
+        self.__pymola_model = pymola_model
         self.time = start
+        self.default_dt = default_dt
 
+        # Initialize nominals and types
+        # These are not in @cached dictionary properties for backwards compatibility.
+        self.__nominals = {}
+        self.__python_types = {}
+        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
+            sym_name = v.symbol.name()
+            # We need to take care to allow nominal vectors.
+            if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero():
+                self.__nominals[sym_name] = ca.fabs(v.nominal)
+
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
+                        sym_name, self.__nominals[sym_name]))
+
+            self.__python_types[sym_name] = v.python_type
+
+        # Initialize dae and initial residuals
+        variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
+        function_arguments = [self.__pymola_model.time] + [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
+
+        self.__dae_residual = self.__pymola_model.dae_residual_function(*function_arguments)
+
+        self.__initial_residual = self.__pymola_model.initial_residual_function(*function_arguments)
+        if self.__initial_residual is None:
+            self.__initial_residual = ca.MX()
+
+        # Substitute ders for discrete states using backwards euler formulation
         X = ca.vertcat(*self.__mx['states'])
         X_prev = ca.MX.sym("prev_states", len(self.__mx['states']))
         dt = ca.MX.sym("delta_t")
 
-        derivatives = ca.vertcat(*self.__mx['derivatives'])
-
         derivative_approximations = []
-
         for derivative_state in self.__mx['derivatives']:
             index = next((i for i, s in enumerate(X) if s.name() == derivative_state.name()[4:-1]))
             derivative_approximations.append((X[index] - X_prev[index]) / dt)
 
+        derivatives = ca.vertcat(*self.__mx['derivatives'])
         derivative_approximations = ca.vertcat(*derivative_approximations)
-
         dae_residual_substituted_ders = ca.substitute(self.__dae_residual, derivatives, derivative_approximations)
 
         # TODO: implement lookup_tables
+
+        # TODO: what happens when alg_states is not empty? How do they fit in?
+        # TODO: can we forget about constants once residuals are initialized?
 
         # Construct state array
         self.__sym_iter = self.__mx['states'] + self.__mx['constant_inputs'] + self.__mx['parameters']
@@ -166,36 +191,6 @@ class SimulationProblem:
                     # All inputs are constant inputs
                     self.__mx['constant_inputs'].append(v.symbol)
 
-        # Initialize nominals and types
-        # These are not in @cached dictionary properties for backwards compatibility.
-        self.__nominals = {}
-        self.__python_types = {}
-        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
-            sym_name = v.symbol.name()
-            # We need to take care to allow nominal vectors.
-            if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero():
-                self.__nominals[sym_name] = ca.fabs(v.nominal)
-
-                if logger.getEffectiveLevel() == logging.DEBUG:
-                    logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
-                        sym_name, self.__nominals[sym_name]))
-
-            self.__python_types[sym_name] = v.python_type
-
-        # Initialize dae and initial residuals
-        # These are not in @cached dictionary properties so that we need to create the list
-        # of function arguments only once.
-        variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
-        function_arguments = [self.__pymola_model.time] + [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
-
-        self.__dae_residual = self.__pymola_model.dae_residual_function(*function_arguments)
-        if self.__dae_residual is None:
-            self.__dae_residual = ca.MX()
-
-        self.__initial_residual = self.__pymola_model.initial_residual_function(*function_arguments)
-        if self.__initial_residual is None:
-            self.__initial_residual = ca.MX()
-
         # Log variables in debug mode
         if logger.getEffectiveLevel() == logging.DEBUG:
             logger.debug("ModelicaMixin: Found states {}".format(
@@ -251,7 +246,7 @@ class SimulationProblem:
         self.__stop = stop
         self.__dt = dt
         self._dt = dt # backward compatibility for now
-        self.__model = Model(self.__mx, self.__dae_residual, self.__initial_residual, start, stop, dt)
+        self.__model = Model(self.__mx, self.__pymola_model, start, stop, dt)
 
         if tol is not None:
             self.__model.solver_tol = tol
