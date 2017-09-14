@@ -225,7 +225,7 @@ class ControlTreeMixin(OptimizationProblem):
                         pass
 
         # Return number of control variables
-        return count, discrete, lbx, ubx, x0
+        return count, discrete, lbx, ubx, x0, self._control_indices
 
     def extract_controls(self, ensemble_member=0):
         # Solver output
@@ -239,10 +239,6 @@ class ControlTreeMixin(OptimizationProblem):
 
         # Done
         return results
-
-    def control_vector(self, variable, ensemble_member=0):
-        X = self.solver_input
-        return X[self._control_indices[variable][ensemble_member, :]]
 
     def control_at(self, variable, t, ensemble_member=0, scaled=False, extrapolate=True):
         t0 = self.initial_time
