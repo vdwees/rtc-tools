@@ -131,7 +131,7 @@ class PIMixin(SimulationProblem):
         # Set initial input values
         for variable, timeseries in self.__timeseries_import.items():
             if variable in self.__input_variables:
-                value = timeseries[self.__timeseries_import._forecast_index]
+                value = timeseries[self.__timeseries_import.forecast_index]
                 if np.isfinite(value):
                     self.set_var(variable, value)
 
@@ -145,7 +145,7 @@ class PIMixin(SimulationProblem):
 
         # Extract consistent t0 values
         for variable in self.__output_variables:
-            self.__output[variable][self.__timeseries_import._forecast_index] = self.get_var(variable)
+            self.__output[variable][self.__timeseries_import.forecast_index] = self.get_var(variable)
 
     def update(self, dt):
         # Time step
