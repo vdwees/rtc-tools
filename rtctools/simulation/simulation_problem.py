@@ -62,9 +62,14 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         if self.__initial_residual is None:
             self.__initial_residual = ca.MX()
 
+        # Construct state vector
+        self.__sym_iter = self.__mx['states'] + self.__mx['algebraics'] + self.__mx['constant_inputs'] + self.__mx['parameters']
+        self.__state_vector = np.full(len(self.__sym_iter), np.nan)
+        self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics'])
+
         # Substitute ders for discrete states using backwards euler formulation
-        X = ca.vertcat(*self.__mx['states'])
-        X_prev = ca.MX.sym("prev_states", len(self.__mx['states']))
+        X = ca.vertcat(*self.__sym_iter[:self.__states_end_index])
+        X_prev = ca.MX.sym("prev_states", X.size1())
         dt = ca.MX.sym("delta_t")
 
         derivative_approximations = []
@@ -81,11 +86,6 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         # TODO: what happens when alg_states is not empty? How do they fit in?
         # TODO: can we forget about constants once residuals are initialized?
 
-        # Construct state vector
-        self.__sym_iter = self.__mx['states'] + self.__mx['algebraics'] + self.__mx['constant_inputs'] + self.__mx['parameters']
-        self.__state_vector = np.full(len(self.__sym_iter), np.nan)
-        self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics'])
-
         # Construct function parameters
         parameters = ca.vertcat(dt, X_prev, *self.__sym_iter[self.__states_end_index:])
 
@@ -97,7 +97,7 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         # take a step
         guess = self.__state_vector[:self.__states_end_index]
         next_state = self.__do_step(guess, ca.vertcat(dt, *self.__state_vector))
-        self.__state_vector[:self.__states_end_index] = next_state
+        self.__state_vector[:self.__states_end_index] = next_state.T
 
         # increment time
         self.time += dt
@@ -144,14 +144,14 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
 
         # Use rootfinder() to construct a function to find consistant intial conditions
         f = ca.Function("initial_residual", [X, parameters], [full_initial_residual])
-        find_initial_state = ca.rootfinder("s", "newton", f, self.solver_options())
+        find_initial_state = ca.rootfinder("find_initial_state", "newton", f, self.solver_options())
 
         # Convert any np.nan (unset values) to a default guess of 0.0 and get the initial state
-        guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]))
+        guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]), *np.zeros_like(self.__mx['derivatives']))
         initial_state = find_initial_state(guess, ca.vertcat(self.__state_vector[self.__states_end_index:]))
 
         # Update state vector with initial conditions
-        self.__state_vector[:self.__states_end_index] = initial_state[:self.__states_end_index]
+        self.__state_vector[:self.__states_end_index] = initial_state[:self.__states_end_index].T
 
         # make a copy of the initialized initial state vector in case we want to run the model again
         self.__initial_state_vector = copy.deepcopy(self.__state_vector)
