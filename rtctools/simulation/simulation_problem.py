@@ -54,7 +54,8 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
 
         # Initialize dae and initial residuals
         variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
-        function_arguments = [self.__pymola_model.time] + [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
+        function_arguments = [self.__pymola_model.time] + \
+            [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
 
         self.__dae_residual = self.__pymola_model.dae_residual_function(*function_arguments)
 
@@ -144,7 +145,8 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         parameters = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
 
         if X.size1() != full_initial_residual.size1():
-            logger.error('Initialization Error: Number of states ({}) does not equal number of initial equations ({})'.format(X.size1(), full_initial_residual.size1()))
+            logger.error('Initialization Error: Number of states ({}) does not equal number of initial equations ({})'.format(
+                X.size1(), full_initial_residual.size1()))
 
         # Use rootfinder() to construct a function to find consistant intial conditions
         f = ca.Function("initial_residual", [X, parameters], [full_initial_residual])
@@ -225,7 +227,8 @@ class SimulationProblem:
 
         for v in self.__pymola_model.inputs:
             if v.symbol.name() in delayed_feedback_variables:
-                # Delayed feedback variables are local to each ensemble, and therefore belong to the collection of algebraic variables,
+                # Delayed feedback variables are local to each ensemble, and
+                # therefore belong to the collection of algebraic variables,
                 # rather than to the control inputs.
                 self.__mx['algebraics'].append(v.symbol)
             else:
