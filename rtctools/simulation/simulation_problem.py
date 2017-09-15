@@ -87,6 +87,8 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
                 X.size1(), dae_residual_substituted_ders.size1()))
 
         # TODO: implement lookup_tables
+        # TODO: use alias relation (so the get and set api will work with aliases too)
+        # TODO: output the variables with the output tag, and not one of their aliases
 
         # Construct function parameters
         parameters = ca.vertcat(dt, X_prev, *self.__sym_iter[self.__states_end_index:])
