@@ -1,10 +1,13 @@
 model TestModel
 	parameter Real x_start;
-	Real x(start=x_start, fixed=true);
-	Real w(start=0.0, fixed=true);
+	Real x(start=x_start);
+	Real w(start=0.0);
 	Real alias;
 
 	parameter Real k = 1.0;
+
+	input Real u;
+	output Real u_out;
 
 	output Real y;
 
@@ -18,7 +21,7 @@ model TestModel
 	output Real constant_output;
 
 equation
-	der(x) = k * x;
+	der(x) = k * x + u;
 	der(w) = x;
 
 	alias = x;
@@ -34,5 +37,7 @@ equation
 	end if;
 
 	constant_output = constant_input;
+
+	u_out = u + 1;
 
 end TestModel;
