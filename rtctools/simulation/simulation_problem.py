@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from datetime import timedelta
 import bisect
+import copy
 
 import casadi as ca
 import itertools
@@ -23,10 +24,14 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
     # Default solver tolerance
     solver_tol = 1e-10
 
+    # Initial State Vector
+    __initial_state_vector = None
+
     def __init__(self, mx, pymola_model, start, stop, default_dt):
         super(Model, self).__init__()
 
         self.__mx = mx
+        self.__symbol_dict = {s.name(): s for s in itertools.chain(*self.__mx.values())}
         self.__pymola_model = pymola_model
         self.time = start
         self.default_dt = default_dt
@@ -76,30 +81,23 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         # TODO: what happens when alg_states is not empty? How do they fit in?
         # TODO: can we forget about constants once residuals are initialized?
 
-        # Construct state array
-        self.__sym_iter = self.__mx['states'] + self.__mx['constant_inputs'] + self.__mx['parameters']
-        self.__state_array = np.full(len(self.__sym_iter), np.nan)
-        self.__states_end_index = len(self.__mx['states'])
+        # Construct state vector
+        self.__sym_iter = self.__mx['states'] + self.__mx['algebraics'] + self.__mx['constant_inputs'] + self.__mx['parameters']
+        self.__state_vector = np.full(len(self.__sym_iter), np.nan)
+        self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics'])
 
         # Construct function parameters
-        parameters = ca.vertcat(dt, X_prev, *self.__mx['constant_inputs'], *self.__mx['parameters'])
+        parameters = ca.vertcat(dt, X_prev, *self.__sym_iter[self.__states_end_index:])
 
         # Use rootfinder() to make a function that takes a step forward in time
         f = ca.Function("f", [X, parameters], [dae_residual_substituted_ders])
         self.__do_step = ca.rootfinder("s", "newton", f, self.solver_options())
 
     def do_step(self, dt):
-        if any(np.isnan(self.__state_array)):
-            arr = zip(self.__sym_iter, self.__state_array)
-            print("State Array:")
-            for sym, val in arr:
-                print(str(sym) + ': ' + str(val))
-            raise ValueError("Missing inputs or parameters")
-
         # take a step
-        guess = self.__state_array[:self.__states_end_index]
-        next_state = self.__do_step(guess, ca.vertcat(dt, *self.__state_array))
-        self.__state_array[:self.__states_end_index] = next_state
+        guess = self.__state_vector[:self.__states_end_index]
+        next_state = self.__do_step(guess, ca.vertcat(dt, *self.__state_vector))
+        self.__state_vector[:self.__states_end_index] = next_state
 
         # increment time
         self.time += dt
@@ -111,28 +109,70 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         return opts
 
     def set(self, variable, value):
-        index = self.__get_state_array_index(variable)
-        self.__state_array[index] = float(value) # TODO: handle booleans & ints?
+        index = self.__get_state_vector_index(variable)
+        self.__state_vector[index] = float(value) # TODO: handle booleans & ints?
 
     def initialize(self):
-        # TODO: find consistant t0 values
-        # for now, initialize variables manually (from the simulation example)
-        self.set('storage.V', self.get('storage_V_init'))
-        self.set('storage.n_QForcing', 0)
+        initial_residual = self.__initial_residual
+        dae_residual = self.__dae_residual
+        symbol_dict = self.__symbol_dict
 
-    def __get_state_array_index(self, variable):
+        # Assemble residual for start attributes 
+        start_attribute_residuals = []
+        for state in self.__pymola_model.states:
+            if not state.fixed:
+                if type(state.start) == ca.MX:
+                    # state.start is a symbol from the model, so we attempt to
+                    # set it equal to the value of that symbol 
+                    # TODO: does this make sense:
+                    # self.set(state.symbol.name(), self.get(state.start.name()))?
+                    pass
+                else:
+                    # state.start has a numerical value, so we set it in the state vector
+                    self.set(state.symbol.name(), state.start)
+            else:
+                # add a residual for the difference between the state and its starting value
+                start_attribute_residuals.append(symbol_dict[state.symbol.name()]-state.start)
+
+        # make a function describing the initial contition
+        full_initial_residual = ca.veccat(dae_residual, initial_residual, *start_attribute_residuals)
+        X = ca.vertcat(*self.__sym_iter[:self.__states_end_index], *self.__mx['derivatives'])
+        parameters = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
+
+        if X.size1() != full_initial_residual.size1():
+            logger.error('Initialization Error: Number of states ({}) does not equal number of initial equations ({})'.format(X.size1(), full_initial_residual.size1()))
+
+        # Use rootfinder() to construct a function to find consistant intial conditions
+        f = ca.Function("initial_residual", [X, parameters], [full_initial_residual])
+        find_initial_state = ca.rootfinder("s", "newton", f, self.solver_options())
+
+        # Convert any np.nan (unset values) to a default guess of 0.0 and get the initial state
+        guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]))
+        initial_state = find_initial_state(guess, ca.vertcat(self.__state_vector[self.__states_end_index:]))
+
+        # Update state vector with initial conditions
+        self.__state_vector[:self.__states_end_index] = initial_state[:self.__states_end_index]
+
+        # make a copy of the initialized initial state vector in case we want to run the model again
+        self.__initial_state_vector = copy.deepcopy(self.__state_vector)
+
+        # Test state vector for missing values and warn
+        value_is_nan = np.isnan(self.__state_vector)
+        if any(value_is_nan):
+            for sym, isnan in zip(self.__sym_iter, value_is_nan):
+                if isnan:
+                    logger.warning('Variable {} has no value.'.format(sym))
+
+    def __get_state_vector_index(self, variable):
         # TODO: cache these indices
         index =  next((i for i, sym in enumerate(self.__sym_iter) if sym.name() == variable), None)
         if index is None:
-            raise KeyError(str(variable) + "does not exist!") # Perhaps only warn?
+            raise KeyError(str(variable) + " does not exist!")
         return index
 
     def get(self, variable):
-        index = self.__get_state_array_index(variable)
-        return self.__state_array[index]
-
-
-
+        index = self.__get_state_vector_index(variable)
+        return self.__state_vector[index]
 
 
 
