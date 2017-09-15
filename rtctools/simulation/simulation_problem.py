@@ -88,9 +88,6 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
 
         # TODO: implement lookup_tables
 
-        # TODO: what happens when alg_states is not empty? How do they fit in?
-        # TODO: can we forget about constants once residuals are initialized?
-
         # Construct function parameters
         parameters = ca.vertcat(dt, X_prev, *self.__sym_iter[self.__states_end_index:])
 
