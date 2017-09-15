@@ -10,6 +10,7 @@ import itertools
 import pymola
 import rtctools.data.csv as csv
 import pymola.backends.casadi.api
+from collections import OrderedDict
 
 
 logger = logging.getLogger("rtctools")
@@ -31,9 +32,7 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         super(Model, self).__init__()
 
         self.__mx = mx
-        self.__symbol_dict = {s.name(): s for s in itertools.chain(*self.__mx.values())}
         self.__pymola_model = pymola_model
-        self.time = start
         self.default_dt = default_dt
 
         # Initialize nominals and types
@@ -64,9 +63,18 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
             self.__initial_residual = ca.MX()
 
         # Construct state vector
-        self.__sym_iter = self.__mx['states'] + self.__mx['algebraics'] + self.__mx['constant_inputs'] + self.__mx['parameters']
+        self.__sym_iter = self.__mx['states'] + \
+                          self.__mx['algebraics'] + \
+                          self.__mx['time'] + \
+                          self.__mx['constant_inputs'] + \
+                          self.__mx['parameters']
         self.__state_vector = np.full(len(self.__sym_iter), np.nan)
         self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics'])
+        self.__sym_dict = OrderedDict(((sym.name(), sym) for sym in self.__sym_iter))
+
+
+        # Set time
+        self.set('time', start)
 
         # Substitute ders for discrete states using backwards euler formulation
         X = ca.vertcat(*self.__sym_iter[:self.__states_end_index])
@@ -98,13 +106,17 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         self.__do_step = ca.rootfinder("s", "newton", f, self.solver_options())
 
     def do_step(self, dt):
+        # increment time
+        self.set('time', self.time + dt)
+
         # take a step
         guess = self.__state_vector[:self.__states_end_index]
         next_state = self.__do_step(guess, ca.vertcat(dt, *self.__state_vector))
         self.__state_vector[:self.__states_end_index] = next_state.T
 
-        # increment time
-        self.time += dt
+    @property
+    def time(self):
+        return self.get('time')
 
     def solver_options(self):
         opts = {}
@@ -119,7 +131,7 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
     def initialize(self):
         initial_residual = self.__initial_residual
         dae_residual = self.__dae_residual
-        symbol_dict = self.__symbol_dict
+        symbol_dict = self.__sym_dict
 
         # Assemble residual for start attributes 
         start_attribute_residuals = []
@@ -178,6 +190,9 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
     def get(self, variable):
         index = self.__get_state_vector_index(variable)
         return self.__state_vector[index]
+
+    def get_model_variables(self):
+        return self.__sym_dict
 
 
 
