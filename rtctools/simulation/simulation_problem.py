@@ -140,7 +140,7 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
                 start_attribute_residuals.append(symbol_dict[state.symbol.name()]-state.start)
 
         # make a function describing the initial contition
-        full_initial_residual = ca.veccat(dae_residual, initial_residual, *start_attribute_residuals)
+        full_initial_residual = ca.vertcat(dae_residual, initial_residual, *start_attribute_residuals)
         X = ca.vertcat(*self.__sym_iter[:self.__states_end_index], *self.__mx['derivatives'])
         parameters = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
 
