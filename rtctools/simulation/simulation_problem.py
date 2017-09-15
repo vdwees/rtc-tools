@@ -81,6 +81,10 @@ class Model(object): # TODO: inherit from pymola model? (could be the cleanest w
         derivative_approximations = ca.vertcat(*derivative_approximations)
         dae_residual_substituted_ders = ca.substitute(self.__dae_residual, derivatives, derivative_approximations)
 
+        if X.size1() != dae_residual_substituted_ders.size1():
+            logger.error('Formulation Error: Number of states ({}) does not equal number of equations ({})'.format(
+                X.size1(), dae_residual_substituted_ders.size1()))
+
         # TODO: implement lookup_tables
 
         # TODO: what happens when alg_states is not empty? How do they fit in?
