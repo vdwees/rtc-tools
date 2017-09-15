@@ -102,7 +102,7 @@ class PIMixin(SimulationProblem):
                     raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
                         self.__timeseries_import.times[i + 1]))
 
-    def initialize(self, config_file=None):
+    def initialize(self):
         # Set up experiment
         self.setup_experiment(0, self.__timeseries_import_times[-1], self.__dt)
 
@@ -141,7 +141,7 @@ class PIMixin(SimulationProblem):
         self.__output = {variable : np.full(n_times, np.nan) for variable in self.__output_variables}
 
         # Call super, which will also initialize the model itself
-        super().initialize(config_file)
+        super().initialize()
 
         # Extract consistent t0 values
         for variable in self.__output_variables:
