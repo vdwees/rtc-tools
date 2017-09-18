@@ -75,15 +75,15 @@ class SimulationProblem:
 
         # Log variables in debug mode
         if logger.getEffectiveLevel() == logging.DEBUG:
-            logger.debug("ModelicaMixin: Found states {}".format(
+            logger.debug("SimulationProblem: Found states {}".format(
                 ', '.join([var.name() for var in self.__mx['states']])))
-            logger.debug("ModelicaMixin: Found derivatives {}".format(
+            logger.debug("SimulationProblem: Found derivatives {}".format(
                 ', '.join([var.name() for var in self.__mx['derivatives']])))
-            logger.debug("ModelicaMixin: Found algebraics {}".format(
+            logger.debug("SimulationProblem: Found algebraics {}".format(
                 ', '.join([var.name() for var in self.__mx['algebraics']])))
-            logger.debug("ModelicaMixin: Found constant inputs {}".format(
+            logger.debug("SimulationProblem: Found constant inputs {}".format(
                 ', '.join([var.name() for var in self.__mx['constant_inputs']])))
-            logger.debug("ModelicaMixin: Found parameters {}".format(
+            logger.debug("SimulationProblem: Found parameters {}".format(
                 ', '.join([var.name() for var in self.__mx['parameters']])))
 
 
@@ -98,7 +98,7 @@ class SimulationProblem:
                 self.__nominals[sym_name] = ca.fabs(v.nominal)
 
                 if logger.getEffectiveLevel() == logging.DEBUG:
-                    logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
+                    logger.debug("SimulationProblem: Set nominal value for variable {} to {}".format(
                         sym_name, self.__nominals[sym_name]))
 
             self.__python_types[sym_name] = v.python_type
@@ -137,6 +137,9 @@ class SimulationProblem:
         derivatives = ca.vertcat(*self.__mx['derivatives'])
         derivative_approximations = ca.vertcat(*derivative_approximations)
         dae_residual_substituted_ders = ca.substitute(self.__dae_residual, derivatives, derivative_approximations)
+
+        logger.debug('SimulationProblem: DAE Residual is ' + ', '.join(
+            [str(res) for res in ca.vertsplit(dae_residual_substituted_ders)]))
 
         if X.size1() != dae_residual_substituted_ders.size1():
             logger.error('Formulation Error: Number of states ({}) does not equal number of equations ({})'.format(
@@ -189,6 +192,9 @@ class SimulationProblem:
         full_initial_residual = ca.vertcat(dae_residual, initial_residual, *start_attribute_residuals)
         X = ca.vertcat(*self.__sym_iter[:self.__states_end_index], *self.__mx['derivatives'])
         parameters = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
+
+        logger.debug('SimulationProblem: Initial Residual is ' +', '.join(
+            [str(res) for res in ca.vertsplit(full_initial_residual)]))
 
         if X.size1() != full_initial_residual.size1():
             logger.error('Initialization Error: Number of states ({}) does not equal number of initial equations ({})'.format(
