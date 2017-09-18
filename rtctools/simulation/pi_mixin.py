@@ -178,36 +178,29 @@ class PIMixin(SimulationProblem):
 
         # Start of write output
         # Write the time range for the export file.
-        self.__timeseries_export._times = self.__timeseries_import.times[self.__timeseries_import.forecast_index:]
+        self.__timeseries_export.times = self.__timeseries_import.times[self.__timeseries_import.forecast_index:]
 
         # Write other time settings
-        self.__timeseries_export._start_datetime = self.__timeseries_import._forecast_datetime
-        self.__timeseries_export._end_datetime  = self.__timeseries_import._end_datetime
-        self.__timeseries_export._forecast_datetime  = self.__timeseries_import._forecast_datetime
-        self.__timeseries_export._dt = self.__timeseries_import._dt
-        self.__timeseries_export._timezone = self.__timeseries_import._timezone
+        self.__timeseries_export.forecast_datetime  = self.__timeseries_import.forecast_datetime
+        self.__timeseries_export.dt = self.__timeseries_import.dt
+        self.__timeseries_export.timezone = self.__timeseries_import.timezone
 
         # Write the ensemble properties for the export file.
-        self.__timeseries_export._ensemble_size = 1
-        self.__timeseries_export._contains_ensemble = self.__timeseries_import.contains_ensemble
-        while self.__timeseries_export._ensemble_size > len(self.__timeseries_export._values):
-            self.__timeseries_export._values.append({})
-
-        # Transfer units from import timeseries
-        self.__timeseries_export._units = self.__timeseries_import._units
+        self.__timeseries_export.ensemble_size = 1
+        self.__timeseries_export.contains_ensemble = self.__timeseries_import.contains_ensemble
 
         # For all variables that are output variables the values are
         # extracted from the results.
         for key, values in self.__output.items():
             # Check if ID mapping is present
             try:
-                location_parameter_id = self.__timeseries_export._data_config.pi_variable_ids(key)
+                location_parameter_id = self.__data_config.pi_variable_ids(key)
             except KeyError:
                 logger.debug('PIMixIn: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(key))
                 continue
 
             # Add series to output file
-            self.__timeseries_export.set(key, values)
+            self.__timeseries_export.set(key, values, unit=self.__timeseries_import.get_unit(key))
 
         # Write output file to disk
         self.__timeseries_export.write()
