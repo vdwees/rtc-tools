@@ -139,7 +139,7 @@ class SimulationProblem:
         dae_residual_substituted_ders = ca.substitute(self.__dae_residual, derivatives, derivative_approximations)
 
         logger.debug('SimulationProblem: DAE Residual is ' + ', '.join(
-            [str(res) for res in ca.vertsplit(dae_residual_substituted_ders)]))
+            (str(res) for res in ca.vertsplit(dae_residual_substituted_ders))))
 
         if X.size1() != dae_residual_substituted_ders.size1():
             logger.error('Formulation Error: Number of states ({}) does not equal number of equations ({})'.format(
@@ -194,7 +194,7 @@ class SimulationProblem:
         parameters = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
 
         logger.debug('SimulationProblem: Initial Residual is ' +', '.join(
-            [str(res) for res in ca.vertsplit(full_initial_residual)]))
+            (str(res) for res in ca.vertsplit(full_initial_residual))))
 
         if X.size1() != full_initial_residual.size1():
             logger.error('Initialization Error: Number of states ({}) does not equal number of initial equations ({})'.format(
