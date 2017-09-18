@@ -1,7 +1,7 @@
 model TestModel
 	parameter Real x_start;
-	Real x(start=x_start);
-	Real w(start=0.0);
+	Real x(start=x_start, fixed=true);
+	Real w(start=0.0, fixed=true);
 	Real alias;
 
 	parameter Real k = 1.0;
