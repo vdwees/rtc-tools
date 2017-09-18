@@ -149,9 +149,11 @@ class SimulationProblem:
         # Construct function parameters
         parameters = ca.vertcat(dt, X_prev, *self.__sym_iter[self.__states_end_index:])
 
-        # Use rootfinder() to make a function that takes a step forward in time
-        f = ca.Function("f", [X, parameters], [dae_residual_substituted_ders])
-        self.__do_step = ca.rootfinder("s", "newton", f, self.solver_options())
+        # Construct a function res_vals that returns the numerical residuals of a numnerical state
+        self.__res_vals = ca.Function("res_vals", [X, parameters], [dae_residual_substituted_ders])
+
+        # Use rootfinder() to make a function that takes a step forward in time by trying to zero res_vals()
+        self.__do_step = ca.rootfinder("next_state", "newton", self.__res_vals, self.solver_options())
 
         # Call parent class first for default behaviour.
         super().__init__()
@@ -224,6 +226,12 @@ class SimulationProblem:
         Any postprocessing takes place here.
         """
         pass
+
+    def get_current_residual_values(self):
+        """
+        Returns the residual values (equation error) of the current state
+        """
+        return self.__res_vals(self.__state_vector[:self.__states_end_index], ca.vertcat(self.__dt, *self.__state_vector))
 
     def setup_experiment(self, start, stop, dt):
         """ 
