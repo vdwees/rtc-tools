@@ -144,7 +144,7 @@ class CSVMixin(SimulationProblem):
         self.__output = {variable : np.full(n_times, np.nan) for variable in self.__output_variables}
 
         # Call super, which will also initialize the model itself
-        super().initialize(config_file)
+        super().initialize()
 
         # Extract consistent t0 values
         for variable in self.__output_variables:
