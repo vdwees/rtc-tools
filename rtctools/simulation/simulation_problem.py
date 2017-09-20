@@ -108,6 +108,8 @@ class SimulationProblem:
         function_arguments = [self.__pymola_model.time] + \
             [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
 
+        self.__all_vars = list(itertools.chain.from_iterable(((v for v in getattr(self.__pymola_model, variable_list)) for variable_list in variable_lists)))
+
         self.__dae_residual = self.__pymola_model.dae_residual_function(*function_arguments)
 
         self.__initial_residual = self.__pymola_model.initial_residual_function(*function_arguments)
@@ -173,20 +175,35 @@ class SimulationProblem:
 
         # Assemble residual for start attributes 
         start_attribute_residuals = []
-        for state in self.__pymola_model.states:
-            if not state.fixed:
-                if type(state.start) == ca.MX:
-                    # state.start is a symbol from the model, so we attempt to
-                    # set it equal to the value of that symbol 
-                    # TODO: does this make sense:
-                    # self.set(state.symbol.name(), self.get(state.start.name()))?
-                    pass
+        for var in self.__all_vars:
+            if not var.fixed:
+                if type(var.start) == ca.MX:
+                    if not var.start.is_symbolic():
+                        # start was a float in MX form
+                        # TODO: Handle bools and ints
+                        start = float(var.start)
+                    else:
+                        # var.start is a symbol from the model, so we attempt to
+                        # set it equal to the value of that symbol
+                        # TODO: could be a recursive search?
+                        # TODO: what if that variable is not set yet?
+                        try:
+                            start = self.get_var(var.start.name())
+                        except Exception:
+                            logger.warning('Initialize: Falied to set {} guess with the start value of {}'.format(
+                                var.symbol.name(), var.start.name()))
+                            continue
+                    self.set_var(var.symbol.name(), start)
                 else:
-                    # state.start has a numerical value, so we set it in the state vector
-                    self.set_var(state.symbol.name(), state.start)
+                    # var.start has a numerical value, so we set it in the state vector
+                    try:
+                        self.set_var(var.symbol.name(), var.start)
+                    except KeyError:
+                        logger.warning('Initialize: {} not found in state vector. Initial value of {} not set.'.format(
+                            var.symbol.name(), var.start))
             else:
                 # add a residual for the difference between the state and its starting value
-                start_attribute_residuals.append(symbol_dict[state.symbol.name()]-state.start)
+                start_attribute_residuals.append(symbol_dict[var.symbol.name()]-var.start)
 
         # make a function describing the initial contition
         full_initial_residual = ca.vertcat(dae_residual, initial_residual, *start_attribute_residuals)
@@ -503,7 +520,7 @@ class SimulationProblem:
         compiler_options['eliminable_variable_expression'] = r'_\w+'
 
         # Automatically detect and eliminate alias variables.
-        compiler_options['detect_aliases'] = True
+        compiler_options['detect_aliases'] = False
 
         # Cache the model on disk
         compiler_options['cache'] = False #TODO: fix file suffix error when caching
