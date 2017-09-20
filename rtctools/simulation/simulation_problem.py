@@ -172,6 +172,7 @@ class SimulationProblem:
         initial_residual = self.__initial_residual
         dae_residual = self.__dae_residual
         symbol_dict = self.__sym_dict
+        param_sym_vector = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
 
         # Assemble residual for start attributes 
         start_attribute_residuals = []
@@ -202,6 +203,9 @@ class SimulationProblem:
                         logger.warning('Initialize: {} not found in state vector. Initial value of {} not set.'.format(
                             var.symbol.name(), var.start))
             else:
+                if ca.depends_on(param_sym_vector, var.symbol):
+                    # ignore when variable is an input
+                    continue
                 # add a residual for the difference between the state and its starting value
                 start_attribute_residuals.append(symbol_dict[var.symbol.name()]-var.start)
 
