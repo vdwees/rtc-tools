@@ -190,9 +190,9 @@ class SimulationProblem:
                         try:
                             start = self.get_var(var.start.name())
                         except Exception:
-                            logger.warning('Initialize: Falied to set {} guess with the start value of {}'.format(
+                            logger.warning('Initialize: Falied to set {} guess with the start value of {}. Using default of 0.0'.format(
                                 var.symbol.name(), var.start.name()))
-                            continue
+                            start = 0.0
                     self.set_var(var.symbol.name(), start)
                 else:
                     # var.start has a numerical value, so we set it in the state vector
