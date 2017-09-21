@@ -88,6 +88,7 @@ class SimulationProblem:
 
 
         # Initialize nominals and types
+        # TODO: Use the nominals in the formulation
         # These are not in @cached dictionary properties for backwards compatibility.
         self.__nominals = {}
         self.__python_types = {}
@@ -177,6 +178,7 @@ class SimulationProblem:
         # Set values of parameters defined in the model
         for var in self.__pymola_model.parameters:
             if np.isfinite(var.value):
+                logger.debug('SimulationProblem: Setting parameter {} = {}'.format(var.symbol.name(), var.value))
                 self.set_var(var.symbol.name(), var.value)
 
         # Assemble residual for state start attributes
