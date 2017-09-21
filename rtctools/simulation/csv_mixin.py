@@ -113,7 +113,7 @@ class CSVMixin(SimulationProblem):
 
         for parameter, value in self.__parameters.items():
             if parameter in self.__parameter_variables:
-                logger.debug("Setting parameter {} = {}".format(parameter, value))
+                logger.debug("CSVMixin: Setting parameter {} = {}".format(parameter, value))
 
                 self.set_var(parameter, value)
 
