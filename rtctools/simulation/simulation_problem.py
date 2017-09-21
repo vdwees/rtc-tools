@@ -193,7 +193,11 @@ class SimulationProblem:
                         # TODO: could be a recursive search?
                         # TODO: what if that variable is not set yet?
                         try:
-                            start = self.get_var(var.start.name())
+                            alias_start = self.get_var(var.start.name())
+                            if np.isfinite(alias_start):
+                                start = alias_start
+                            else:
+                                start = 0.0
                         except Exception:
                             logger.warning('Initialize: Falied to set {} guess with the start value of {}. \
                                 Using default of 0.0'.format(var.symbol.name(), var.start.name()))
