@@ -174,15 +174,19 @@ class SimulationProblem:
         symbol_dict = self.__sym_dict
         param_sym_vector = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
 
-        # Assemble residual for start attributes 
+        # Set values of parameters defined in the model
+        for var in self.__pymola_model.parameters:
+            if np.isfinite(var.value):
+                self.set_var(var.symbol.name(), var.value)
+
+        # Assemble residual for state start attributes
         start_attribute_residuals = []
-        for var in self.__all_vars:
+        for var in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states):
             if not var.fixed:
                 if type(var.start) == ca.MX:
                     if not var.start.is_symbolic():
                         # start was a float in MX form
-                        # TODO: Handle bools and ints
-                        start = float(var.start)
+                        start = var.python_type(var.start)
                     else:
                         # var.start is a symbol from the model, so we attempt to
                         # set it equal to the value of that symbol
@@ -203,9 +207,6 @@ class SimulationProblem:
                         logger.warning('Initialize: {} not found in state vector. Initial value of {} not set.'.format(
                             var.symbol.name(), var.start))
             else:
-                if ca.depends_on(param_sym_vector, var.symbol):
-                    # ignore when variable is an input
-                    continue
                 # add a residual for the difference between the state and its starting value
                 start_attribute_residuals.append(symbol_dict[var.symbol.name()]-var.start)
 
