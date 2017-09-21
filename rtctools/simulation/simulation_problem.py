@@ -230,6 +230,9 @@ class SimulationProblem:
         f = ca.Function("initial_residual", [X, parameters], [full_initial_residual])
         find_initial_state = ca.rootfinder("find_initial_state", "newton", f, self.solver_options())
 
+        # Warn for nans in state vector before initialization
+        self.__warn_for_nans()
+
         # Convert any np.nan (unset values) to a default guess of 0.0 and get the initial state
         guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]), *np.zeros_like(self.__mx['derivatives']))
         initial_state = find_initial_state(guess, ca.vertcat(self.__state_vector[self.__states_end_index:]))
@@ -240,12 +243,8 @@ class SimulationProblem:
         # make a copy of the initialized initial state vector in case we want to run the model again
         self.__initial_state_vector = copy.deepcopy(self.__state_vector)
 
-        # Test state vector for missing values and warn
-        value_is_nan = np.isnan(self.__state_vector)
-        if any(value_is_nan):
-            for sym, isnan in zip(self.__sym_iter, value_is_nan):
-                if isnan:
-                    logger.warning('Variable {} has no value.'.format(sym))
+        # Warn for nans in state vector after initialization
+        self.__warn_for_nans()
 
     def pre(self):
         """
@@ -450,6 +449,17 @@ class SimulationProblem:
         if index is None:
             raise KeyError(str(variable) + " does not exist!")
         return index
+
+    def __warn_for_nans(self):
+        """
+        Test state vector for missing values and warn
+        """
+        value_is_nan = np.isnan(self.__state_vector)
+        if any(value_is_nan):
+            for sym, isnan in zip(self.__sym_iter, value_is_nan):
+                if isnan:
+                    logger.warning('Variable {} has no value.'.format(sym))
+
 
     def set_var(self, name, value):
         """
