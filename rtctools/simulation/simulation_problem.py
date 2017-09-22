@@ -87,22 +87,21 @@ class SimulationProblem:
                 ', '.join([var.name() for var in self.__mx['parameters']])))
 
 
-        # Initialize nominals and types
-        # TODO: Use the nominals in the formulation
-        # These are not in @cached dictionary properties for backwards compatibility.
+        # Initialize nominals
         self.__nominals = {}
-        self.__python_types = {}
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
-            # We need to take care to allow nominal vectors.
-            if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero():
+            # If the nominal is 0.0 or 1.0 or -1.0, ignore: get_variable_nominal returns a default of 1.0
+            # TODO: handle allow nominal vectors (update() will need to load them)
+            if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero() or ca.MX(v.nominal + 1).is_zero():
+                continue
+            else:
+                if ca.MX(v.nominal).size1() != 1:
+                    logger.error('Vector Nominals not supported yet. ({})'.format(sym_name))
                 self.__nominals[sym_name] = ca.fabs(v.nominal)
-
                 if logger.getEffectiveLevel() == logging.DEBUG:
-                    logger.debug("SimulationProblem: Set nominal value for variable {} to {}".format(
+                    logger.debug("SimulationProblem: Setting nominal value for variable {} to {}".format(
                         sym_name, self.__nominals[sym_name]))
-
-            self.__python_types[sym_name] = v.python_type
 
         # Initialize dae and initial residuals
         variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
@@ -129,7 +128,7 @@ class SimulationProblem:
 
         # Substitute ders for discrete states using backwards euler formulation
         X = ca.vertcat(*self.__sym_iter[:self.__states_end_index])
-        X_prev = ca.MX.sym("prev_states", X.size1())
+        X_prev = ca.vertcat(*[ca.MX.sym(sym.name() + '_prev') for sym in self.__sym_iter[:self.__states_end_index]])
         dt = ca.MX.sym("delta_t")
 
         derivative_approximations = []
@@ -141,12 +140,32 @@ class SimulationProblem:
         derivative_approximations = ca.vertcat(*derivative_approximations)
         dae_residual_substituted_ders = ca.substitute(self.__dae_residual, derivatives, derivative_approximations)
 
-        logger.debug('SimulationProblem: DAE Residual is ' + ', '.join(
-            (str(res) for res in ca.vertsplit(dae_residual_substituted_ders))))
+        # Substitute each unscaled symbol for scaled_symbol * nominal
+        unscaled_symbols = []
+        scaled_symbols = []
+        for sym_name, nominal in self.__nominals.items():
+            # Add the symbol to the lists
+            symbol = self.__sym_dict[sym_name]
+            unscaled_symbols.append(symbol)
+            scaled_symbols.append(symbol * nominal)
 
-        if X.size1() != dae_residual_substituted_ders.size1():
+            # Also scale previous states
+            prev_state_index = next((i for i, s in enumerate(X) if s.name() == sym_name), None)
+            if prev_state_index is not None:
+                # symbol is a state, so add previous state terms to the substitute list
+                unscaled_symbols.append(X_prev[prev_state_index])
+                scaled_symbols.append(X_prev[prev_state_index] * nominal)
+
+        # Substitute unscaled terms for scaled terms
+        dae_residual_scaled = ca.substitute(dae_residual_substituted_ders,
+                                            ca.vertcat(*unscaled_symbols), ca.vertcat(*scaled_symbols))
+
+        logger.debug('SimulationProblem: DAE Residual is ' + ', '.join(
+            (str(res) for res in ca.vertsplit(dae_residual_scaled))))
+
+        if X.size1() != dae_residual_scaled.size1():
             logger.error('Formulation Error: Number of states ({}) does not equal number of equations ({})'.format(
-                X.size1(), dae_residual_substituted_ders.size1()))
+                X.size1(), dae_residual_scaled.size1()))
 
         # TODO: implement lookup_tables
         # TODO: use alias relation (so the get and set api will work with aliases too)
@@ -156,7 +175,7 @@ class SimulationProblem:
         parameters = ca.vertcat(dt, X_prev, *self.__sym_iter[self.__states_end_index:])
 
         # Construct a function res_vals that returns the numerical residuals of a numnerical state
-        self.__res_vals = ca.Function("res_vals", [X, parameters], [dae_residual_substituted_ders])
+        self.__res_vals = ca.Function("res_vals", [X, parameters], [dae_residual_scaled])
 
         # Use rootfinder() to make a function that takes a step forward in time by trying to zero res_vals()
         self.__do_step = ca.rootfinder("next_state", "newton", self.__res_vals, self.solver_options())
@@ -227,6 +246,19 @@ class SimulationProblem:
         full_initial_residual = ca.vertcat(dae_residual, initial_residual, *start_attribute_residuals)
         X = ca.vertcat(*self.__sym_iter[:self.__states_end_index], *self.__mx['derivatives'])
         parameters = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
+
+        # Substitute each unscaled symbol for scaled_symbol * nominal
+        unscaled_symbols = []
+        scaled_symbols = []
+        for sym_name, nominal in self.__nominals.items():
+            # Add the symbol to the lists
+            symbol = self.__sym_dict[sym_name]
+            unscaled_symbols.append(symbol)
+            scaled_symbols.append(symbol * nominal)
+
+        # Substitute unscaled terms for scaled terms
+        full_initial_residual = ca.substitute(full_initial_residual,
+                                            ca.vertcat(*unscaled_symbols), ca.vertcat(*scaled_symbols))
 
         logger.debug('SimulationProblem: Initial Residual is ' +', '.join(
             (str(res) for res in ca.vertsplit(full_initial_residual))))
@@ -394,9 +426,9 @@ class SimulationProblem:
 
         :returns: The value of the variable.
         """
-
+        nominal = self.get_variable_nominal(name)
         index = self.__get_state_vector_index(name)
-        return self.__state_vector[index]
+        return self.__state_vector[index] * nominal
 
     def get_var_count(self):
         """
@@ -484,8 +516,9 @@ class SimulationProblem:
         """
 
         # TODO: sanitize input
+        nominal = self.get_variable_nominal(name)
         index = self.__get_state_vector_index(name)
-        self.__state_vector[index] = value
+        self.__state_vector[index] = value / nominal
 
     def set_var_slice(self, name, start, count, var):
         """
@@ -519,6 +552,12 @@ class SimulationProblem:
         """
         return dict(abstol = 1e-10,
                     linear_solver = 'csparse')
+
+    def get_variable_nominal(self, variable):
+        """
+        Get the value of the nominal attribute of a variable
+        """
+        return self.__nominals.get(variable, 1.0)
 
     def compiler_options(self):
         """
