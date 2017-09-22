@@ -56,6 +56,9 @@ class SimulationProblem:
         self.__mx['constant_inputs'] = []
         self.__mx['lookup_tables'] = []
 
+        # TODO: use alias relation (so the get and set api will work with aliases too)
+        # TODO: output the variables with the output tag, and not one of their aliases
+
         # Merge with user-specified delayed feedback
         # TODO: get this working
         delayed_feedback_variables = [] #map(lambda delayed_feedback: delayed_feedback[1], self.delayed_feedback())
@@ -86,8 +89,7 @@ class SimulationProblem:
             logger.debug("SimulationProblem: Found parameters {}".format(
                 ', '.join([var.name() for var in self.__mx['parameters']])))
 
-
-        # Initialize nominals
+        # Initialize nominals dictionary
         self.__nominals = {}
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
@@ -103,7 +105,7 @@ class SimulationProblem:
                     logger.debug("SimulationProblem: Setting nominal value for variable {} to {}".format(
                         sym_name, self.__nominals[sym_name]))
 
-        # Initialize dae and initial residuals
+        # Initialize DAE and initial residuals
         variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
         function_arguments = [self.__pymola_model.time] + \
             [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
@@ -126,21 +128,26 @@ class SimulationProblem:
         self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics'])
         self.__sym_dict = OrderedDict(((sym.name(), sym) for sym in self.__sym_iter))
 
-        # Substitute ders for discrete states using backwards euler formulation
+
+        # Assemble some symbolics, including those needed for a backwards Euler derivative approximation
         X = ca.vertcat(*self.__sym_iter[:self.__states_end_index])
         X_prev = ca.vertcat(*[ca.MX.sym(sym.name() + '_prev') for sym in self.__sym_iter[:self.__states_end_index]])
         dt = ca.MX.sym("delta_t")
 
+        # Make a list of derivative approximations using backwards Euler formulation
         derivative_approximations = []
         for derivative_state in self.__mx['derivatives']:
             index = next((i for i, s in enumerate(X) if s.name() == derivative_state.name()[4:-1]))
             derivative_approximations.append((X[index] - X_prev[index]) / dt)
 
+        # Substitute derivatives for derivative approximations
         derivatives = ca.vertcat(*self.__mx['derivatives'])
         derivative_approximations = ca.vertcat(*derivative_approximations)
         dae_residual_substituted_ders = ca.substitute(self.__dae_residual, derivatives, derivative_approximations)
 
-        # Substitute each unscaled symbol for scaled_symbol * nominal
+        # TODO: implement lookup_tables
+
+        # Make a list of unscaled symbols and a list of their scaled equivalent
         unscaled_symbols = []
         scaled_symbols = []
         for sym_name, nominal in self.__nominals.items():
@@ -166,10 +173,6 @@ class SimulationProblem:
         if X.size1() != dae_residual_scaled.size1():
             logger.error('Formulation Error: Number of states ({}) does not equal number of equations ({})'.format(
                 X.size1(), dae_residual_scaled.size1()))
-
-        # TODO: implement lookup_tables
-        # TODO: use alias relation (so the get and set api will work with aliases too)
-        # TODO: output the variables with the output tag, and not one of their aliases
 
         # Construct function parameters
         parameters = ca.vertcat(dt, X_prev, *self.__sym_iter[self.__states_end_index:])
@@ -242,12 +245,12 @@ class SimulationProblem:
                 # add a residual for the difference between the state and its starting value
                 start_attribute_residuals.append(symbol_dict[var.symbol.name()]-var.start)
 
-        # make a function describing the initial contition
+        # Assemble symbolics needed to make a function describing the initial condition of the model
         full_initial_residual = ca.vertcat(dae_residual, initial_residual, *start_attribute_residuals)
         X = ca.vertcat(*self.__sym_iter[:self.__states_end_index], *self.__mx['derivatives'])
         parameters = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
 
-        # Substitute each unscaled symbol for scaled_symbol * nominal
+        # Make a list of unscaled symbols and a list of their scaled equivalent
         unscaled_symbols = []
         scaled_symbols = []
         for sym_name, nominal in self.__nominals.items():
@@ -267,7 +270,7 @@ class SimulationProblem:
             logger.error('Initialization Error: Number of states ({}) does not equal number of initial equations ({})'.format(
                 X.size1(), full_initial_residual.size1()))
 
-        # Use rootfinder() to construct a function to find consistant intial conditions
+        # Use rootfinder() to construct a function to find consistent initial conditions
         f = ca.Function("initial_residual", [X, parameters], [full_initial_residual])
         find_initial_state = ca.rootfinder("find_initial_state", "newton", f, self.solver_options())
 
