@@ -177,7 +177,13 @@ class SimulationProblem:
 
         # Set values of parameters defined in the model
         for var in self.__pymola_model.parameters:
+            # First test to see if the value is constant
+            if not var.value.is_constant():
+                continue
+
+            # If constant, extract the value as a python type
             val = var.python_type(var.value)
+            # If val is finite, we set it
             if np.isfinite(val):
                 logger.debug('SimulationProblem: Setting parameter {} = {}'.format(var.symbol.name(), val))
                 self.set_var(var.symbol.name(), val)
@@ -265,7 +271,8 @@ class SimulationProblem:
         """
         Returns the residual values (equation error) of the current state
         """
-        return self.__res_vals(self.__state_vector[:self.__states_end_index], ca.vertcat(self.__dt, *self.__state_vector))
+        return np.array(self.__res_vals(self.__state_vector[:self.__states_end_index],
+                                        ca.vertcat(self.__dt, *self.__state_vector)))
 
     def setup_experiment(self, start, stop, dt):
         """ 
@@ -304,6 +311,10 @@ class SimulationProblem:
         guess = self.__state_vector[:self.__states_end_index]
         next_state = self.__do_step(guess, ca.vertcat(dt, *self.__state_vector))
         self.__state_vector[:self.__states_end_index] = next_state.T
+
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            max_mag = np.max(np.abs(self.get_current_residual_values()))
+            logger.debug('Residual maximum magnitude: {:.2E}'.format(max_mag))
 
     def simulate(self):
         """ 
