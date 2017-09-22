@@ -178,7 +178,7 @@ class SimulationProblem:
         # Set values of parameters defined in the model
         for var in self.__pymola_model.parameters:
             # First test to see if the value is constant
-            if not var.value.is_constant():
+            if isinstance(var.value, ca.MX) and not var.value.is_constant():
                 continue
 
             # If constant, extract the value as a python type
