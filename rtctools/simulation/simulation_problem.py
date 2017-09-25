@@ -11,6 +11,10 @@ import pymola
 import rtctools.data.csv as csv
 import pymola.backends.casadi.api
 from collections import OrderedDict
+from rtctools._internal.alias_tools import AliasRelation, AliasDict
+from rtctools._internal.caching import cached
+from rtctools._internal.casadi_helpers import substitute_in_external
+
 
 
 logger = logging.getLogger("rtctools")
@@ -89,8 +93,9 @@ class SimulationProblem:
             logger.debug("SimulationProblem: Found parameters {}".format(
                 ', '.join([var.name() for var in self.__mx['parameters']])))
 
-        # Initialize nominals dictionary
-        self.__nominals = {}
+        # Initialize an AliasDict for nominals and types
+        self.__nominals = AliasDict(self.alias_relation)
+        self.__python_types = AliasDict(self.alias_relation)
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
             # If the nominal is 0.0 or 1.0 or -1.0, ignore: get_variable_nominal returns a default of 1.0
@@ -104,6 +109,9 @@ class SimulationProblem:
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("SimulationProblem: Setting nominal value for variable {} to {}".format(
                         sym_name, self.__nominals[sym_name]))
+
+            # Store the types in an AliasDict
+            self.__python_types[sym_name] = v.python_type
 
         # Initialize DAE and initial residuals
         variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
@@ -561,6 +569,20 @@ class SimulationProblem:
         Get the value of the nominal attribute of a variable
         """
         return self.__nominals.get(variable, 1.0)
+
+    @property
+    @cached
+    def alias_relation(self):
+        # Initialize aliases
+        alias_relation = AliasRelation()
+        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.der_states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
+            for alias in v.aliases:
+                alias_relation.add(v.symbol.name(), alias)
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("SimulationProblem: Aliased {} to {}".format(
+                        v.symbol.name(), alias))
+
+        return alias_relation
 
     def compiler_options(self):
         """
