@@ -311,6 +311,47 @@ class SimulationProblem:
         """
         pass
 
+    @cached
+    def bounds(self):
+
+        # Parameter values
+        parameters = self.parameters()
+        parameter_values = [parameters.get(param.name(), param) for param in self.__mx['parameters']]
+
+        bounds = AliasDict(self.alias_relation)
+
+        # Load additional bounds from model
+        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.der_states):
+            sym_name = v.symbol.name()
+
+            if self.__python_types.get(sym_name, float) == bool:
+                (m, M) = (0, 1)
+            else:
+                (m, M) = (-np.inf, np.inf)
+
+            m_ = ca.MX(v.min)
+            if not m_.is_constant():
+                [m_] = substitute_in_external([m_], self.__mx['parameters'], parameter_values)
+                if not m_.is_constant():
+                    raise Exception('Could not resolve lower bound for variable {}'.format(sym_name))
+            m_ = float(m_)
+
+            M_ = ca.MX(v.max)
+            if not M_.is_constant():
+                [M_] = substitute_in_external([M_], self.__mx['parameters'], parameter_values)
+                if not M_.is_constant():
+                    raise Exception('Could not resolve upper bound for variable {}'.format(sym_name))
+            M_ = float(M_)
+
+            # We take the intersection of all provided bounds
+            m = max(m, m_)
+            M = min(M, M_)
+
+            bounds[sym_name] = (m, M)
+
+        return bounds
+
+
     def get_current_residual_values(self):
         """
         Returns the residual values (equation error) of the current state
