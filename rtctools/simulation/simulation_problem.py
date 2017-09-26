@@ -244,12 +244,27 @@ class SimulationProblem:
                             start = 0.0
                     self.set_var(var.symbol.name(), start)
                 else:
-                    # var.start has a numerical value, so we set it in the state vector
+                    if var.start == 0.0:
+                        # To make initialization easier, we allow setting initial states by providing timeseries
+                        # with names that match a symbol in the model. We only check for this matching if the start
+                        # and fixed attributes were left as default (right here in this if-tree).
+                        # TODO: put csv initial states here too?
+                        try:
+                            start_val = self.timeseries_at(var.symbol.name(), 0)
+                        except KeyError:
+                            start_val = var.start
+                        else:
+                            logger.warning('Initialize: Added {} = {} to initial equations (found matching timeseries).'.format(
+                            var.symbol.name(), start_val))
+                            start_attribute_residuals.append(symbol_dict[var.symbol.name()]-start_val)
+                    else:
+                        # var.start was set with a numerical value, so we don't add a residual
+                        start_val = var.start
                     try:
-                        self.set_var(var.symbol.name(), var.start)
+                        self.set_var(var.symbol.name(), start_val)
                     except KeyError:
                         logger.warning('Initialize: {} not found in state vector. Initial value of {} not set.'.format(
-                            var.symbol.name(), var.start))
+                            var.symbol.name(), start_val))
             else:
                 # add a residual for the difference between the state and its starting value
                 start_attribute_residuals.append(symbol_dict[var.symbol.name()]-var.start)
