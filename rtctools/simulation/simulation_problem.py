@@ -282,45 +282,34 @@ class SimulationProblem:
             logger.warning('Initialization Warning: Number of states ({}) does not equal number of initial equations ({})'.format(
                 X.size1(), full_initial_residual.size1()))
 
-            nlpsol_initialization = False
-            if nlpsol_initialization:
+        nlpsol_initialization = True
+        if nlpsol_initialization:
             # Use nlpsol
 
-                # Construct arrays of state bounds
-                lbx = np.empty(X.size1())
-                ubx = np.empty(X.size1())
-                bounds = self.bounds()
-                for i, x in enumerate(ca.vertsplit(X)):
-                    lbx[i], ubx[i] = bounds[x.name()]
+            # Construct arrays of state bounds
+            lbx = np.empty(X.size1())
+            ubx = np.empty(X.size1())
+            bounds = self.bounds()
+            for i, x in enumerate(ca.vertsplit(X)):
+                lbx[i], ubx[i] = bounds[x.name()]
 
+            # add penalty for der(var) != 0.0
+            derivatives = []
+            for d in self.__mx['derivatives']:
+                logger.info('Added a penalty residual ({})^2 to the initial equations.'.format(d.name()))
+                derivatives.append(d)
+            full_initial_residual = ca.veccat(full_initial_residual, ca.vertcat(*derivatives))
 
-                # Find initial state using ipopt
-                nlp = dict(x = X, f = ca.sum1(full_initial_residual)) # constraints? or are all constraints formulated as residuals?
-                solver = ca.nlpsol('solver', 'ipopt', nlp)
-                guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]), *np.zeros_like(self.__mx['derivatives']))
-                initial_state = solver(x0 = guess, lbx = lbx, ubx = ubx)
+            # Construct objective function
+            # TODO: probably can speed this up with a map() call?
+            # TODO: or perhaps use rootfinder() with ipopt?
+            objective_function = ca.sum1(ca.vertcat(*[ca.power(r, 2) for r in ca.vertsplit(full_initial_residual)]))
 
-            else:
-
-                # attempt to balance equations by adding residuals for der(var) = 0.0
-                undefined_derivatives = []
-                for d in self.__mx['derivatives']:
-                    if not ca.depends_on(initial_residual, d):
-                        undefined_derivatives.append(d)
-                        logger.warning('Added a residual {} = 0.0 to the initial equations.'.format(d.name()))
-                full_initial_residual = ca.veccat(full_initial_residual, ca.vertcat(*undefined_derivatives))
-
-                # Use rootfinder() to construct a function to find consistent initial conditions
-                f = ca.Function("initial_residual", [X, parameters], [full_initial_residual])
-
-                if X.size1() != full_initial_residual.size1():
-                    import code; code.interact(local=dict(globals(), **locals()))
-                find_initial_state = ca.rootfinder("find_initial_state", "newton", f, self.solver_options())
-
-                # Convert any np.nan (unset values) to a default guess of 0.0 and get the initial state
-                guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]), *np.zeros_like(self.__mx['derivatives']))
-                initial_state = find_initial_state(guess, ca.vertcat(self.__state_vector[self.__states_end_index:]))
-
+            # Find initial state using ipopt
+            nlp = dict(x = X, f = objective_function, p = parameters) # constraints? or are all constraints formulated as residuals?
+            solver = ca.nlpsol('solver', 'ipopt', nlp)
+            guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]), *np.zeros_like(self.__mx['derivatives']))
+            initial_state = solver(x0 = guess, lbx = lbx, ubx = ubx, p = self.__state_vector[self.__states_end_index:])['x']
 
         else:
 
