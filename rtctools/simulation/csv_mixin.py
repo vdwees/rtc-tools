@@ -131,15 +131,6 @@ class CSVMixin(SimulationProblem):
 
         logger.debug("Model inputs are {}".format(self.__input_variables))
 
-        # Set initial values of inputs and timeseries with names that match variables in model
-        # TODO: alias dict
-        all_symbol_names = self.get_variables().keys()
-        for variable, timeseries in self.__timeseries.items():
-            if variable in all_symbol_names:
-                value = timeseries[0]
-                if np.isfinite(value):
-                    self.set_var(variable, value)
-
         # Empty output
         self.__output_variables = set(self.get_output_variables().keys())
         n_times = len(self.__timeseries_times_sec)
