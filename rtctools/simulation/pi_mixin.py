@@ -130,6 +130,13 @@ class PIMixin(SimulationProblem):
         # Load input variable names
         self.__input_variables = set(self.get_input_variables().keys())
 
+        # Set input values
+        for variable, timeseries in self.__timeseries_import.items():
+            if variable in self.__input_variables:
+                value = timeseries[0]
+                if np.isfinite(value):
+                    self.set_var(variable, value)
+
         logger.debug("Model inputs are {}".format(self.__input_variables))
 
         # Empty output

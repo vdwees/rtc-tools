@@ -254,7 +254,7 @@ class SimulationProblem:
                         except KeyError:
                             start_val = var.start
                         else:
-                            logger.warning('Initialize: Added {} = {} to initial equations (found matching timeseries).'.format(
+                            logger.debug('Initialize: Added {} = {} to initial equations (found matching timeseries).'.format(
                             var.symbol.name(), start_val))
                             start_attribute_residuals.append(symbol_dict[var.symbol.name()]-start_val)
                     else:
@@ -294,7 +294,7 @@ class SimulationProblem:
         self.__warn_for_nans()
 
         if X.size1() != full_initial_residual.size1():
-            logger.warning('Initialization Warning: Number of states ({}) does not equal number of initial equations ({})'.format(
+            logger.debug('Initialization Warning: Number of states ({}) does not equal number of initial equations ({})'.format(
                 X.size1(), full_initial_residual.size1()))
 
         nlpsol_initialization = True
@@ -311,7 +311,7 @@ class SimulationProblem:
             # add penalty for der(var) != 0.0
             derivatives = []
             for d in self.__mx['derivatives']:
-                logger.info('Added a penalty residual ({})^2 to the initial equations.'.format(d.name()))
+                logger.debug('Added a penalty residual {} to the initial equations.'.format(d.name()))
                 derivatives.append(d)
             full_initial_residual = ca.veccat(full_initial_residual, ca.vertcat(*derivatives))
 
