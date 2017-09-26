@@ -39,6 +39,10 @@ class PIMixin(SimulationProblem):
     #: Check for duplicate parameters
     pi_check_for_duplicate_parameters = True
 
+    # Default names for timseries I/O
+    timeseries_import_basename = 'timeseries_import'
+    timeseries_export_basename = 'timeseries_export'
+
     def __init__(self, **kwargs):
         # Check arguments
         assert('input_folder' in kwargs)
@@ -69,19 +73,15 @@ class PIMixin(SimulationProblem):
             raise Exception(
                 "PI: {}.xml not found in {}.".format(pi_parameter_config_basename, self.__input_folder))
 
-        # timeseries_{import,export}.xml.
-        basename_import = 'timeseries_import'
-        basename_export = 'timeseries_export'
-
         try:
             self.__timeseries_import = pi.Timeseries(
-                self.__data_config, self.__input_folder, basename_import, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
+                self.__data_config, self.__input_folder, self.timeseries_import_basename, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
         except IOError:
             raise Exception("PI: {}.xml not found in {}.".format(
                 basename_import, self.__input_folder))
 
         self.__timeseries_export = pi.Timeseries(
-            self.__data_config, self.__output_folder, basename_export, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
+            self.__data_config, self.__output_folder, self.timeseries_export_basename, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
 
         # Convert timeseries timestamps to seconds since t0 for internal use
         self.__timeseries_import_times = self.__datetime_to_sec(
@@ -128,9 +128,11 @@ class PIMixin(SimulationProblem):
 
         logger.debug("Model inputs are {}".format(self.__input_variables))
 
-        # Set initial input values
+        # Set initial values of inputs and timeseries with names that match variables in model
+        # TODO: alias dict
+        all_symbol_names = self.get_variables().keys()
         for variable, timeseries in self.__timeseries_import.items():
-            if variable in self.__input_variables:
+            if variable in all_symbol_names:
                 value = timeseries[self.__timeseries_import.forecast_index]
                 if np.isfinite(value):
                     self.set_var(variable, value)

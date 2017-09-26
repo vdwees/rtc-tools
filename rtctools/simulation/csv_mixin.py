@@ -7,6 +7,7 @@ import os
 import rtctools.data.csv as csv
 
 from .simulation_problem import SimulationProblem
+from rtctools._internal.caching import cached
 
 logger = logging.getLogger("rtctools")
 
@@ -131,9 +132,11 @@ class CSVMixin(SimulationProblem):
 
         logger.debug("Model inputs are {}".format(self.__input_variables))
 
-        # Set initial input values
+        # Set initial values of inputs and timeseries with names that match variables in model
+        # TODO: alias dict
+        all_symbol_names = self.get_variables().keys()
         for variable, timeseries in self.__timeseries.items():
-            if variable in self.__input_variables:
+            if variable in all_symbol_names:
                 value = timeseries[0]
                 if np.isfinite(value):
                     self.set_var(variable, value)
