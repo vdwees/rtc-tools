@@ -7,6 +7,7 @@ import rtctools.data.rtc as rtc
 import rtctools.data.pi as pi
 
 from .simulation_problem import SimulationProblem
+from rtctools._internal.caching import cached
 
 logger = logging.getLogger("rtctools")
 
@@ -73,6 +74,16 @@ class PIMixin(SimulationProblem):
             raise Exception(
                 "PI: {}.xml not found in {}.".format(pi_parameter_config_basename, self.__input_folder))
 
+        # Make a parameters dict for later access
+        self.__parameters = {}
+        for parameter_config in self.__parameter_config:
+            for location_id, model_id, parameter_id, value in parameter_config:
+                try:
+                    parameter = self.__data_config.parameter(parameter_id, location_id, model_id)
+                except KeyError:
+                    parameter = parameter_id
+                self.__parameters[parameter] = value
+
         try:
             self.__timeseries_import = pi.Timeseries(
                 self.__data_config, self.__input_folder, self.timeseries_import_basename, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
@@ -111,17 +122,10 @@ class PIMixin(SimulationProblem):
 
         logger.debug("Model parameters are {}".format(self.__parameter_variables))
 
-        for parameter_config in self.__parameter_config:
-            for location_id, model_id, parameter_id, value in parameter_config:
-                try:
-                    parameter = self.__data_config.parameter(parameter_id, location_id, model_id)
-                except KeyError:
-                    parameter = parameter_id
-
-                if parameter in self.__parameter_variables:
-                    logger.debug("PIMixin: Setting parameter {} = {}".format(parameter, value))
-
-                    self.set_var(parameter, value)
+        for parameter, value  in self.__parameters.items():
+            if parameter in self.__parameter_variables:
+                logger.debug("PIMixin: Setting parameter {} = {}".format(parameter, value))
+                self.set_var(parameter, value)
 
         # Load input variable names
         self.__input_variables = set(self.get_input_variables().keys())
@@ -220,6 +224,20 @@ class PIMixin(SimulationProblem):
             return [self.__timeseries_import.forecast_datetime + timedelta(seconds=t) for t in s]
         else:
             return self.__timeseries_import.forecast_datetime + timedelta(seconds=s)
+
+    @cached
+    def parameters(self):
+        """
+        Return a dictionary of parameters
+        """
+        # Call parent class first for default values.
+        parameters = super().parameters()
+
+        # Load parameters from parameter config
+        for parameter in self.__parameters:
+            logger.debug("CSVMixin: Read parameter {} ".format(parameter))
+
+        return {**parameters, **self.__parameters}
 
     def timeseries_at(self, variable, t):
         """

@@ -206,6 +206,7 @@ class SimulationProblem:
         param_sym_vector = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
 
         # Set values of parameters defined in the model
+        # TODO: iterate over self.parameters() ?
         for var in self.__pymola_model.parameters:
             # First test to see if the value is constant
             if isinstance(var.value, ca.MX) and not var.value.is_constant():
@@ -433,6 +434,8 @@ class SimulationProblem:
         """
         Return a numpy array from FMU.
 
+        TODO: use aliasdict
+
         :param name: Variable name.
 
         :returns: The value of the variable.
@@ -522,6 +525,8 @@ class SimulationProblem:
         """
         Set the value of the given variable.
 
+        TODO: use aliasdict
+
         :param name: Name of variable to set.
         :param value:  Value(s).
         """
@@ -569,6 +574,14 @@ class SimulationProblem:
         Get the value of the nominal attribute of a variable
         """
         return self.__nominals.get(variable, 1.0)
+
+    @cached
+    def parameters(self):
+        """
+        Return a dictionary of parameter values extracted from the Modelica model
+        """
+        return {p.symbol.name(): p.value for p in self.__pymola_model.parameters}
+
 
     @property
     @cached

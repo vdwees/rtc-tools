@@ -115,7 +115,6 @@ class CSVMixin(SimulationProblem):
         for parameter, value in self.__parameters.items():
             if parameter in self.__parameter_variables:
                 logger.debug("CSVMixin: Setting parameter {} = {}".format(parameter, value))
-
                 self.set_var(parameter, value)
 
         # Load input variable names
@@ -207,6 +206,20 @@ class CSVMixin(SimulationProblem):
             return [self.__timeseries_times[0] + timedelta(seconds=t) for t in s]
         else:
             return self.__timeseries_times[0] + timedelta(seconds=s)
+
+    @cached
+    def parameters(self):
+        """
+        Return a dictionary of parameters
+        """
+        # Call parent class first for default values.
+        parameters = super().parameters()
+
+        # Load parameters from parameter config
+        for parameter in self.__parameters:
+            logger.debug("CSVMixin: Read parameter {} ".format(parameter))
+
+        return {**parameters, **self.__parameters}
 
     def timeseries_at(self, variable, t):
         """
