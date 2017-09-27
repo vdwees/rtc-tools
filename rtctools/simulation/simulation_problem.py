@@ -189,7 +189,7 @@ class SimulationProblem:
         self.__res_vals = ca.Function("res_vals", [X, parameters], [dae_residual_scaled])
 
         # Use rootfinder() to make a function that takes a step forward in time by trying to zero res_vals()
-        self.__do_step = ca.rootfinder("next_state", "newton", self.__res_vals, self.solver_options())
+        self.__do_step = ca.rootfinder("next_state", "nlpsol", self.__res_vals, {'nlpsol':'ipopt', 'nlpsol_options':self.solver_options()})
 
         # Call parent class first for default behaviour.
         super().__init__()
@@ -634,8 +634,7 @@ class SimulationProblem:
 
         :returns: A dictionary of CasADi :class:`root_finder` options.  See the CasADi documentation for details.
         """
-        return dict(abstol = 1e-10,
-                    linear_solver = 'csparse')
+        return {'ipopt.print_level':0, 'print_time':False}
 
     def get_variable_nominal(self, variable):
         """
