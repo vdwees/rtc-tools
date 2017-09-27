@@ -300,7 +300,7 @@ class SimulationProblem:
         for i, x in enumerate(ca.vertsplit(X)):
             lbx[i], ubx[i] = bounds[x.name()]
 
-        if getattr(self, 'encourage_steady_state_initial_conditions', True):
+        if getattr(self, 'encourage_steady_state_initial_conditions', False):
             # add penalty for der(var) != 0.0
             derivatives = []
             for d in self.__mx['derivatives']:
