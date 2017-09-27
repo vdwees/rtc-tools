@@ -293,48 +293,29 @@ class SimulationProblem:
         # Warn for nans in state vector before initialization
         self.__warn_for_nans()
 
-        if X.size1() != full_initial_residual.size1():
-            logger.debug('Initialization Warning: Number of states ({}) does not equal number of initial equations ({})'.format(
-                X.size1(), full_initial_residual.size1()))
+        # Construct arrays of state bounds
+        lbx = np.empty(X.size1())
+        ubx = np.empty(X.size1())
+        bounds = self.bounds()
+        for i, x in enumerate(ca.vertsplit(X)):
+            lbx[i], ubx[i] = bounds[x.name()]
 
-        nlpsol_initialization = True
-        if nlpsol_initialization:
-            # Use nlpsol
+        # add penalty for der(var) != 0.0
+        derivatives = []
+        for d in self.__mx['derivatives']:
+            logger.debug('Added a penalty residual {} to the initial equations.'.format(d.name()))
+            derivatives.append(d)
+        full_initial_residual = ca.veccat(full_initial_residual, ca.vertcat(*derivatives))
 
-            # Construct arrays of state bounds
-            lbx = np.empty(X.size1())
-            ubx = np.empty(X.size1())
-            bounds = self.bounds()
-            for i, x in enumerate(ca.vertsplit(X)):
-                lbx[i], ubx[i] = bounds[x.name()]
+        # Construct objective function
+        # TODO: probably can speed this up with a map() call?
+        objective_function = ca.sum1(ca.vertcat(*[ca.power(r, 2) for r in ca.vertsplit(full_initial_residual)]))
 
-            # add penalty for der(var) != 0.0
-            derivatives = []
-            for d in self.__mx['derivatives']:
-                logger.debug('Added a penalty residual {} to the initial equations.'.format(d.name()))
-                derivatives.append(d)
-            full_initial_residual = ca.veccat(full_initial_residual, ca.vertcat(*derivatives))
-
-            # Construct objective function
-            # TODO: probably can speed this up with a map() call?
-            # TODO: or perhaps use rootfinder() with ipopt?
-            objective_function = ca.sum1(ca.vertcat(*[ca.power(r, 2) for r in ca.vertsplit(full_initial_residual)]))
-
-            # Find initial state using ipopt
-            nlp = dict(x = X, f = objective_function, p = parameters) # constraints? or are all constraints formulated as residuals?
-            solver = ca.nlpsol('solver', 'ipopt', nlp)
-            guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]), *np.zeros_like(self.__mx['derivatives']))
-            initial_state = solver(x0 = guess, lbx = lbx, ubx = ubx, p = self.__state_vector[self.__states_end_index:])['x']
-
-        else:
-
-            # Use rootfinder() to construct a function to find consistent initial conditions
-            f = ca.Function("initial_residual", [X, parameters], [full_initial_residual])
-            find_initial_state = ca.rootfinder("find_initial_state", "newton", f, self.solver_options())
-
-            # Convert any np.nan (unset values) to a default guess of 0.0 and get the initial state
-            guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]), *np.zeros_like(self.__mx['derivatives']))
-            initial_state = find_initial_state(guess, ca.vertcat(self.__state_vector[self.__states_end_index:]))
+        # Find initial state using ipopt
+        nlp = dict(x = X, f = objective_function, p = parameters) # constraints? or are all constraints formulated as residuals?
+        solver = ca.nlpsol('solver', 'ipopt', nlp, self.solver_options())
+        guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]), *np.zeros_like(self.__mx['derivatives']))
+        initial_state = solver(x0 = guess, lbx = lbx, ubx = ubx, p = self.__state_vector[self.__states_end_index:])['x']
 
         # Update state vector with initial conditions
         self.__state_vector[:self.__states_end_index] = initial_state[:self.__states_end_index].T
