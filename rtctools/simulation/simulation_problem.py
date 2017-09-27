@@ -118,7 +118,8 @@ class SimulationProblem:
         function_arguments = [self.__pymola_model.time] + \
             [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
 
-        self.__all_vars = list(itertools.chain.from_iterable(((v for v in getattr(self.__pymola_model, variable_list)) for variable_list in variable_lists)))
+        self.__all_vars = list(itertools.chain.from_iterable(
+            ((v for v in getattr(self.__pymola_model, variable_list)) for variable_list in variable_lists)))
 
         self.__dae_residual = self.__pymola_model.dae_residual_function(*function_arguments)
 
@@ -657,7 +658,10 @@ class SimulationProblem:
     def alias_relation(self):
         # Initialize aliases
         alias_relation = AliasRelation()
-        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.der_states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
+        for v in itertools.chain(self.__pymola_model.states,
+                                 self.__pymola_model.der_states,
+                                 self.__pymola_model.alg_states,
+                                 self.__pymola_model.inputs):
             for alias in v.aliases:
                 alias_relation.add(v.symbol.name(), alias)
                 if logger.getEffectiveLevel() == logging.DEBUG:
