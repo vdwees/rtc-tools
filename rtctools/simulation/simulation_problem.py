@@ -225,7 +225,7 @@ class SimulationProblem:
             if isinstance(var.start, ca.MX):
                 if not var.start.is_symbolic():
                     # start was a float in MX form
-                    start = var.python_type(var.start)
+                    start_val = var.python_type(var.start)
                 else:
                     # var.start is a symbol from the model, so we attempt to
                     # set it equal to the value of that symbol
@@ -234,36 +234,37 @@ class SimulationProblem:
                     try:
                         alias_start = self.get_var(var.start.name())
                         if np.isfinite(alias_start):
-                            start = alias_start
+                            start_val = alias_start
                         else:
-                            start = 0.0
+                            start_val = 0.0
                     except Exception:
                         logger.warning('Initialize: Falied to set {} guess with the start value of {}. \
                             Using default of 0.0'.format(var.symbol.name(), var.start.name()))
-                        start = 0.0
-                self.set_var(var.symbol.name(), start)
-            else:
-                if var.start == 0.0 and not var.fixed:
-                    # To make initialization easier, we allow setting initial states by providing timeseries
-                    # with names that match a symbol in the model. We only check for this matching if the start
-                    # and fixed attributes were left as default
-                    # TODO: put csv initial states here too?
-                    try:
-                        start_val = self.timeseries_at(var.symbol.name(), 0)
-                    except KeyError:
-                        start_val = var.start
-                    else:
-                        logger.debug('Initialize: Added {} = {} to initial equations (found matching timeseries).'.format(
-                        var.symbol.name(), start_val))
-                        start_attribute_residuals.append(symbol_dict[var.symbol.name()]-start_val)
-                else:
-                    # var.start was set with a numerical value, so we don't add a residual
-                    start_val = var.start
+                        start_val = 0.0
+
+            elif var.start == 0.0 and not var.fixed:
+                # To make initialization easier, we allow setting initial states by providing timeseries
+                # with names that match a symbol in the model. We only check for this matching if the start
+                # and fixed attributes were left as default
+                # TODO: put csv initial states here too?
                 try:
-                    self.set_var(var.symbol.name(), start_val)
+                    start_val = self.timeseries_at(var.symbol.name(), 0)
                 except KeyError:
-                    logger.warning('Initialize: {} not found in state vector. Initial value of {} not set.'.format(
-                        var.symbol.name(), start_val))
+                    start_val = var.start
+                else:
+                    logger.debug('Initialize: Added {} = {} to initial equations (found matching timeseries).'.format(
+                    var.symbol.name(), start_val))
+                    start_attribute_residuals.append(symbol_dict[var.symbol.name()]-start_val)
+            else:
+                # var.start was set with a numerical value
+                start_val = var.start
+
+            # Attempt to set start_val in the state vector
+            try:
+                self.set_var(var.symbol.name(), start_val)
+            except KeyError:
+                logger.warning('Initialize: {} not found in state vector. Initial value of {} not set.'.format(
+                    var.symbol.name(), start_val))
 
             if var.fixed:
                 # add a residual for the difference between the state and its starting value
