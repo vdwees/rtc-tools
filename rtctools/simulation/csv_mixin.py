@@ -129,6 +129,13 @@ class CSVMixin(SimulationProblem):
             else:
                 logger.warning("Entry {} in initial_state.csv is not an input variable.".format(variable))
 
+        # Set input values
+        for variable, timeseries in self.__timeseries.items():
+            if variable in self.__input_variables:
+                value = timeseries[0]
+                if np.isfinite(value):
+                    self.set_var(variable, value)
+
         logger.debug("Model inputs are {}".format(self.__input_variables))
 
         # Empty output
