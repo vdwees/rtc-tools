@@ -34,7 +34,7 @@ def reduce_matvec(e, v):
     This reduces the number of nodes required to represent the linear operations.
     """
     Af = ca.Function('Af', [ca.MX()], [ca.jacobian(e, v)])
-    A = Af(ca.MX())
+    A = Af(ca.DM())
     return ca.reshape(ca.mtimes(A, v), e.shape)
 
 

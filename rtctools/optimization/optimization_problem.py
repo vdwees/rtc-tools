@@ -665,7 +665,8 @@ class OptimizationProblem(metaclass = ABCMeta):
         :param resolved_bounds: :class:`AliasDict` of numerical bound values.  This is the same dictionary as returned by :func:`bounds`,
         but with all parameter symbols replaced with their numerical values.
 
-        :returns: The number of control variables in the optimization problem, a lower bound vector, an upper bound vector, and a seed vector.
+        :returns: The number of control variables in the optimization problem, a lower bound vector, an upper bound vector, a seed vector,
+        and a dictionary of offset values.
         """
         pass
 
@@ -682,7 +683,6 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         pass
 
-    @abstractmethod
     def control_vector(self, variable: str, ensemble_member: int=0) -> Union[ca.MX, List[ca.MX]]:
         """
         Return the optimization variables for the entire time horizon of the given state.
@@ -694,7 +694,7 @@ class OptimizationProblem(metaclass = ABCMeta):
 
         :raises: KeyError
         """
-        pass
+        return self.state_vector(variable, ensemble_member)
 
     def control(self, variable: str) -> ca.MX:
         """
@@ -747,7 +747,8 @@ class OptimizationProblem(metaclass = ABCMeta):
         :param resolved_bounds: :class:`AliasDict` of numerical bound values.  This is the same dictionary as returned by :func:`bounds`,
         but with all parameter symbols replaced with their numerical values.
 
-        :returns: The number of control variables in the optimization problem, a lower bound vector, an upper bound vector, and a seed vector.
+        :returns: The number of control variables in the optimization problem, a lower bound vector, an upper bound vector, a seed vector,
+        and a dictionary of vector offset values.
         """
         pass
 
