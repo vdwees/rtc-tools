@@ -300,12 +300,13 @@ class SimulationProblem:
         for i, x in enumerate(ca.vertsplit(X)):
             lbx[i], ubx[i] = bounds[x.name()]
 
-        # add penalty for der(var) != 0.0
-        derivatives = []
-        for d in self.__mx['derivatives']:
-            logger.debug('Added a penalty residual {} to the initial equations.'.format(d.name()))
-            derivatives.append(d)
-        full_initial_residual = ca.veccat(full_initial_residual, ca.vertcat(*derivatives))
+        if getattr(self, 'encourage_steady_state_initial_conditions', True):
+            # add penalty for der(var) != 0.0
+            derivatives = []
+            for d in self.__mx['derivatives']:
+                logger.debug('Added a penalty residual {} to the initial equations.'.format(d.name()))
+                derivatives.append(d)
+            full_initial_residual = ca.veccat(full_initial_residual, ca.vertcat(*derivatives))
 
         # Construct objective function
         # TODO: probably can speed this up with a map() call?
@@ -700,7 +701,7 @@ class SimulationProblem:
         compiler_options['detect_aliases'] = False
 
         # Cache the model on disk
-        compiler_options['cache'] = True
+        compiler_options['cache'] = False
 
         # Done
         return compiler_options
