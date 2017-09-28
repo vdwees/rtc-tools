@@ -84,6 +84,14 @@ class CSVMixin(SimulationProblem):
         except IOError:
             self.__initial_state = {}
 
+        # Check for collisions in __initial_state and __timeseries
+        for collision in set(self.__initial_state.keys()) & set(self.__timeseries.keys()):
+            if self.__initial_state[collision] == self.__timeseries[collision][0]:
+                continue
+            else:
+                logger.warning("CSVMixin: Entry {} in initial_state.csv conflicts with timeseries_import.csv".format(collision))
+
+
         self.__timeseries_times_sec = self.__datetime_to_sec(
             self.__timeseries_times)
 
@@ -119,15 +127,6 @@ class CSVMixin(SimulationProblem):
 
         # Load input variable names
         self.__input_variables = set(self.get_input_variables().keys())
-
-        # Set initial states
-        for variable, value in self.__initial_state.items():
-            if variable in self.__input_variables:
-                if variable in self.__timeseries:
-                    logger.warning("Entry {} in initial_state.csv was also found in timeseries_import.csv.".format(variable))
-                self.set_var(variable, value)
-            else:
-                logger.warning("Entry {} in initial_state.csv is not an input variable.".format(variable))
 
         # Set input values
         for variable, timeseries in self.__timeseries.items():
@@ -230,9 +229,26 @@ class CSVMixin(SimulationProblem):
 
         :raises: KeyError
         """
-        values = self.__timeseries[variable]
-        t_idx = bisect.bisect_left(self.__timeseries_times_sec, t)
-        if self.__timeseries_times_sec[t_idx] == t:
-            return values[t_idx]
+
+        # If t=0, include __initial_state in lookup (this makes the api consistant with PIMixin)
+        if t == 0:
+            # Check self.__initial_state
+            initial_state_value = self.__initial_state.get(variable, None)
+
+            # Also check self.__timeseries
+            timeseries_value = self.__timeseries.get(variable, [None])[0]
+
+            # use the first value that is not none (initial state overrides timeseries)
+            value = initial_state_value or timeseries_value
+
+            if value is None:
+                raise KeyError(variable)
+            else:
+                return value
         else:
-            return np.interp1d(t, self.__timeseries_times_sec, values)
+            values = self.__timeseries[variable]
+            t_idx = bisect.bisect_left(self.__timeseries_times_sec, t)
+            if self.__timeseries_times_sec[t_idx] == t:
+                return values[t_idx]
+            else:
+                return np.interp1d(t, self.__timeseries_times_sec, values)

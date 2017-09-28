@@ -60,7 +60,6 @@ class SimulationProblem:
         self.__mx['constant_inputs'] = []
         self.__mx['lookup_tables'] = []
 
-        # TODO: use alias relation (so the get and set api will work with aliases too)
         # TODO: output the variables with the output tag, and not one of their aliases
 
         # Merge with user-specified delayed feedback
@@ -99,7 +98,7 @@ class SimulationProblem:
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
             # If the nominal is 0.0 or 1.0 or -1.0, ignore: get_variable_nominal returns a default of 1.0
-            # TODO: handle allow nominal vectors (update() will need to load them)
+            # TODO: handle nominal vectors (update() will need to load them)
             if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero() or ca.MX(v.nominal + 1).is_zero():
                 continue
             else:
