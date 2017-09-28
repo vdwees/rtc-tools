@@ -531,15 +531,28 @@ class SimulationProblem:
         """
         Return a numpy array from FMU.
 
-        TODO: use aliasdict
-
         :param name: Variable name.
 
         :returns: The value of the variable.
         """
-        nominal = self.get_variable_nominal(name)
+
+        # Get the canonical name and sign
+        name, sign  = self.alias_relation.canonical_signed(name)
+
+        # Get the raw value of the canonical var
         index = self.__get_state_vector_index(name)
-        return self.__state_vector[index] * nominal
+        value = self.__state_vector[index]
+
+        # Adjust sign if needed
+        if sign < 0:
+            value *= sign
+
+        # Adjust for nominal value if not default
+        nominal = self.get_variable_nominal(name)
+        if nominal != 1.0:
+            value *= nominal
+
+        return value
 
     def get_var_count(self):
         """
@@ -622,16 +635,25 @@ class SimulationProblem:
         """
         Set the value of the given variable.
 
-        TODO: use aliasdict
-
         :param name: Name of variable to set.
         :param value:  Value(s).
         """
 
         # TODO: sanitize input
+
+        # Get the canonical name, adjust sign if needed
+        name, sign  = self.alias_relation.canonical_signed(name)
+        if sign < 0:
+            value *= sign
+
+        # Adjust for nominal value if not default
         nominal = self.get_variable_nominal(name)
+        if nominal != 1.0:
+            value /= nominal
+
+        # Store value in state vector
         index = self.__get_state_vector_index(name)
-        self.__state_vector[index] = value / nominal
+        self.__state_vector[index] = value
 
     def set_var_slice(self, name, start, count, var):
         """
