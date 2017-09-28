@@ -235,17 +235,17 @@ class CSVMixin(SimulationProblem):
         if t == 0:
             # Check self.__initial_state
             initial_state_value = self.__initial_state.get(variable, None)
+            if initial_state_value is not None:
+                return initial_state_value
 
             # Also check self.__timeseries
             timeseries_value = self.__timeseries.get(variable, [None])[0]
+            if timeseries_value is not None:
+                return timeseries_value
 
-            # use the first value that is not none (initial state overrides timeseries)
-            value = initial_state_value if initial_state_value is not None else timeseries_value
+            # At this point, variable was not found.
+            raise KeyError(variable)
 
-            if value is None:
-                raise KeyError(variable)
-            else:
-                return value
         else:
             values = self.__timeseries[variable]
             t_idx = bisect.bisect_left(self.__timeseries_times_sec, t)
