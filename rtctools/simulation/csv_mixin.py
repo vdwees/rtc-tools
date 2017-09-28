@@ -220,7 +220,8 @@ class CSVMixin(SimulationProblem):
 
     def timeseries_at(self, variable, t):
         """
-        Return the value of a time series at the given time.
+        Return the value of a timeseries at the given time. If t==0, return
+        the value of the variable in initial_state.csv when present.
 
         :param variable: Variable name.
         :param t: Time.
@@ -230,7 +231,7 @@ class CSVMixin(SimulationProblem):
         :raises: KeyError
         """
 
-        # If t=0, include __initial_state in lookup (this makes the api consistant with PIMixin)
+        # If t==0, include __initial_state in lookup
         if t == 0:
             # Check self.__initial_state
             initial_state_value = self.__initial_state.get(variable, None)

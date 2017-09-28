@@ -246,7 +246,7 @@ class SimulationProblem:
                 # To make initialization easier, we allow setting initial states by providing timeseries
                 # with names that match a symbol in the model. We only check for this matching if the start
                 # and fixed attributes were left as default
-                # TODO: put csv initial states here too?
+                # TODO: perhaps treat these as input_residuals (min error) instead of start_attribute_residuals (constraints)?
                 try:
                     start_val = self.timeseries_at(var.symbol.name(), 0)
                 except KeyError:
