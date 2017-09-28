@@ -135,6 +135,8 @@ class SimulationProblem:
                           self.__mx['parameters']
         self.__state_vector = np.full(len(self.__sym_iter), np.nan)
         self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics'])
+        self.__input_slice = slice(self.__states_end_index + 1, len(self.__sym_iter) - len(self.__mx['parameters']))
+        self.__parameter_slice = slice(len(self.__sym_iter) - len(self.__mx['parameters']), len(self.__sym_iter))
         self.__sym_dict = OrderedDict(((sym.name(), sym) for sym in self.__sym_iter))
 
 
@@ -269,10 +271,31 @@ class SimulationProblem:
                 # add a residual for the difference between the state and its starting value
                 start_attribute_residuals.append(var.symbol - var.start)
 
+        # Warn for nans in state vector (verify we didn't miss anything)
+        self.__warn_for_nans()
+
         # Assemble symbolics needed to make a function describing the initial condition of the model
+        # We constrain every entry in this MX to zero
         full_initial_residual = ca.vertcat(dae_residual, initial_residual, *start_attribute_residuals)
-        X = ca.vertcat(*self.__sym_iter[:self.__states_end_index], *self.__mx['derivatives'])
-        parameters = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
+
+        # The variables that need a mutually consistent initial condition
+        X = ca.vertcat(*self.__sym_iter[:self.__states_end_index], *self.__mx['derivatives'], *self.__mx['constant_inputs'])
+
+        # Add residuals for constant inputs. We treat all inputs as if "fixed=true", but
+        # minimize rather than constrain this residual to zero
+        input_residuals = []
+        for symbol in self.__mx['constant_inputs']:
+            input_residuals.append(symbol - self.get_var(symbol.name()))
+        input_residual = ca.vertcat(*input_residuals)
+
+        # Optionally encourage a steady-state initial condition
+        if getattr(self, 'encourage_steady_state_initial_conditions', False):
+            # add penalty for der(var) != 0.0
+            derivatives = []
+            for d in self.__mx['derivatives']:
+                logger.debug('Added {} to the input residual.'.format(d.name()))
+                derivatives.append(d)
+            input_residual = ca.veccat(input_residual, ca.vertcat(*derivatives))
 
         # Make a list of unscaled symbols and a list of their scaled equivalent
         unscaled_symbols = []
@@ -283,43 +306,47 @@ class SimulationProblem:
             unscaled_symbols.append(symbol)
             scaled_symbols.append(symbol * nominal)
 
+        # Make the lists symbolic
+        unscaled_symbols = ca.vertcat(*unscaled_symbols)
+        scaled_symbols = ca.vertcat(*scaled_symbols)
+
         # Substitute unscaled terms for scaled terms
-        full_initial_residual = ca.substitute(full_initial_residual,
-                                            ca.vertcat(*unscaled_symbols), ca.vertcat(*scaled_symbols))
+        full_initial_residual = ca.substitute(full_initial_residual, unscaled_symbols, scaled_symbols)
+        input_residual = ca.substitute(input_residual, unscaled_symbols, scaled_symbols)
 
-        logger.debug('SimulationProblem: Initial Residual is ' +', '.join(
-            (str(res) for res in ca.vertsplit(full_initial_residual))))
-
-        # Warn for nans in state vector before initialization
-        self.__warn_for_nans()
+        logger.debug('SimulationProblem: Initial Residual is ' + str(full_initial_residual))
+        logger.debug('SimulationProblem: Input Residual is ' + str(input_residual))
 
         # Construct arrays of state bounds
-        lbx = np.empty(X.size1())
-        ubx = np.empty(X.size1())
-        bounds = self.bounds()
-        for i, x in enumerate(ca.vertsplit(X)):
-            lbx[i], ubx[i] = bounds[x.name()]
+        # TODO: jmodelica seems to ignore min and max terms, so we do to?
+        lbx = np.full(X.size1(), -np.inf)
+        ubx = np.full(X.size1(), np.inf)
 
-        if getattr(self, 'encourage_steady_state_initial_conditions', False):
-            # add penalty for der(var) != 0.0
-            derivatives = []
-            for d in self.__mx['derivatives']:
-                logger.debug('Added a penalty residual {} to the initial equations.'.format(d.name()))
-                derivatives.append(d)
-            full_initial_residual = ca.veccat(full_initial_residual, ca.vertcat(*derivatives))
+        # Constrain model equation residuals to zero
+        lbg = np.zeros(full_initial_residual.size1())
+        ubg = np.zeros(full_initial_residual.size1())
 
-        # Construct objective function
+        # Construct objective function from the input residual
         # TODO: probably can speed this up with a map() call?
-        objective_function = ca.sum1(ca.vertcat(*[ca.power(r, 2) for r in ca.vertsplit(full_initial_residual)]))
+        objective_function = ca.sum1(ca.vertcat(*[ca.power(r, 2) for r in ca.vertsplit(input_residual)]))
 
         # Find initial state using ipopt
-        nlp = dict(x = X, f = objective_function, p = parameters) # constraints? or are all constraints formulated as residuals?
+        parameters = ca.vertcat(*self.__mx['parameters'])
+        nlp = dict(x = X, f = objective_function, g = full_initial_residual, p = parameters)
         solver = ca.nlpsol('solver', 'ipopt', nlp, self.solver_options())
-        guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]), *np.zeros_like(self.__mx['derivatives']))
-        initial_state = solver(x0 = guess, lbx = lbx, ubx = ubx, p = self.__state_vector[self.__states_end_index:])['x']
+        guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]), *np.zeros_like(self.__mx['derivatives']), *self.__state_vector[self.__input_slice])
+        initial_state = solver(x0 = guess,
+                               lbx = lbx, ubx = ubx,
+                               lbg = lbg, ubg = ubg,
+                               p = self.__state_vector[self.__parameter_slice])
+
+        # If unsuccessful, stop.
+        return_status = solver.stats()['return_status']
+        if return_status not in {'Solve_Succeeded', 'Solved_To_Acceptable_Level'}:
+            raise Exception('Initialization Failed with return status "{}"'.format(return_status))
 
         # Update state vector with initial conditions
-        self.__state_vector[:self.__states_end_index] = initial_state[:self.__states_end_index].T
+        self.__state_vector[:self.__states_end_index] = initial_state['x'][:self.__states_end_index].T
 
         # make a copy of the initialized initial state vector in case we want to run the model again
         self.__initial_state_vector = copy.deepcopy(self.__state_vector)
@@ -340,7 +367,8 @@ class SimulationProblem:
         pass
 
     @cached
-    def bounds(self):
+    def __bounds(self):
+        # TODO: do we even need this method?
 
         # Parameter values
         parameters = self.parameters()
