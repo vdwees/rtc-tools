@@ -240,7 +240,7 @@ class CSVMixin(SimulationProblem):
             timeseries_value = self.__timeseries.get(variable, [None])[0]
 
             # use the first value that is not none (initial state overrides timeseries)
-            value = initial_state_value or timeseries_value
+            value = initial_state_value if initial_state_value is not None else timeseries_value
 
             if value is None:
                 raise KeyError(variable)
