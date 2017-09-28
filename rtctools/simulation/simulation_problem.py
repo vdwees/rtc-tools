@@ -203,8 +203,6 @@ class SimulationProblem:
 
         initial_residual = self.__initial_residual
         dae_residual = self.__dae_residual
-        symbol_dict = self.__sym_dict
-        param_sym_vector = ca.vertcat(*self.__sym_iter[self.__states_end_index:])
 
         # Set values of parameters defined in the model
         # TODO: iterate over self.parameters() ?
@@ -255,7 +253,7 @@ class SimulationProblem:
                 else:
                     logger.debug('Initialize: Added {} = {} to initial equations (found matching timeseries).'.format(
                     var.symbol.name(), start_val))
-                    start_attribute_residuals.append(symbol_dict[var.symbol.name()]-start_val)
+                    start_attribute_residuals.append(var.symbol - start_val)
             else:
                 # var.start was set with a numerical value
                 start_val = var.start
@@ -269,7 +267,7 @@ class SimulationProblem:
 
             if var.fixed:
                 # add a residual for the difference between the state and its starting value
-                start_attribute_residuals.append(symbol_dict[var.symbol.name()]-var.start)
+                start_attribute_residuals.append(var.symbol - var.start)
 
         # Assemble symbolics needed to make a function describing the initial condition of the model
         full_initial_residual = ca.vertcat(dae_residual, initial_residual, *start_attribute_residuals)
