@@ -226,7 +226,9 @@ class PIMixin(SimulationProblem):
     @cached
     def parameters(self):
         """
-        Return a dictionary of parameters
+        Return a dictionary of parameters, including parameters in PI Parameter Config XML files.
+
+        :returns: Dictionary of parameters
         """
         # Call parent class first for default values.
         parameters = super().parameters()
@@ -235,7 +237,18 @@ class PIMixin(SimulationProblem):
         for parameter in self.__parameters:
             logger.debug("CSVMixin: Read parameter {} ".format(parameter))
 
-        return {**parameters, **self.__parameters}
+        return parameters.update(self.__parameters)
+
+    @cached
+    def times(self, variable=None):
+        """
+        Return a list of all the timesteps in seconds.
+
+        :param variable: Variable name.
+
+        :returns: A list of all the timesteps in seconds.
+        """
+        return self.__timeseries_import_times[self.__timeseries_import.forecast_index:]
 
     def timeseries_at(self, variable, t):
         """

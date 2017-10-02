@@ -91,9 +91,7 @@ class CSVMixin(SimulationProblem):
             else:
                 logger.warning("CSVMixin: Entry {} in initial_state.csv conflicts with timeseries_import.csv".format(collision))
 
-
-        self.__timeseries_times_sec = self.__datetime_to_sec(
-            self.__timeseries_times)
+        self.__timeseries_times_sec = self.__datetime_to_sec(self.__timeseries_times)
 
         # Timestamp check
         if self.csv_validate_timeseries:
@@ -207,7 +205,9 @@ class CSVMixin(SimulationProblem):
     @cached
     def parameters(self):
         """
-        Return a dictionary of parameters
+        Return a dictionary of parameters, including parameters in parameters CSV files.
+
+        :returns: Dictionary of parameters
         """
         # Call parent class first for default values.
         parameters = super().parameters()
@@ -217,6 +217,16 @@ class CSVMixin(SimulationProblem):
             logger.debug("CSVMixin: Read parameter {} ".format(parameter))
 
         return parameters.update(self.__parameters)
+
+    def times(self, variable=None):
+        """
+        Return a list of all the timesteps in seconds.
+
+        :param variable: Variable name.
+
+        :returns: List of all the timesteps in seconds.
+        """
+        return self.__timeseries_times_sec
 
     def timeseries_at(self, variable, t):
         """
