@@ -216,7 +216,7 @@ class CSVMixin(SimulationProblem):
         for parameter in self.__parameters:
             logger.debug("CSVMixin: Read parameter {} ".format(parameter))
 
-        return {**parameters, **self.__parameters}
+        return parameters.update(self.__parameters)
 
     def timeseries_at(self, variable, t):
         """
