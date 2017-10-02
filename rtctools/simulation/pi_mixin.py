@@ -133,7 +133,7 @@ class PIMixin(SimulationProblem):
         # Set input values
         for variable, timeseries in self.__timeseries_import.items():
             if variable in self.__input_variables:
-                value = timeseries[0]
+                value = timeseries[self.__timeseries_import.forecast_index]
                 if np.isfinite(value):
                     self.set_var(variable, value)
 
