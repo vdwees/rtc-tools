@@ -202,9 +202,6 @@ class SimulationProblem:
 
         """
 
-        initial_residual = self.__initial_residual
-        dae_residual = self.__dae_residual
-
         # Set values of parameters defined in the model
         # TODO: iterate over self.parameters() ?
         for var in self.__pymola_model.parameters:
@@ -219,8 +216,9 @@ class SimulationProblem:
                 logger.debug('SimulationProblem: Setting parameter {} = {}'.format(var.symbol.name(), val))
                 self.set_var(var.symbol.name(), val)
 
-        # Assemble residual for state start attributes
-        start_attribute_residuals = []
+        # Assemble initial residuals
+        constrained_residuals = []
+        minimized_residuals = []
         for var in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states):
             if isinstance(var.start, ca.MX):
                 if not var.start.is_symbolic():
@@ -246,7 +244,7 @@ class SimulationProblem:
                 # To make initialization easier, we allow setting initial states by providing timeseries
                 # with names that match a symbol in the model. We only check for this matching if the start
                 # and fixed attributes were left as default
-                # TODO: perhaps treat these as input_residuals (min error) instead of start_attribute_residuals (constraints)?
+                # TODO: perhaps treat these as minimized_residuals instead of constrained_residuals?
                 try:
                     start_val = self.timeseries_at(var.symbol.name(), 0)
                 except KeyError:
@@ -254,7 +252,7 @@ class SimulationProblem:
                 else:
                     logger.debug('Initialize: Added {} = {} to initial equations (found matching timeseries).'.format(
                     var.symbol.name(), start_val))
-                    start_attribute_residuals.append(var.symbol - start_val)
+                    constrained_residuals.append(var.symbol - start_val)
             else:
                 # var.start was set with a numerical value
                 start_val = var.start
@@ -266,35 +264,37 @@ class SimulationProblem:
                 logger.warning('Initialize: {} not found in state vector. Initial value of {} not set.'.format(
                     var.symbol.name(), start_val))
 
+            # add a residual for the difference between the state and its starting value
             if var.fixed:
-                # add a residual for the difference between the state and its starting value
-                start_attribute_residuals.append(var.symbol - var.start)
+                # require residual = 0
+                constrained_residuals.append(var.symbol - var.start)
+            else:
+                # minimize residual
+                minimized_residuals.append(var.symbol - var.start)
 
         # Warn for nans in state vector (verify we didn't miss anything)
         self.__warn_for_nans()
 
-        # Assemble symbolics needed to make a function describing the initial condition of the model
-        # We constrain every entry in this MX to zero
-        full_initial_residual = ca.vertcat(dae_residual, initial_residual, *start_attribute_residuals)
-
-        # The variables that need a mutually consistent initial condition
-        X = ca.vertcat(*self.__sym_iter[:self.__states_end_index], *self.__mx['derivatives'], *self.__mx['constant_inputs'])
-
-        # Add residuals for constant inputs. We treat all inputs as if "fixed=true", but
-        # minimize rather than constrain this residual to zero
-        input_residuals = []
+        # Add residuals for constant_inputs. We assume all constant_inputs are fixed=true
         for symbol in self.__mx['constant_inputs']:
-            input_residuals.append(symbol - self.get_var(symbol.name()))
-        input_residual = ca.vertcat(*input_residuals)
+            constrained_residuals.append(symbol - self.get_var(symbol.name()))
 
         # Optionally encourage a steady-state initial condition
         if getattr(self, 'encourage_steady_state_initial_conditions', False):
             # add penalty for der(var) != 0.0
-            derivatives = []
             for d in self.__mx['derivatives']:
-                logger.debug('Added {} to the input residual.'.format(d.name()))
-                derivatives.append(d)
-            input_residual = ca.veccat(input_residual, ca.vertcat(*derivatives))
+                logger.debug('Added {} to the minimized residuals.'.format(d.name()))
+                minimized_residuals.append(d)
+
+        # Make minimized_residuals into a single symbolic object
+        minimized_residual = ca.vertcat(*minimized_residuals)
+
+        # Assemble symbolics needed to make a function describing the initial condition of the model
+        # We constrain every entry in this MX to zero
+        equality_constraints = ca.vertcat(self.__dae_residual, self.__initial_residual, *constrained_residuals)
+
+        # The variables that need a mutually consistent initial condition
+        X = ca.vertcat(*self.__sym_iter[:self.__states_end_index], *self.__mx['derivatives'], *self.__mx['constant_inputs'])
 
         # Make a list of unscaled symbols and a list of their scaled equivalent
         unscaled_symbols = []
@@ -310,11 +310,11 @@ class SimulationProblem:
         scaled_symbols = ca.vertcat(*scaled_symbols)
 
         # Substitute unscaled terms for scaled terms
-        full_initial_residual = ca.substitute(full_initial_residual, unscaled_symbols, scaled_symbols)
-        input_residual = ca.substitute(input_residual, unscaled_symbols, scaled_symbols)
+        equality_constraints = ca.substitute(equality_constraints, unscaled_symbols, scaled_symbols)
+        minimized_residual = ca.substitute(minimized_residual, unscaled_symbols, scaled_symbols)
 
-        logger.debug('SimulationProblem: Initial Residual is ' + str(full_initial_residual))
-        logger.debug('SimulationProblem: Input Residual is ' + str(input_residual))
+        logger.debug('SimulationProblem: Initial Equations are ' + str(equality_constraints))
+        logger.debug('SimulationProblem: Minimized Residuals are ' + str(minimized_residual))
 
         # Construct arrays of state bounds
         # TODO: jmodelica seems to ignore min and max terms, so we do to?
@@ -322,18 +322,20 @@ class SimulationProblem:
         ubx = np.full(X.size1(), np.inf)
 
         # Constrain model equation residuals to zero
-        lbg = np.zeros(full_initial_residual.size1())
-        ubg = np.zeros(full_initial_residual.size1())
+        lbg = np.zeros(equality_constraints.size1())
+        ubg = np.zeros(equality_constraints.size1())
 
         # Construct objective function from the input residual
         # TODO: probably can speed this up with a map() call?
-        objective_function = ca.sum1(ca.vertcat(*[ca.power(r, 2) for r in ca.vertsplit(input_residual)]))
+        objective_function = ca.sum1(ca.vertcat(*[ca.power(r, 2) for r in ca.vertsplit(minimized_residual)]))
 
         # Find initial state using ipopt
         parameters = ca.vertcat(*self.__mx['parameters'])
-        nlp = dict(x = X, f = objective_function, g = full_initial_residual, p = parameters)
+        nlp = dict(x = X, f = objective_function, g = equality_constraints, p = parameters)
         solver = ca.nlpsol('solver', 'ipopt', nlp, self.solver_options())
-        guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]), *np.zeros_like(self.__mx['derivatives']), *self.__state_vector[self.__input_slice])
+        guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]),
+                           *np.zeros_like(self.__mx['derivatives']),
+                           *self.__state_vector[self.__input_slice])
         initial_state = solver(x0 = guess,
                                lbx = lbx, ubx = ubx,
                                lbg = lbg, ubg = ubg,
