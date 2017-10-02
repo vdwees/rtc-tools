@@ -122,7 +122,7 @@ class PIMixin(SimulationProblem):
 
         logger.debug("Model parameters are {}".format(self.__parameter_variables))
 
-        for parameter, value  in self.__parameters.items():
+        for parameter, value in self.__parameters.items():
             if parameter in self.__parameter_variables:
                 logger.debug("PIMixin: Setting parameter {} = {}".format(parameter, value))
                 self.set_var(parameter, value)

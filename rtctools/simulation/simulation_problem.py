@@ -138,7 +138,6 @@ class SimulationProblem:
         self.__parameter_slice = slice(len(self.__sym_iter) - len(self.__mx['parameters']), len(self.__sym_iter))
         self.__sym_dict = OrderedDict(((sym.name(), sym) for sym in self.__sym_iter))
 
-
         # Assemble some symbolics, including those needed for a backwards Euler derivative approximation
         X = ca.vertcat(*self.__sym_iter[:self.__states_end_index])
         X_prev = ca.vertcat(*[ca.MX.sym(sym.name() + '_prev') for sym in self.__sym_iter[:self.__states_end_index]])
@@ -193,7 +192,7 @@ class SimulationProblem:
         # Use rootfinder() to make a function that takes a step forward in time by trying to zero res_vals()
         self.__do_step = ca.rootfinder("next_state", "nlpsol", self.__res_vals, {'nlpsol':'ipopt', 'nlpsol_options':self.solver_options()})
 
-        # Call parent class first for default behaviour.
+        # Call parent class for default behaviour.
         super().__init__()
 
     def initialize(self):
@@ -201,7 +200,6 @@ class SimulationProblem:
         Initialize state vector with default values
 
         """
-
         # Set values of parameters defined in the model
         # TODO: iterate over self.parameters() ?
         for var in self.__pymola_model.parameters:
@@ -408,7 +406,6 @@ class SimulationProblem:
 
         return bounds
 
-
     def get_current_residual_values(self):
         """
         Returns the residual values (equation error) of the current state
@@ -538,7 +535,7 @@ class SimulationProblem:
         """
 
         # Get the canonical name and sign
-        name, sign  = self.alias_relation.canonical_signed(name)
+        name, sign = self.alias_relation.canonical_signed(name)
 
         # Get the raw value of the canonical var
         index = self.__get_state_vector_index(name)
@@ -616,7 +613,7 @@ class SimulationProblem:
 
     def __get_state_vector_index(self, variable):
         # TODO: cache these indices
-        index =  next((i for i, sym in enumerate(self.__sym_iter) if sym.name() == variable), None)
+        index = next((i for i, sym in enumerate(self.__sym_iter) if sym.name() == variable), None)
         if index is None:
             raise KeyError(str(variable) + " does not exist!")
         return index
@@ -630,7 +627,6 @@ class SimulationProblem:
             for sym, isnan in zip(self.__sym_iter, value_is_nan):
                 if isnan:
                     logger.warning('Variable {} has no value.'.format(sym))
-
 
     def set_var(self, name, value):
         """
@@ -700,7 +696,6 @@ class SimulationProblem:
         Return a dictionary of parameter values extracted from the Modelica model
         """
         return {p.symbol.name(): p.value for p in self.__pymola_model.parameters}
-
 
     @property
     @cached
