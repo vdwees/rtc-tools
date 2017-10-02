@@ -570,8 +570,8 @@ class SimulationProblem:
     def get_output_variables(self):
         return {sym.name(): sym for sym in self.__mx['outputs']}
 
+    @cached
     def __get_state_vector_index(self, variable):
-        # TODO: cache these indices
         index = next((i for i, sym in enumerate(self.__sym_iter) if sym.name() == variable), None)
         if index is None:
             raise KeyError(str(variable) + " does not exist!")
