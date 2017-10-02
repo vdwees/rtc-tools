@@ -228,6 +228,35 @@ class CSVMixin(SimulationProblem):
         """
         return self.__timeseries_times_sec
 
+    @cached
+    def initial_state(self):
+        """
+        The initial state. Includes entries from parent classes and initial_state.csv
+
+        :returns: A dictionary of variable names and initial state (t0) values.
+        """
+        # Call parent class first for default values.
+        initial_state = super().initial_state()
+
+        # Set of model vars that are allowed to have an initial state
+        valid_model_vars = set(self.get_state_variables()) | set(self.get_input_variables())
+
+        # Load initial states from __initial_state
+        for variable, value in self.__initial_state.items():
+
+            # Get the cannonical vars and signs
+            canonical_var, sign = self.alias_relation.canonical_signed(variable)
+
+            # Only store variables that are allowed to have an initial state
+            if canonical_var in valid_model_vars:
+                initial_state[canonical_var] = value * sign
+
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("CSVMixin: Read initial state {} = {}".format(variable, value))
+            else:
+                logger.warning("CSVMixin: In initial_state.csv, {} is not an input or state variable.".format(variable))
+        return initial_state
+
     def timeseries_at(self, variable, t):
         """
         Return the value of a timeseries at the given time. If t==0, return
@@ -240,26 +269,9 @@ class CSVMixin(SimulationProblem):
 
         :raises: KeyError
         """
-
-        # If t==0, include __initial_state in lookup
-        if t == 0:
-            # Check self.__initial_state
-            initial_state_value = self.__initial_state.get(variable, None)
-            if initial_state_value is not None:
-                return initial_state_value
-
-            # Also check self.__timeseries
-            timeseries_value = self.__timeseries.get(variable, [None])[0]
-            if timeseries_value is not None:
-                return timeseries_value
-
-            # At this point, variable was not found.
-            raise KeyError(variable)
-
+        values = self.__timeseries[variable]
+        t_idx = bisect.bisect_left(self.__timeseries_times_sec, t)
+        if self.__timeseries_times_sec[t_idx] == t:
+            return values[t_idx]
         else:
-            values = self.__timeseries[variable]
-            t_idx = bisect.bisect_left(self.__timeseries_times_sec, t)
-            if self.__timeseries_times_sec[t_idx] == t:
-                return values[t_idx]
-            else:
-                return np.interp1d(t, self.__timeseries_times_sec, values)
+            return np.interp1d(t, self.__timeseries_times_sec, values)

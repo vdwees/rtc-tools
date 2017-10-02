@@ -244,7 +244,7 @@ class SimulationProblem:
                 # and fixed attributes were left as default
                 # TODO: perhaps treat these as minimized_residuals instead of constrained_residuals?
                 try:
-                    start_val = self.timeseries_at(var.symbol.name(), 0)
+                    start_val = self.initial_state()[var.symbol.name()]
                 except KeyError:
                     start_val = var.start
                 else:
@@ -348,7 +348,7 @@ class SimulationProblem:
         self.__state_vector[:self.__states_end_index] = initial_state['x'][:self.__states_end_index].T
 
         # make a copy of the initialized initial state vector in case we want to run the model again
-        self.__initial_state_vector = copy.deepcopy(self.__state_vector)
+        self.__initialized_state_vector = copy.deepcopy(self.__state_vector)
 
         # Warn for nans in state vector after initialization
         self.__warn_for_nans()
@@ -441,7 +441,7 @@ class SimulationProblem:
         """
         Reset the FMU.
         """
-        self.__state_vector = copy.deepcopy(self.__initial_state_vector)
+        self.__state_vector = copy.deepcopy(self.__initialized_state_vector)
 
     def get_start_time(self):
         """
@@ -531,15 +531,15 @@ class SimulationProblem:
 
     def get_var_type(self, name):
         """
-        Return type string, compatible with numpy.
+        Return type, compatible with numpy.
 
-        :param name: Variable name.
+        :param name: String variable name.
 
-        :returns: The type of the variable.
+        :returns: The numpy-compatible type of the variable.
+
+        :raises: KeyError
         """
-        raise NotImplementedError
-        retval = self.__model.get_variable_data_type(name)
-        return self.__model_types[retval]
+        return self.__python_types(name)
 
     def get_var_rank(self, name):
         """
@@ -560,6 +560,9 @@ class SimulationProblem:
         :returns: A list of all variables supported by the FMU.
         """
         return self.__sym_dict
+
+    def get_state_variables(self):
+        return {sym.name(): sym for sym in (self.__mx['states'] + self.__mx['algebraics'])}
 
     def get_parameter_variables(self):
         return {sym.name(): sym for sym in self.__mx['parameters']}
@@ -648,6 +651,27 @@ class SimulationProblem:
         Get the value of the nominal attribute of a variable
         """
         return self.__nominals.get(variable, 1.0)
+
+    @cached
+    def initial_state(self) -> AliasDict:
+        """
+        The initial state.
+
+        :returns: A dictionary of variable names and initial state (t0) values.
+        """
+        t0 = self.get_start_time()
+        initial_state_dict = AliasDict(self.alias_relation)
+
+        for variable in list(self.get_state_variables()) + list(self.get_input_variables()):
+            try:
+                initial_state_dict[variable] = self.timeseries_at(variable, t0)
+            except KeyError:
+                pass
+            else:
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("Read intial state for {}".format(variable))
+
+        return initial_state_dict
 
     @cached
     def parameters(self):
