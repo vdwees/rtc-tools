@@ -217,19 +217,20 @@ class SimulationProblem:
                     # start was a float in MX form
                     start_val = var.python_type(var.start)
                 else:
+                    start_val = 0.0
                     # var.start is a symbol from the model, so we attempt to
                     # set it equal to the value of that symbol
-                    try:
-                        alias_start = self.get_var(var.start.name())
-                        if np.isfinite(alias_start):
-                            start_val = alias_start
-                        else:
-                            start_val = 0.0
-                    # TODO: which Exceptions?
-                    except Exception:
-                        logger.warning('Initialize: Falied to set {} guess with the start value of {}. \
-                            Using default of 0.0'.format(var.symbol.name(), var.start.name()))
-                        start_val = 0.0
+                    # try:
+                    #     alias_start = self.get_var(var.start.name())
+                    #     if np.isfinite(alias_start):
+                    #         start_val = alias_start
+                    #     else:
+                    #         start_val = 0.0
+                    # # TODO: which Exceptions?
+                    # except Exception:
+                    #     logger.warning('Initialize: Falied to set {} guess with the start value of {}. \
+                    #         Using default of 0.0'.format(var.symbol.name(), var.start.name()))
+                    #     start_val = 0.0
 
             elif var.start == 0.0 and not var.fixed:
                 # To make initialization easier, we allow setting initial states by providing timeseries
