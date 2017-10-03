@@ -162,7 +162,7 @@ class AliasDict:
         return len(self.__d)
 
     def __iter__(self):
-        return iter(self.__d.keys())
+        return iter(self.__d)
 
     def update(self, other):
         for key, value in other.items():
