@@ -34,6 +34,10 @@ class CSVMixin(SimulationProblem):
     #: Check consistency of timeseries
     csv_validate_timeseries = True
 
+    # Default names for timseries I/O
+    timeseries_import_basename = 'timeseries_import'
+    timeseries_export_basename = 'timeseries_export'
+
     def __init__(self, **kwargs):
         # Check arguments
         assert('input_folder' in kwargs)
@@ -62,7 +66,7 @@ class CSVMixin(SimulationProblem):
 
         # Read CSV files
         _timeseries = csv.load(os.path.join(
-            self.__input_folder, 'timeseries_import.csv'), delimiter=self.csv_delimiter, with_time=True)
+            self.__input_folder, self.timeseries_import_basename + '.csv'), delimiter=self.csv_delimiter, with_time=True)
         self.__timeseries_times = _timeseries[_timeseries.dtype.names[0]]
         self.__timeseries = {key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}
         logger.debug("CSVMixin: Read timeseries.")
@@ -185,7 +189,7 @@ class CSVMixin(SimulationProblem):
         for variable, values in self.__output.items():
             data[variable] = values
 
-        fname = os.path.join(self.__output_folder, 'timeseries_export.csv')
+        fname = os.path.join(self.__output_folder, self.timeseries_export_basename + '.csv')
         csv.save(fname, data, delimiter=self.csv_delimiter, with_time=True)
 
     def __datetime_to_sec(self, d):
@@ -259,8 +263,7 @@ class CSVMixin(SimulationProblem):
 
     def timeseries_at(self, variable, t):
         """
-        Return the value of a timeseries at the given time. If t==0, return
-        the value of the variable in initial_state.csv when present.
+        Return the value of a timeseries at the given time.
 
         :param variable: Variable name.
         :param t: Time.
