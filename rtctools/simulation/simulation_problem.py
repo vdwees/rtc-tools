@@ -194,6 +194,7 @@ class SimulationProblem:
         """
         Initialize state vector with default values
 
+        :param config_file: Path to an initialization file.
         """
         if config_file:
             # TODO read start and stop time from configfile and call:
@@ -475,15 +476,6 @@ class SimulationProblem:
         :returns: The simulation timestep.
         """
         return self.__dt
-
-    def get_options(self):
-        """
-        Return the available options of the FMU.
-
-        :returns: A dictionary of options supported by the FMU.
-        """
-        raise NotImplementedError
-        return self.__model.simulate_options()
 
     def get_var(self, name):
         """
