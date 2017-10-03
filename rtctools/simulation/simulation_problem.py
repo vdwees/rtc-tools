@@ -227,14 +227,13 @@ class SimulationProblem:
                 else:
                     # var.start is a symbol from the model, so we attempt to
                     # set it equal to the value of that symbol
-                    # TODO: could be a recursive search?
-                    # TODO: what if that variable is not set yet?
                     try:
                         alias_start = self.get_var(var.start.name())
                         if np.isfinite(alias_start):
                             start_val = alias_start
                         else:
                             start_val = 0.0
+                    # TODO: which Exceptions?
                     except Exception:
                         logger.warning('Initialize: Falied to set {} guess with the start value of {}. \
                             Using default of 0.0'.format(var.symbol.name(), var.start.name()))
@@ -244,15 +243,18 @@ class SimulationProblem:
                 # To make initialization easier, we allow setting initial states by providing timeseries
                 # with names that match a symbol in the model. We only check for this matching if the start
                 # and fixed attributes were left as default
-                # TODO: perhaps treat these as minimized_residuals instead of constrained_residuals?
                 try:
                     start_val = self.initial_state()[var.symbol.name()]
                 except KeyError:
                     start_val = var.start
                 else:
+                    # An intitial state was found- add it to the constrained residuals
                     logger.debug('Initialize: Added {} = {} to initial equations (found matching timeseries).'.format(
-                    var.symbol.name(), start_val))
+                        var.symbol.name(), start_val))
+                    self.set_var(var.symbol.name(), start_val)
                     constrained_residuals.append(var.symbol - start_val)
+                    # residuals and stated vector are already set, so skip to the next var in the for-loop
+                    continue
             else:
                 # var.start was set with a numerical value
                 start_val = var.start
