@@ -89,7 +89,7 @@ class CSVMixin(SimulationProblem):
             self.__initial_state = {}
 
         # Check for collisions in __initial_state and __timeseries
-        for collision in set(self.__initial_state.keys()) & set(self.__timeseries.keys()):
+        for collision in set(self.__initial_state) & set(self.__timeseries):
             if self.__initial_state[collision] == self.__timeseries[collision][0]:
                 continue
             else:
