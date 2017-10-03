@@ -195,8 +195,7 @@ class SimulationProblem:
         Initialize state vector with default values
 
         """
-        # Set values of parameters defined in the model
-        # TODO: iterate over self.parameters() ?
+        # Set values of parameters defined in the model into the state vector
         for var in self.__pymola_model.parameters:
             # First test to see if the value is constant
             if isinstance(var.value, ca.MX) and not var.value.is_constant():
@@ -209,7 +208,7 @@ class SimulationProblem:
                 logger.debug('SimulationProblem: Setting parameter {} = {}'.format(var.symbol.name(), val))
                 self.set_var(var.symbol.name(), val)
 
-        # Assemble initial residuals
+        # Assemble initial residuals and set values from start arributes into the state vector
         constrained_residuals = []
         minimized_residuals = []
         for var in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states):
@@ -556,17 +555,21 @@ class SimulationProblem:
         """
         return self.__sym_dict
 
+    @cached
     def get_state_variables(self):
-        return {sym.name(): sym for sym in (self.__mx['states'] + self.__mx['algebraics'])}
+        return AliasDict(self.alias_relation, {sym.name(): sym for sym in (self.__mx['states'] + self.__mx['algebraics'])})
 
+    @cached
     def get_parameter_variables(self):
-        return {sym.name(): sym for sym in self.__mx['parameters']}
+        return AliasDict(self.alias_relation, {sym.name(): sym for sym in self.__mx['parameters']})
 
+    @cached
     def get_input_variables(self):
-        return {sym.name(): sym for sym in self.__mx['constant_inputs']}
+        return AliasDict(self.alias_relation, {sym.name(): sym for sym in self.__mx['constant_inputs']})
 
+    @cached
     def get_output_variables(self):
-        return {sym.name(): sym for sym in self.__mx['outputs']}
+        return AliasDict(self.alias_relation, {sym.name(): sym for sym in self.__mx['outputs']})
 
     @cached
     def __get_state_vector_index(self, variable):
