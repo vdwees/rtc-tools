@@ -119,9 +119,6 @@ class SimulationProblem:
         function_arguments = [self.__pymola_model.time] + \
             [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
 
-        self.__all_vars = list(itertools.chain.from_iterable(
-            ((v for v in getattr(self.__pymola_model, variable_list)) for variable_list in variable_lists)))
-
         self.__dae_residual = self.__pymola_model.dae_residual_function(*function_arguments)
 
         self.__initial_residual = self.__pymola_model.initial_residual_function(*function_arguments)
@@ -253,7 +250,7 @@ class SimulationProblem:
                         var.symbol.name(), start_val))
                     self.set_var(var.symbol.name(), start_val)
                     constrained_residuals.append(var.symbol - start_val)
-                    # residuals and stated vector are already set, so skip to the next var in the for-loop
+                    # residuals and state vector are already set, so skip to the next var in the for-loop
                     continue
             else:
                 # var.start was set with a numerical value
