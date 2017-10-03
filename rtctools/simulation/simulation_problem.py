@@ -126,32 +126,34 @@ class SimulationProblem:
             self.__initial_residual = ca.MX()
 
         # Construct state vector
-        self.__sym_iter = self.__mx['states'] + \
-                          self.__mx['algebraics'] + \
+        self.__sym_list = self.__mx['states'] + self.__mx['algebraics'] + self.__mx['derivatives'] + \
                           self.__mx['time'] + \
-                          self.__mx['constant_inputs'] + \
-                          self.__mx['parameters']
-        self.__state_vector = np.full(len(self.__sym_iter), np.nan)
-        self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics'])
-        self.__input_slice = slice(self.__states_end_index + 1, len(self.__sym_iter) - len(self.__mx['parameters']))
-        self.__parameter_slice = slice(len(self.__sym_iter) - len(self.__mx['parameters']), len(self.__sym_iter))
-        self.__sym_dict = OrderedDict(((sym.name(), sym) for sym in self.__sym_iter))
+                          self.__mx['constant_inputs'] + self.__mx['parameters']
+        self.__state_vector = np.full(len(self.__sym_list), np.nan)
+
+        # SOme handy slices and indices
+        self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics']) + len(self.__mx['derivatives'])
+        self.__input_slice = slice(self.__states_end_index + 1, len(self.__sym_list) - len(self.__mx['parameters']))
+        self.__parameter_slice = slice(len(self.__sym_list) - len(self.__mx['parameters']), len(self.__sym_list))
+
+        # Construct a dict to look up symbols by name (or iterate over)
+        self.__sym_dict = OrderedDict(((sym.name(), sym) for sym in self.__sym_list))
 
         # Assemble some symbolics, including those needed for a backwards Euler derivative approximation
-        X = ca.vertcat(*self.__sym_iter[:self.__states_end_index])
-        X_prev = ca.vertcat(*[ca.MX.sym(sym.name() + '_prev') for sym in self.__sym_iter[:self.__states_end_index]])
+        X = ca.vertcat(*self.__sym_list[:self.__states_end_index])
+        X_prev = ca.vertcat(*[ca.MX.sym(sym.name() + '_prev') for sym in self.__sym_list[:self.__states_end_index]])
         dt = ca.MX.sym("delta_t")
 
         # Make a list of derivative approximations using backwards Euler formulation
-        derivative_approximations = []
+        derivative_approximation_residuals = []
         for derivative_state in self.__mx['derivatives']:
-            index = next((i for i, s in enumerate(X) if s.name() == derivative_state.name()[4:-1]))
-            derivative_approximations.append((X[index] - X_prev[index]) / dt)
+            index = self.__get_state_vector_index(derivative_state.name()[4:-1])
+            if index > self.__states_end_index:
+                logger.error('Derivatives of parameters or inputs are not supported in the Model.')
+            derivative_approximation_residuals.append(derivative_state - (X[index] - X_prev[index]) / dt)
 
-        # Substitute derivatives for derivative approximations
-        derivatives = ca.vertcat(*self.__mx['derivatives'])
-        derivative_approximations = ca.vertcat(*derivative_approximations)
-        dae_residual_substituted_ders = ca.substitute(self.__dae_residual, derivatives, derivative_approximations)
+        # Append residuals for derivative approximations
+        dae_residual = ca.vertcat(self.__dae_residual, *derivative_approximation_residuals)
 
         # TODO: implement lookup_tables
 
@@ -160,33 +162,30 @@ class SimulationProblem:
         scaled_symbols = []
         for sym_name, nominal in self.__nominals.items():
             # Add the symbol to the lists
-            symbol = self.__sym_dict[sym_name]
-            unscaled_symbols.append(symbol)
-            scaled_symbols.append(symbol * nominal)
+            index = self.__get_state_vector_index(sym_name)
+            unscaled_symbols.append(X[index])
+            scaled_symbols.append(X[index] * nominal)
 
             # Also scale previous states
-            prev_state_index = next((i for i, s in enumerate(X) if s.name() == sym_name), None)
-            if prev_state_index is not None:
-                # symbol is a state, so add previous state terms to the substitute list
-                unscaled_symbols.append(X_prev[prev_state_index])
-                scaled_symbols.append(X_prev[prev_state_index] * nominal)
+            if index <= self.__states_end_index:
+                unscaled_symbols.append(X_prev[index])
+                scaled_symbols.append(X_prev[index] * nominal)
 
         # Substitute unscaled terms for scaled terms
-        dae_residual_scaled = ca.substitute(dae_residual_substituted_ders,
-                                            ca.vertcat(*unscaled_symbols), ca.vertcat(*scaled_symbols))
+        dae_residual = ca.substitute(dae_residual, ca.vertcat(*unscaled_symbols), ca.vertcat(*scaled_symbols))
 
-        logger.debug('SimulationProblem: DAE Residual is ' + ', '.join(
-            (str(res) for res in ca.vertsplit(dae_residual_scaled))))
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            logger.debug('SimulationProblem: DAE Residual is ' + ', '.join((str(res) for res in ca.vertsplit(dae_residual))))
 
-        if X.size1() != dae_residual_scaled.size1():
+        if X.size1() != dae_residual.size1():
             logger.error('Formulation Error: Number of states ({}) does not equal number of equations ({})'.format(
-                X.size1(), dae_residual_scaled.size1()))
+                X.size1(), dae_residual.size1()))
 
         # Construct function parameters
-        parameters = ca.vertcat(dt, X_prev, *self.__sym_iter[self.__states_end_index:])
+        parameters = ca.vertcat(dt, X_prev, *self.__sym_list[self.__states_end_index:])
 
-        # Construct a function res_vals that returns the numerical residuals of a numnerical state
-        self.__res_vals = ca.Function("res_vals", [X, parameters], [dae_residual_scaled])
+        # Construct a function res_vals that returns the numerical residuals of a numerical state
+        self.__res_vals = ca.Function("res_vals", [X, parameters], [dae_residual])
 
         # Use rootfinder() to make a function that takes a step forward in time by trying to zero res_vals()
         self.__do_step = ca.rootfinder("next_state", "nlpsol", self.__res_vals, {'nlpsol':'ipopt', 'nlpsol_options':self.solver_options()})
@@ -271,6 +270,10 @@ class SimulationProblem:
                 # minimize residual
                 minimized_residuals.append(var.symbol - var.start)
 
+        # Default start var for ders is zero
+        for der_var in self.__mx['derivatives']:
+            self.set_var(der_var.name(), 0.0)
+
         # Warn for nans in state vector (verify we didn't miss anything)
         self.__warn_for_nans()
 
@@ -293,7 +296,7 @@ class SimulationProblem:
         equality_constraints = ca.vertcat(self.__dae_residual, self.__initial_residual, *constrained_residuals)
 
         # The variables that need a mutually consistent initial condition
-        X = ca.vertcat(*self.__sym_iter[:self.__states_end_index], *self.__mx['derivatives'], *self.__mx['constant_inputs'])
+        X = ca.vertcat(*self.__sym_list[:self.__states_end_index], *self.__mx['constant_inputs'])
 
         # Make a list of unscaled symbols and a list of their scaled equivalent
         unscaled_symbols = []
@@ -333,7 +336,6 @@ class SimulationProblem:
         nlp = dict(x = X, f = objective_function, g = equality_constraints, p = parameters)
         solver = ca.nlpsol('solver', 'ipopt', nlp, self.solver_options())
         guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]),
-                           *np.zeros_like(self.__mx['derivatives']),
                            *self.__state_vector[self.__input_slice])
         initial_state = solver(x0 = guess,
                                lbx = lbx, ubx = ubx,
@@ -576,7 +578,7 @@ class SimulationProblem:
 
     @cached
     def __get_state_vector_index(self, variable):
-        index = next((i for i, sym in enumerate(self.__sym_iter) if sym.name() == variable), None)
+        index = next((i for i, sym in enumerate(self.__sym_list) if sym.name() == variable), None)
         if index is None:
             raise KeyError(str(variable) + " does not exist!")
         return index
@@ -587,7 +589,7 @@ class SimulationProblem:
         """
         value_is_nan = np.isnan(self.__state_vector)
         if any(value_is_nan):
-            for sym, isnan in zip(self.__sym_iter, value_is_nan):
+            for sym, isnan in zip(self.__sym_list, value_is_nan):
                 if isnan:
                     logger.warning('Variable {} has no value.'.format(sym))
 
