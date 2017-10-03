@@ -190,11 +190,17 @@ class SimulationProblem:
         # Call parent class for default behaviour.
         super().__init__()
 
-    def initialize(self):
+    def initialize(self, config_file=None):
         """
         Initialize state vector with default values
 
         """
+        if config_file:
+            # TODO read start and stop time from configfile and call:
+            # self.setup_experiment(start,stop)
+            # for now, assume that setup_experiment was called beforehand
+            raise NotImplementedError
+
         # Set values of parameters defined in the model into the state vector
         for var in self.__pymola_model.parameters:
             # First test to see if the value is constant
