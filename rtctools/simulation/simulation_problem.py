@@ -25,6 +25,8 @@ import rtctools.data.pi as pi
 
 class SimulationProblem:
     """
+    Implements the `BMI <http://csdms.colorado.edu/wiki/BMI_Description>`_ Interface.
+
     Base class for all Simulation problems. Loads the Modelica Model.
     """
 
