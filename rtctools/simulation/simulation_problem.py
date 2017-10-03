@@ -127,14 +127,11 @@ class SimulationProblem:
 
         # Construct state vector
         self.__sym_list = self.__mx['states'] + self.__mx['algebraics'] + self.__mx['derivatives'] + \
-                          self.__mx['time'] + \
-                          self.__mx['constant_inputs'] + self.__mx['parameters']
+                          self.__mx['time'] + self.__mx['constant_inputs'] + self.__mx['parameters']
         self.__state_vector = np.full(len(self.__sym_list), np.nan)
 
-        # SOme handy slices and indices
+        # A very handy index
         self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics']) + len(self.__mx['derivatives'])
-        self.__input_slice = slice(self.__states_end_index + 1, len(self.__sym_list) - len(self.__mx['parameters']))
-        self.__parameter_slice = slice(len(self.__sym_list) - len(self.__mx['parameters']), len(self.__sym_list))
 
         # Construct a dict to look up symbols by name (or iterate over)
         self.__sym_dict = OrderedDict(((sym.name(), sym) for sym in self.__sym_list))
@@ -277,10 +274,6 @@ class SimulationProblem:
         # Warn for nans in state vector (verify we didn't miss anything)
         self.__warn_for_nans()
 
-        # Add residuals for constant_inputs. We assume all constant_inputs are fixed=true
-        for symbol in self.__mx['constant_inputs']:
-            constrained_residuals.append(symbol - self.get_var(symbol.name()))
-
         # Optionally encourage a steady-state initial condition
         if getattr(self, 'encourage_steady_state_initial_conditions', False):
             # add penalty for der(var) != 0.0
@@ -296,7 +289,7 @@ class SimulationProblem:
         equality_constraints = ca.vertcat(self.__dae_residual, self.__initial_residual, *constrained_residuals)
 
         # The variables that need a mutually consistent initial condition
-        X = ca.vertcat(*self.__sym_list[:self.__states_end_index], *self.__mx['constant_inputs'])
+        X = ca.vertcat(*self.__sym_list[:self.__states_end_index])
 
         # Make a list of unscaled symbols and a list of their scaled equivalent
         unscaled_symbols = []
@@ -332,15 +325,14 @@ class SimulationProblem:
         objective_function = ca.sum1(ca.vertcat(*[ca.power(r, 2) for r in ca.vertsplit(minimized_residual)]))
 
         # Find initial state using ipopt
-        parameters = ca.vertcat(*self.__mx['parameters'])
+        parameters = ca.vertcat(*self.__mx['time'], *self.__mx['constant_inputs'], *self.__mx['parameters'])
         nlp = dict(x = X, f = objective_function, g = equality_constraints, p = parameters)
         solver = ca.nlpsol('solver', 'ipopt', nlp, self.solver_options())
-        guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]),
-                           *self.__state_vector[self.__input_slice])
+        guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]))
         initial_state = solver(x0 = guess,
                                lbx = lbx, ubx = ubx,
                                lbg = lbg, ubg = ubg,
-                               p = self.__state_vector[self.__parameter_slice])
+                               p = self.__state_vector[self.__states_end_index:])
 
         # If unsuccessful, stop.
         return_status = solver.stats()['return_status']
