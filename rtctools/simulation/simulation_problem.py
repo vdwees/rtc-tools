@@ -596,8 +596,6 @@ class SimulationProblem:
             differentiand = expression[4:-1] + index
 
         if validate and self.__sym_dict.get(differentiand, None) is not None:
-            print(variable)
-            print(differentiand)
             return differentiand
         else:
             raise ValueError('Variable {} is not in the model.'.format(differentiand))
