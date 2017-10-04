@@ -588,6 +588,7 @@ class SimulationProblem:
             raise KeyError(str(variable) + " does not exist!")
         return index
 
+    @cached
     def __get_differentiand(self, variable, validate=True):
         """
         Gets the term being differentiated
