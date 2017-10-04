@@ -205,23 +205,33 @@ class SimulationProblem:
 
         # Set values of parameters defined in the model into the state vector
         for var in self.__pymola_model.parameters:
-            # First test to see if the value is constant
+            # First check to see if parameter is already set (this allows child classes to overide model defaults)
+            if np.isfinite(self.get_var(var.symbol.name())):
+                continue
+
+            # Also test to see if the value is constant
             if isinstance(var.value, ca.MX) and not var.value.is_constant():
                 continue
 
-            # If constant, extract the value as a python type
-            val = var.python_type(var.value)
-            # If val is finite, we set it
-            if np.isfinite(val):
-                logger.debug('SimulationProblem: Setting parameter {} = {}'.format(var.symbol.name(), val))
-                self.set_var(var.symbol.name(), val)
+            # Try to extract the value
+            try:
+                # Extract the value as a python type
+                val = var.python_type(var.value)
+            except ValueError:
+                # var.value is a float NaN being cast to non-float
+                continue
+            else:
+                # If val is finite, we set it
+                if np.isfinite(val):
+                    logger.debug('SimulationProblem: Setting parameter {} = {}'.format(var.symbol.name(), val))
+                    self.set_var(var.symbol.name(), val)
 
         # Assemble initial residuals and set values from start arributes into the state vector
         constrained_residuals = []
         minimized_residuals = []
         for var in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states):
             if isinstance(var.start, ca.MX):
-                if not var.start.is_symbolic():
+                if var.start.is_constant():
                     # start was a float in MX form
                     start_val = var.python_type(var.start)
                 else:
