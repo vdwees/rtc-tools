@@ -7,6 +7,7 @@ import rtctools.data.rtc as rtc
 import rtctools.data.pi as pi
 
 from .simulation_problem import SimulationProblem
+from rtctools._internal.caching import cached
 
 logger = logging.getLogger("rtctools")
 
@@ -39,6 +40,10 @@ class PIMixin(SimulationProblem):
     #: Check for duplicate parameters
     pi_check_for_duplicate_parameters = True
 
+    # Default names for timseries I/O
+    timeseries_import_basename = 'timeseries_import'
+    timeseries_export_basename = 'timeseries_export'
+
     def __init__(self, **kwargs):
         # Check arguments
         assert('input_folder' in kwargs)
@@ -69,19 +74,25 @@ class PIMixin(SimulationProblem):
             raise Exception(
                 "PI: {}.xml not found in {}.".format(pi_parameter_config_basename, self.__input_folder))
 
-        # timeseries_{import,export}.xml.
-        basename_import = 'timeseries_import'
-        basename_export = 'timeseries_export'
+        # Make a parameters dict for later access
+        self.__parameters = {}
+        for parameter_config in self.__parameter_config:
+            for location_id, model_id, parameter_id, value in parameter_config:
+                try:
+                    parameter = self.__data_config.parameter(parameter_id, location_id, model_id)
+                except KeyError:
+                    parameter = parameter_id
+                self.__parameters[parameter] = value
 
         try:
             self.__timeseries_import = pi.Timeseries(
-                self.__data_config, self.__input_folder, basename_import, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
+                self.__data_config, self.__input_folder, self.timeseries_import_basename, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
         except IOError:
             raise Exception("PI: {}.xml not found in {}.".format(
                 basename_import, self.__input_folder))
 
         self.__timeseries_export = pi.Timeseries(
-            self.__data_config, self.__output_folder, basename_export, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
+            self.__data_config, self.__output_folder, self.timeseries_export_basename, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
 
         # Convert timeseries timestamps to seconds since t0 for internal use
         self.__timeseries_import_times = self.__datetime_to_sec(
@@ -111,29 +122,22 @@ class PIMixin(SimulationProblem):
 
         logger.debug("Model parameters are {}".format(self.__parameter_variables))
 
-        for parameter_config in self.__parameter_config:
-            for location_id, model_id, parameter_id, value in parameter_config:
-                try:
-                    parameter = self.__data_config.parameter(parameter_id, location_id, model_id)
-                except KeyError:
-                    parameter = parameter_id
-
-                if parameter in self.__parameter_variables:
-                    logger.debug("Setting parameter {} = {}".format(parameter, value))
-
-                    self.set_var(parameter, value)
+        for parameter, value in self.__parameters.items():
+            if parameter in self.__parameter_variables:
+                logger.debug("PIMixin: Setting parameter {} = {}".format(parameter, value))
+                self.set_var(parameter, value)
 
         # Load input variable names
         self.__input_variables = set(self.get_input_variables().keys())
 
-        logger.debug("Model inputs are {}".format(self.__input_variables))
-
-        # Set initial input values
+        # Set input values
         for variable, timeseries in self.__timeseries_import.items():
             if variable in self.__input_variables:
-                value = timeseries[self.__timeseries_import._forecast_index]
+                value = timeseries[self.__timeseries_import.forecast_index]
                 if np.isfinite(value):
                     self.set_var(variable, value)
+
+        logger.debug("Model inputs are {}".format(self.__input_variables))
 
         # Empty output
         self.__output_variables = set(self.get_output_variables().keys())
@@ -145,7 +149,7 @@ class PIMixin(SimulationProblem):
 
         # Extract consistent t0 values
         for variable in self.__output_variables:
-            self.__output[variable][self.__timeseries_import._forecast_index] = self.get_var(variable)
+            self.__output[variable][self.__timeseries_import.forecast_index] = self.get_var(variable)
 
     def update(self, dt):
         # Time step
@@ -178,36 +182,29 @@ class PIMixin(SimulationProblem):
 
         # Start of write output
         # Write the time range for the export file.
-        self.__timeseries_export._times = self.__timeseries_import.times[self.__timeseries_import.forecast_index:]
+        self.__timeseries_export.times = self.__timeseries_import.times[self.__timeseries_import.forecast_index:]
 
         # Write other time settings
-        self.__timeseries_export._start_datetime = self.__timeseries_import._forecast_datetime
-        self.__timeseries_export._end_datetime  = self.__timeseries_import._end_datetime
-        self.__timeseries_export._forecast_datetime  = self.__timeseries_import._forecast_datetime
-        self.__timeseries_export._dt = self.__timeseries_import._dt
-        self.__timeseries_export._timezone = self.__timeseries_import._timezone
+        self.__timeseries_export.forecast_datetime  = self.__timeseries_import.forecast_datetime
+        self.__timeseries_export.dt = self.__timeseries_import.dt
+        self.__timeseries_export.timezone = self.__timeseries_import.timezone
 
         # Write the ensemble properties for the export file.
-        self.__timeseries_export._ensemble_size = 1
-        self.__timeseries_export._contains_ensemble = self.__timeseries_import.contains_ensemble
-        while self.__timeseries_export._ensemble_size > len(self.__timeseries_export._values):
-            self.__timeseries_export._values.append({})
-
-        # Transfer units from import timeseries
-        self.__timeseries_export._units = self.__timeseries_import._units
+        self.__timeseries_export.ensemble_size = 1
+        self.__timeseries_export.contains_ensemble = self.__timeseries_import.contains_ensemble
 
         # For all variables that are output variables the values are
         # extracted from the results.
         for key, values in self.__output.items():
             # Check if ID mapping is present
             try:
-                location_parameter_id = self.__timeseries_export._data_config.pi_variable_ids(key)
+                location_parameter_id = self.__data_config.pi_variable_ids(key)
             except KeyError:
                 logger.debug('PIMixIn: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(key))
                 continue
 
             # Add series to output file
-            self.__timeseries_export.set(key, values)
+            self.__timeseries_export.set(key, values, unit=self.__timeseries_import.get_unit(key))
 
         # Write output file to disk
         self.__timeseries_export.write()
@@ -225,6 +222,33 @@ class PIMixin(SimulationProblem):
             return [self.__timeseries_import.forecast_datetime + timedelta(seconds=t) for t in s]
         else:
             return self.__timeseries_import.forecast_datetime + timedelta(seconds=s)
+
+    @cached
+    def parameters(self):
+        """
+        Return a dictionary of parameters, including parameters in PI Parameter Config XML files.
+
+        :returns: Dictionary of parameters
+        """
+        # Call parent class first for default values.
+        parameters = super().parameters()
+
+        # Load parameters from parameter config
+        for parameter in self.__parameters:
+            logger.debug("CSVMixin: Read parameter {} ".format(parameter))
+
+        return parameters.update(self.__parameters)
+
+    @cached
+    def times(self, variable=None):
+        """
+        Return a list of all the timesteps in seconds.
+
+        :param variable: Variable name.
+
+        :returns: A list of all the timesteps in seconds.
+        """
+        return self.__timeseries_import_times[self.__timeseries_import.forecast_index:]
 
     def timeseries_at(self, variable, t):
         """

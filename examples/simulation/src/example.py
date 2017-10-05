@@ -10,6 +10,10 @@ class Example(CSVMixin, SimulationProblem):
     A basic example for introducing users to RTC-Tools 2 Simulation
     """
 
+    def initialize(self):
+        self.set_var('P_control', 0.0)
+        super().initialize()
+
     # Min and Max flow rate that the storage is capable of releasing
     min_release, max_release = 0., 8. # m^3/s
 
@@ -19,7 +23,7 @@ class Example(CSVMixin, SimulationProblem):
 
         # Get the time step
         if dt < 0:
-            dt = self._dt
+            dt = self.get_time_step()
 
         # Get relevant model variables
         volume = self.get_var('storage.V')
@@ -38,7 +42,7 @@ class Example(CSVMixin, SimulationProblem):
         self.set_var('P_control', bounded_control)
 
         # Call the super class so that everything else continues as normal
-    	super(Example, self).update(dt)
+        super().update(dt)
 
 # Run
 run_simulation_problem(Example, log_level=logging.DEBUG)

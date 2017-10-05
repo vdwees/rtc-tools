@@ -1,5 +1,4 @@
 ﻿from rtctools.simulation.simulation_problem import SimulationProblem
-from pyfmi.fmi_algorithm_drivers import FMICSAlgOptions
 import os
 import re
 import numpy as np
@@ -7,8 +6,6 @@ import collections
 
 from .data_path import data_path
 from test_case import TestCase
-
-import pyfmi
 
 class SimulationTestProblem(SimulationProblem):
     def __init__(self):
@@ -21,10 +18,6 @@ class TestSimulation(TestCase):
 
     def test_object(self):
         self.assertIsInstance(self.problem, SimulationTestProblem)
-
-    def test_options(self):
-        options = self.problem.get_options()
-        self.assertIsInstance(options, FMICSAlgOptions)
         
     def test_get_variables(self):
         all_variables = self.problem.get_variables()

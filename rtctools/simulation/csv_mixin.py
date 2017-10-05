@@ -7,6 +7,7 @@ import os
 import rtctools.data.csv as csv
 
 from .simulation_problem import SimulationProblem
+from rtctools._internal.caching import cached
 
 logger = logging.getLogger("rtctools")
 
@@ -32,6 +33,10 @@ class CSVMixin(SimulationProblem):
 
     #: Check consistency of timeseries
     csv_validate_timeseries = True
+
+    # Default names for timseries I/O
+    timeseries_import_basename = 'timeseries_import'
+    timeseries_export_basename = 'timeseries_export'
 
     def __init__(self, **kwargs):
         # Check arguments
@@ -61,7 +66,7 @@ class CSVMixin(SimulationProblem):
 
         # Read CSV files
         _timeseries = csv.load(os.path.join(
-            self.__input_folder, 'timeseries_import.csv'), delimiter=self.csv_delimiter, with_time=True)
+            self.__input_folder, self.timeseries_import_basename + '.csv'), delimiter=self.csv_delimiter, with_time=True)
         self.__timeseries_times = _timeseries[_timeseries.dtype.names[0]]
         self.__timeseries = {key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}
         logger.debug("CSVMixin: Read timeseries.")
@@ -83,8 +88,14 @@ class CSVMixin(SimulationProblem):
         except IOError:
             self.__initial_state = {}
 
-        self.__timeseries_times_sec = self.__datetime_to_sec(
-            self.__timeseries_times)
+        # Check for collisions in __initial_state and __timeseries
+        for collision in set(self.__initial_state) & set(self.__timeseries):
+            if self.__initial_state[collision] == self.__timeseries[collision][0]:
+                continue
+            else:
+                logger.warning("CSVMixin: Entry {} in initial_state.csv conflicts with timeseries_import.csv".format(collision))
+
+        self.__timeseries_times_sec = self.__datetime_to_sec(self.__timeseries_times)
 
         # Timestamp check
         if self.csv_validate_timeseries:
@@ -113,30 +124,20 @@ class CSVMixin(SimulationProblem):
 
         for parameter, value in self.__parameters.items():
             if parameter in self.__parameter_variables:
-                logger.debug("Setting parameter {} = {}".format(parameter, value))
-
+                logger.debug("CSVMixin: Setting parameter {} = {}".format(parameter, value))
                 self.set_var(parameter, value)
 
         # Load input variable names
         self.__input_variables = set(self.get_input_variables().keys())
 
-        # Set initial states
-        for variable, value in self.__initial_state.items():
-            if variable in self.__input_variables:
-                if variable in self.__timeseries:
-                    logger.warning("Entry {} in initial_state.csv was also found in timeseries_import.csv.".format(variable))
-                self.set_var(variable, value)
-            else:
-                logger.warning("Entry {} in initial_state.csv is not an input variable.".format(variable))
-
-        logger.debug("Model inputs are {}".format(self.__input_variables))
-
-        # Set initial input values
+        # Set input values
         for variable, timeseries in self.__timeseries.items():
             if variable in self.__input_variables:
                 value = timeseries[0]
                 if np.isfinite(value):
                     self.set_var(variable, value)
+
+        logger.debug("Model inputs are {}".format(self.__input_variables))
 
         # Empty output
         self.__output_variables = set(self.get_output_variables().keys())
@@ -188,7 +189,7 @@ class CSVMixin(SimulationProblem):
         for variable, values in self.__output.items():
             data[variable] = values
 
-        fname = os.path.join(self.__output_folder, 'timeseries_export.csv')
+        fname = os.path.join(self.__output_folder, self.timeseries_export_basename + '.csv')
         csv.save(fname, data, delimiter=self.csv_delimiter, with_time=True)
 
     def __datetime_to_sec(self, d):
@@ -205,9 +206,64 @@ class CSVMixin(SimulationProblem):
         else:
             return self.__timeseries_times[0] + timedelta(seconds=s)
 
+    @cached
+    def parameters(self):
+        """
+        Return a dictionary of parameters, including parameters in parameters CSV files.
+
+        :returns: Dictionary of parameters
+        """
+        # Call parent class first for default values.
+        parameters = super().parameters()
+
+        # Load parameters from parameter config
+        for parameter in self.__parameters:
+            logger.debug("CSVMixin: Read parameter {} ".format(parameter))
+
+        return parameters.update(self.__parameters)
+
+    def times(self, variable=None):
+        """
+        Return a list of all the timesteps in seconds.
+
+        :param variable: Variable name.
+
+        :returns: List of all the timesteps in seconds.
+        """
+        return self.__timeseries_times_sec
+
+    @cached
+    def initial_state(self):
+        """
+        The initial state. Includes entries from parent classes and initial_state.csv
+
+        :returns: A dictionary of variable names and initial state (t0) values.
+        """
+        # Call parent class first for default values.
+        initial_state = super().initial_state()
+
+        # Set of model vars that are allowed to have an initial state
+        valid_model_vars = set(self.get_state_variables()) | set(self.get_input_variables())
+
+        # Load initial states from __initial_state
+        for variable, value in self.__initial_state.items():
+
+            # Get the cannonical vars and signs
+            canonical_var, sign = self.alias_relation.canonical_signed(variable)
+
+            # Only store variables that are allowed to have an initial state
+            if canonical_var in valid_model_vars:
+                initial_state[canonical_var] = value * sign
+
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                        logger.debug("CSVMixin: Read initial state {} = {}".format(variable, value))
+            else:
+                logger.warning("CSVMixin: In initial_state.csv, {} is not an input or state variable.".format(variable))
+        return initial_state
+
     def timeseries_at(self, variable, t):
         """
-        Return the value of a time series at the given time.
+        Return the value of a timeseries at the given time.
 
         :param variable: Variable name.
         :param t: Time.
