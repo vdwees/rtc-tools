@@ -162,12 +162,13 @@ class ControlTreeMixin(OptimizationProblem):
 
         # Map ensemble members to control inputs
         # (variable, (ensemble member, step)) -> control_index
-        self._control_indices = {}
+        self.__control_indices = [{} for ensemble_member in range(self.ensemble_size)]
         count = 0
         for control_input in self.controls:
             times = self.times(control_input)
-            self._control_indices[control_input] = np.zeros(
-                (self.ensemble_size, len(times)), dtype=np.int16)
+            for member in range(self.ensemble_size):
+                self.__control_indices[member][control_input] = np.zeros(
+                    len(times), dtype=np.int16)
             for branch, members in branches.items():
                 branching_time_0 = branching_times[len(branch) + 0]
                 branching_time_1 = branching_times[len(branch) + 1]
@@ -175,8 +176,8 @@ class ControlTreeMixin(OptimizationProblem):
                     times >= branching_time_0, times < branching_time_1)
                 nnz = np.count_nonzero(els)
                 for member in members:
-                    self._control_indices[control_input][
-                        member, els] = list(range(count, count + nnz))
+                    self.__control_indices[member][control_input][els] = \
+                        list(range(count, count + nnz))
                 count += nnz
 
         # Construct bounds and initial guess
@@ -193,8 +194,8 @@ class ControlTreeMixin(OptimizationProblem):
             for variable in self.controls:
                 times = self.times(variable)
 
-                discrete[self._control_indices[variable][
-                    ensemble_member, :]] = self.variable_is_discrete(variable)
+                discrete[self.__control_indices[ensemble_member][variable]] = \
+                    self.variable_is_discrete(variable)
 
                 try:
                     bound = resolved_bounds[variable]
@@ -204,28 +205,26 @@ class ControlTreeMixin(OptimizationProblem):
                     nominal = self.variable_nominal(variable)
                     if bound[0] is not None:
                         if isinstance(bound[0], Timeseries):
-                            lbx[self._control_indices[variable][ensemble_member, :]] = self.interpolate(
+                            lbx[self.__control_indices[ensemble_member][variable]] = self.interpolate(
                                 times, bound[0].times, bound[0].values, -np.inf, -np.inf) / nominal
                         else:
-                            lbx[self._control_indices[variable][
-                                ensemble_member, :]] = bound[0] / nominal
+                            lbx[self.__control_indices[ensemble_member][variable]] = bound[0] / nominal
                     if bound[1] is not None:
                         if isinstance(bound[1], Timeseries):
-                            ubx[self._control_indices[variable][ensemble_member, :]] = self.interpolate(
+                            ubx[self.__control_indices[ensemble_member][variable]] = self.interpolate(
                                 times, bound[1].times, bound[1].values, +np.inf, +np.inf) / nominal
                         else:
-                            ubx[self._control_indices[variable][
-                                ensemble_member, :]] = bound[1] / nominal
+                            ubx[self.__control_indices[ensemble_member][variable]] = bound[1] / nominal
 
                     try:
                         seed_k = seed[variable]
-                        x0[self._control_indices[variable][ensemble_member, :]] = self.interpolate(
+                        x0[self.__control_indices[ensemble_member][variable]] = self.interpolate(
                             times, seed_k.times, seed_k.values, 0, 0) / nominal
                     except KeyError:
                         pass
 
         # Return number of control variables
-        return count, discrete, lbx, ubx, x0, self._control_indices
+        return count, discrete, lbx, ubx, x0, self.__control_indices
 
     def extract_controls(self, ensemble_member=0):
         # Solver output
@@ -235,7 +234,7 @@ class ControlTreeMixin(OptimizationProblem):
         results = {}
         for variable in self.controls:
             results[variable] = np.array(self.variable_nominal(
-                variable) * X[self._control_indices[variable][ensemble_member, :], 0]).ravel()
+                variable) * X[self.__control_indices[ensemble_member][variable], 0]).ravel()
 
         # Done
         return results
@@ -249,8 +248,8 @@ class ControlTreeMixin(OptimizationProblem):
             times = self.times(control_input)
             if control_input == canonical:
                 nominal = self.variable_nominal(control_input)
-                variable_values = [X[i] for i in self._control_indices[
-                    control_input][ensemble_member, :]]
+                variable_values = [X[i] for i in self.__control_indices[ensemble_member][
+                    control_input]]
                 f_left, f_right = np.nan, np.nan
                 if t < t0:
                     history = self.history(ensemble_member)
