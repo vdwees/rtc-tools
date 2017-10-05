@@ -1,5 +1,5 @@
 import numpy as np
-from casadi import if_else, logic_and, Function, nlpsol, SX, vertcat, inf, sum2
+from casadi import if_else, logic_and, Function, nlpsol, SX, vertcat, inf, sum2, jacobian
 from .bspline import BSpline
 
 
@@ -95,15 +95,19 @@ class BSpline1D(BSpline):
         x_sym = SX.sym('x')
 
         # Casadi Representation of Spline Function & Derivatives
-        bspline = Function('bspline', [c, x_sym], [cls(t, c, k)(x_sym)])
-        bspline_prime = bspline.jacobian(1)
-        bspline_prime_prime = bspline_prime.jacobian(1)
+        expr = cls(t, c, k)(x_sym)
+        free_vars = [c, x_sym]
+        bspline = Function('bspline', free_vars, [expr])
+        J = jacobian(expr, x_sym)
+        bspline_prime = Function('bspline_prime', free_vars, [J])
+        H = jacobian(J, x_sym)
+        bspline_prime_prime = Function('bspline_prime_prime', free_vars, [H])
 
         # Objective Function
         xpt = SX.sym('xpt')
         ypt = SX.sym('ypt')
         sq_diff = Function('sq_diff', [xpt, ypt], [
-                             (ypt - bspline(c, xpt)[0])**2])
+                             (ypt - bspline(c, xpt))**2])
         sq_diff = sq_diff.map(N, 'serial')
         f = sum2(sq_diff(SX(x), SX(y)))
 
@@ -126,7 +130,7 @@ class BSpline1D(BSpline):
             c[i + 1] - c[i] for i in range(num_knots - 1)])
         x_linspace = np.linspace(x[0], x[-1], num_test_points)
         curvature_constraints = vertcat(*[
-            bspline_prime_prime(c, SX(x))[0] for x in x_linspace])
+            bspline_prime_prime(c, SX(x)) for x in x_linspace])
         g = vertcat(monotonicity_constraints, curvature_constraints)
         lbg = np.concatenate((delta_c_min, min_slope_slope))
         ubg = np.concatenate((delta_c_max, max_slope_slope))
