@@ -615,8 +615,6 @@ class SimulationProblem:
         else:
             return differentiand
 
-
-
     def __warn_for_nans(self):
         """
         Test state vector for missing values and warn
