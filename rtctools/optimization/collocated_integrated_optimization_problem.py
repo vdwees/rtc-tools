@@ -1241,13 +1241,13 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                                 lbx[offset:offset + n_times] = self.interpolate(
                                     times, bound[0].times, bound[0].values, -np.inf, -np.inf) / nominal
                             else:
-                                lbx[offset:offset + n_times] = bound[0] / nominal
+                                lbx[offset:offset + n_times] = ca.MX(bound[0] / nominal).to_DM().full().flatten()
                         if bound[1] is not None:
                             if isinstance(bound[1], Timeseries):
                                 ubx[offset:offset + n_times] = self.interpolate(
                                     times, bound[1].times, bound[1].values, +np.inf, +np.inf) / nominal
                             else:
-                                ubx[offset:offset + n_times] = bound[1] / nominal
+                                ubx[offset:offset + n_times] = ca.MX(bound[1] / nominal).to_DM().full().flatten()
 
                     offset += n_times
 
