@@ -406,7 +406,7 @@ class PIMixin(OptimizationProblem):
             timeseries = Timeseries(self.__timeseries_import_times, stretch_values(timeseries, t_pos))
 
         if unit is None:
-            unit = self.__timeseries_import._get_unit(variable, ensemble_member=ensemble_member)
+            unit = self.__timeseries_import.get_unit(variable, ensemble_member=ensemble_member)
         self.__timeseries_import.set(
             variable, timeseries.values, ensemble_member=ensemble_member, unit=unit)
         self.__timeseries_import_dict[ensemble_member][variable] = timeseries.values
