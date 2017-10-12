@@ -94,7 +94,7 @@ class PIMixin(OptimizationProblem):
                 self.__data_config, self.__input_folder, self.timeseries_import_basename, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
         except IOError:
             raise Exception("PI: {}.xml not found in {}.".format(
-                self.basename_import, self.__input_folder))
+                self.timeseries_import_basename, self.__input_folder))
 
         self.__timeseries_export = pi.Timeseries(
             self.__data_config, self.__output_folder, self.timeseries_export_basename, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
