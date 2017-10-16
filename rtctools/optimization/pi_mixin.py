@@ -46,6 +46,10 @@ class PIMixin(OptimizationProblem):
     #: Check for duplicate parameters
     pi_check_for_duplicate_parameters = True
 
+    # I/O Basenames (can be overridden)
+    timeseries_import_basename = 'timeseries_import'
+    timeseries_export_basename = 'timeseries_export'
+
     def __init__(self, **kwargs):
         # Check arguments
         assert('input_folder' in kwargs)
@@ -85,19 +89,15 @@ class PIMixin(OptimizationProblem):
         except IOError:
             self.__parameter_config_numerical = None
 
-        # timeseries_{import,export}.xml.
-        basename_import = 'timeseries_import'
-        basename_export = 'timeseries_export'
-
         try:
             self.__timeseries_import = pi.Timeseries(
-                self.__data_config, self.__input_folder, basename_import, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
+                self.__data_config, self.__input_folder, self.timeseries_import_basename, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
         except IOError:
             raise Exception("PI: {}.xml not found in {}.".format(
-                basename_import, self.__input_folder))
+                self.timeseries_import_basename, self.__input_folder))
 
         self.__timeseries_export = pi.Timeseries(
-            self.__data_config, self.__output_folder, basename_export, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
+            self.__data_config, self.__output_folder, self.timeseries_export_basename, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
 
         # Convert timeseries timestamps to seconds since t0 for internal use
         self.__timeseries_import_times = self.__datetime_to_sec(
@@ -406,7 +406,7 @@ class PIMixin(OptimizationProblem):
             timeseries = Timeseries(self.__timeseries_import_times, stretch_values(timeseries, t_pos))
 
         if unit is None:
-            unit = self.__timeseries_import._get_unit(variable, ensemble_member=ensemble_member)
+            unit = self.__timeseries_import.get_unit(variable, ensemble_member=ensemble_member)
         self.__timeseries_import.set(
             variable, timeseries.values, ensemble_member=ensemble_member, unit=unit)
         self.__timeseries_import_dict[ensemble_member][variable] = timeseries.values

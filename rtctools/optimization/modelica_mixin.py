@@ -82,7 +82,9 @@ class ModelicaMixin(OptimizationProblem):
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
             # We need to take care to allow nominal vectors.
-            if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero():
+            if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero() or ca.MX(v.nominal + 1).is_zero():
+                continue
+            else:
                 self.__nominals[sym_name] = ca.fabs(v.nominal)
 
                 if logger.getEffectiveLevel() == logging.DEBUG:
