@@ -144,10 +144,7 @@ class SimulationProblem:
 
         # Make a list of derivative approximations using backwards Euler formulation
         derivative_approximation_residuals = []
-        for derivative_state in self.__mx['derivatives']:
-            index = self.__get_state_vector_index(self.__get_differentiand(derivative_state.name()))
-            if index > self.__states_end_index:
-                logger.error('Derivatives of parameters or inputs are not supported in the Model.')
+        for index, derivative_state in enumerate(self.__mx['derivatives']):
             derivative_approximation_residuals.append(derivative_state - (X[index] - X_prev[index]) / dt)
 
         # Append residuals for derivative approximations
@@ -587,33 +584,6 @@ class SimulationProblem:
         if index is None:
             raise KeyError(str(variable) + " does not exist!")
         return index
-
-    @cached
-    def __get_differentiand(self, variable, validate=True):
-        """
-        Gets the term being differentiated
-        (differentiand means the term being differentiated, opposite of integrand)
-
-        For now, this is done by string operations
-        """
-        if not variable.startswith('der('):
-            raise ValueError('Variable {} is not a derivative.'.format(variable))
-
-        if variable.endswith(')'):
-            differentiand = variable[4:-1]
-        elif variable.endswith(']'):
-            expression = re.search('der[(].*[)]', variable)[0]
-            index = re.search('[[][0-9]+[]]', variable)[0]
-            differentiand = expression[4:-1] + index
-
-        if validate:
-            found = self.__sym_dict.get(differentiand, None) is not None
-            if found:
-                return differentiand
-            else:
-                raise ValueError('Variable {} is not in the model.'.format(differentiand))
-        else:
-            return differentiand
 
     def __warn_for_nans(self):
         """
