@@ -183,7 +183,8 @@ class ModelicaMixin(OptimizationProblem):
     @property
     @cached
     def output_variables(self):
-        output_variables = [v.symbol for v in self.__pymola_model.outputs]
+        output_variables = [ca.MX.sym(variable)
+                            for variable in self.__pymola_model.outputs]
         output_variables.extend(self.__mx['control_inputs'])
         return output_variables
 
@@ -255,7 +256,7 @@ class ModelicaMixin(OptimizationProblem):
         # Load additional bounds from model
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
-            
+
             try:
                 (m, M) = bounds[sym_name]
             except KeyError:
