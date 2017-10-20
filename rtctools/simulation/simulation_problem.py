@@ -169,7 +169,7 @@ class SimulationProblem:
         dae_residual = ca.substitute(dae_residual, ca.vertcat(*unscaled_symbols), ca.vertcat(*scaled_symbols))
 
         if logger.getEffectiveLevel() == logging.DEBUG:
-            logger.debug('SimulationProblem: DAE Residual is ' + ', '.join((str(res) for res in ca.vertsplit(dae_residual))))
+            logger.debug('SimulationProblem: DAE Residual is ' + str(dae_residual))
 
         if X.size1() != dae_residual.size1():
             logger.error('Formulation Error: Number of states ({}) does not equal number of equations ({})'.format(
