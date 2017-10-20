@@ -56,7 +56,6 @@ class SimulationProblem:
         self.__mx = {}
         self.__mx['time'] = [self.__pymola_model.time]
         self.__mx['states'] = [v.symbol for v in self.__pymola_model.states]
-        self.__mx['outputs'] = [v.symbol for v in self.__pymola_model.outputs]
         self.__mx['derivatives'] = [v.symbol for v in self.__pymola_model.der_states]
         self.__mx['algebraics'] = [v.symbol for v in self.__pymola_model.alg_states]
         self.__mx['parameters'] = [v.symbol for v in self.__pymola_model.parameters]
@@ -576,7 +575,7 @@ class SimulationProblem:
 
     @cached
     def get_output_variables(self):
-        return AliasDict(self.alias_relation, {sym.name(): sym for sym in self.__mx['outputs']})
+        return self.__pymola_model.outputs
 
     @cached
     def __get_state_vector_index(self, variable):

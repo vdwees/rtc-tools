@@ -140,7 +140,7 @@ class CSVMixin(SimulationProblem):
         logger.debug("Model inputs are {}".format(self.__input_variables))
 
         # Empty output
-        self.__output_variables = set(self.get_output_variables().keys())
+        self.__output_variables = self.get_output_variables()
         n_times = len(self.__timeseries_times_sec)
         self.__output = {variable : np.full(n_times, np.nan) for variable in self.__output_variables}
 
