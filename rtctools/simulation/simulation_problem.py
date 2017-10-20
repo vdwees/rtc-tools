@@ -734,10 +734,10 @@ class SimulationProblem:
         compiler_options['eliminable_variable_expression'] = r'_\w+'
 
         # Automatically detect and eliminate alias variables.
-        compiler_options['detect_aliases'] = False
+        compiler_options['detect_aliases'] = True
 
         # Cache the model on disk
-        compiler_options['cache'] = False
+        compiler_options['cache'] = True
 
         # Done
         return compiler_options
