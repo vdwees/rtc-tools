@@ -155,13 +155,13 @@ class SimulationProblem:
         unscaled_symbols = []
         scaled_symbols = []
         for sym_name, nominal in self.__nominals.items():
-            # Add the symbol to the lists
             index = self.__get_state_vector_index(sym_name)
-            unscaled_symbols.append(X[index])
-            scaled_symbols.append(X[index] * nominal)
-
-            # Also scale previous states
+            # If the symbol is a state, Add the symbol to the lists
             if index <= self.__states_end_index:
+                unscaled_symbols.append(X[index])
+                scaled_symbols.append(X[index] * nominal)
+
+                # Also scale previous states
                 unscaled_symbols.append(X_prev[index])
                 scaled_symbols.append(X_prev[index] * nominal)
 
