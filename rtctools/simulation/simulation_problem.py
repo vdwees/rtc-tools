@@ -56,7 +56,6 @@ class SimulationProblem:
         self.__mx = {}
         self.__mx['time'] = [self.__pymola_model.time]
         self.__mx['states'] = [v.symbol for v in self.__pymola_model.states]
-        self.__mx['outputs'] = [v.symbol for v in self.__pymola_model.outputs]
         self.__mx['derivatives'] = [v.symbol for v in self.__pymola_model.der_states]
         self.__mx['algebraics'] = [v.symbol for v in self.__pymola_model.alg_states]
         self.__mx['parameters'] = [v.symbol for v in self.__pymola_model.parameters]
@@ -156,13 +155,13 @@ class SimulationProblem:
         unscaled_symbols = []
         scaled_symbols = []
         for sym_name, nominal in self.__nominals.items():
-            # Add the symbol to the lists
             index = self.__get_state_vector_index(sym_name)
-            unscaled_symbols.append(X[index])
-            scaled_symbols.append(X[index] * nominal)
-
-            # Also scale previous states
+            # If the symbol is a state, Add the symbol to the lists
             if index <= self.__states_end_index:
+                unscaled_symbols.append(X[index])
+                scaled_symbols.append(X[index] * nominal)
+
+                # Also scale previous states
                 unscaled_symbols.append(X_prev[index])
                 scaled_symbols.append(X_prev[index] * nominal)
 
@@ -170,7 +169,7 @@ class SimulationProblem:
         dae_residual = ca.substitute(dae_residual, ca.vertcat(*unscaled_symbols), ca.vertcat(*scaled_symbols))
 
         if logger.getEffectiveLevel() == logging.DEBUG:
-            logger.debug('SimulationProblem: DAE Residual is ' + ', '.join((str(res) for res in ca.vertsplit(dae_residual))))
+            logger.debug('SimulationProblem: DAE Residual is ' + str(dae_residual))
 
         if X.size1() != dae_residual.size1():
             logger.error('Formulation Error: Number of states ({}) does not equal number of equations ({})'.format(
@@ -576,7 +575,7 @@ class SimulationProblem:
 
     @cached
     def get_output_variables(self):
-        return AliasDict(self.alias_relation, {sym.name(): sym for sym in self.__mx['outputs']})
+        return self.__pymola_model.outputs
 
     @cached
     def __get_state_vector_index(self, variable):
@@ -735,10 +734,10 @@ class SimulationProblem:
         compiler_options['eliminable_variable_expression'] = r'_\w+'
 
         # Automatically detect and eliminate alias variables.
-        compiler_options['detect_aliases'] = False
+        compiler_options['detect_aliases'] = True
 
         # Cache the model on disk
-        compiler_options['cache'] = False
+        compiler_options['cache'] = True
 
         # Done
         return compiler_options
