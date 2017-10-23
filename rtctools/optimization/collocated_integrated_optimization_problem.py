@@ -164,13 +164,16 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                         "No value specified for parameter {}".format(variable))
 
             if np.any([isinstance(value, ca.MX) and not value.is_constant() for value in parameter_values]):
-                parameter_values = substitute_in_external(
-                    parameter_values, self.dae_variables['parameters'], parameter_values)
+                parameter_values = nullvertcat(*parameter_values)
+                [parameter_values] = substitute_in_external(
+                    [parameter_values], self.dae_variables['parameters'], parameter_values)
+            else:
+                parameter_values = nullvertcat(*parameter_values)
 
             if ensemble_member == 0:
                 # Store parameter values of member 0, as variable bounds may depend on these.
                 self.__parameter_values_ensemble_member_0 = parameter_values
-            ensemble_data["parameters"] = nullvertcat(*parameter_values)
+            ensemble_data["parameters"] = parameter_values
 
             # Store constant inputs
             constant_inputs = self.constant_inputs(ensemble_member)
@@ -186,10 +189,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                     values = constant_input.values
                     if isinstance(values, ca.MX) and not values.is_constant():
                         [values] = substitute_in_external(
-                            [values], self.dae_variables['parameters'], parameter_values)
+                            [values], symbolic_parameters, parameter_values)
                     elif np.any([isinstance(value, ca.MX) and not value.is_constant() for value in values]):
-                        values = substitute_in_external(
-                            values, self.dae_variables['parameters'], parameter_values)
+                        values = ca.vertcat(*values)
+                        [values] = substitute_in_external(
+                            [values], symbolic_parameters, parameter_values)
+                        values = ca.vertsplit(values)
                     constant_inputs_interpolated[variable] = self.interpolate(
                         collocation_times, constant_input.times, values, 0.0, 0.0)
 
@@ -206,11 +211,11 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         ub_mx_indices = np.where(
             [isinstance(v, ca.MX) and not v.is_constant() for v in ub_values])
         if len(lb_mx_indices[0]) > 0:
-            lb_values[lb_mx_indices] = substitute_in_external(list(
-                lb_values[lb_mx_indices]), self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
+            lb_values[lb_mx_indices] = substitute_in_external(ca.vertcat(*
+                lb_values[lb_mx_indices]), symbolic_parameters, self.__parameter_values_ensemble_member_0)
         if len(ub_mx_indices[0]) > 0:
-            ub_values[ub_mx_indices] = substitute_in_external(list(
-                ub_values[ub_mx_indices]), self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
+            ub_values[ub_mx_indices] = substitute_in_external(ca.vertcat(*
+                ub_values[ub_mx_indices]), symbolic_parameters, self.__parameter_values_ensemble_member_0)
         resolved_bounds = AliasDict(self.alias_relation)
         for i, key in enumerate(bound_keys):
             lb, ub = lb_values[i], ub_values[i]
@@ -681,11 +686,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
 
             # Call the external metadata function in one go, rather than two
             if len(initial_state_constraint_states) > 0:
-                g.extend(initial_state_constraint_states)
-                initial_state_constraint_values = substitute_in_external(
-                    initial_state_constraint_values, [symbolic_parameters], [parameters])
-                lbg.extend(initial_state_constraint_values)
-                ubg.extend(initial_state_constraint_values)
+                g.append(ca.vertcat(*initial_state_constraint_states))
+                initial_state_constraint_values = ca.vertcat(*initial_state_constraint_values)
+                [initial_state_constraint_values] = substitute_in_external(
+                    [initial_state_constraint_values], [symbolic_parameters], [parameters])
+                lbg.append(initial_state_constraint_values)
+                ubg.append(initial_state_constraint_values)
 
             # Initial conditions for integrator
             accumulation_X0 = []
@@ -914,7 +920,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                     lb = path_constraint[1]
                     if isinstance(lb, ca.MX) and not lb.is_constant():
                         [lb] = ca.substitute(
-                            [lb], self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
+                            [lb], symbolic_parameters, self.__parameter_values_ensemble_member_0)
                     elif isinstance(lb, Timeseries):
                         lb = self.interpolate(
                             collocation_times, lb.times, lb.values, -np.inf, -np.inf)
@@ -922,7 +928,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                     ub = path_constraint[2]
                     if isinstance(ub, ca.MX) and not ub.is_constant():
                         [ub] = ca.substitute(
-                            [ub], self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
+                            [ub], symbolic_parameters, self.__parameter_values_ensemble_member_0)
                     elif isinstance(ub, Timeseries):
                         ub = self.interpolate(
                             collocation_times, ub.times, ub.values, np.inf, np.inf)
@@ -1748,10 +1754,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                 values = constant_input.values
                 if isinstance(values, ca.MX) and not values.is_constant():
                     [values] = substitute_in_external(
-                        [values], self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
+                        [values], symbolic_parameters, self.__parameter_values_ensemble_member_0)
                 elif np.any([isinstance(value, ca.MX) and not value.is_constant() for value in values]):
-                    values = substitute_in_external(
-                        values, self.dae_variables['parameters'], self.__parameter_values_ensemble_member_0)
+                    values = ca.vertcat(*values)
+                    [values] = substitute_in_external(
+                        [values], symoblic_parameters, self.__parameter_values_ensemble_member_0)
+                    values = ca.vertsplit(values)
                 accumulation_constant_inputs[i] = self.interpolate(
                     collocation_times, constant_input.times, values, 0.0, 0.0)
 
@@ -1761,6 +1769,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         # Map
         values = fmap(accumulation_states, accumulation_derivatives,
                       accumulation_constant_inputs, ca.repmat(
-                          ca.vertcat(*self.__parameter_values_ensemble_member_0), 1, n_collocation_times),
+                          self.__parameter_values_ensemble_member_0, 1, n_collocation_times),
                       np.transpose(collocation_times))
         return ca.transpose(values)
