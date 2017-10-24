@@ -280,7 +280,7 @@ class PIMixin(OptimizationProblem):
                 pass
             else:
                 if logger.getEffectiveLevel() == logging.DEBUG:
-                    logger.debug("Seeded free variable {}".format(variable))
+                    logger.debug("PIMixin: Seeded free variable {}".format(variable))
                 # A seeding of NaN means no seeding
                 s.values[np.isnan(s.values)] = 0.0
                 seed[variable] = s
