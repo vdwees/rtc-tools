@@ -287,6 +287,21 @@ class ModelicaMixin(OptimizationProblem):
 
         return bounds
 
+    @cached
+    def seed(self, ensemble_member):
+        # Call parent class first for default values.
+        seed = super().seed(ensemble_member)
+
+        # Load seeds
+        for var in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states):
+            if not var.fixed and ca.MX(var.start).is_constant() and not ca.MX(var.start).is_zero():
+                times = self.times(var.symbol.name())
+                s = Timeseries(times, np.full_like(times, var.python_type(var.start)))
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("Seeded free variable {}".format(var))
+                seed[var.symbol.name()] = s
+        return seed
+
     def variable_is_discrete(self, variable):
         return self.__python_types.get(variable, float) != float
 

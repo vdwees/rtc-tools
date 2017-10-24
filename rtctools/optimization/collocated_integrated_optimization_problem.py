@@ -1292,8 +1292,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                     try:
                         seed_k = seed[variable]
                         nominal = self.variable_nominal(variable)
-                        x0[offset:offset + n_times] = self.interpolate(
-                            times, seed_k.times, seed_k.values, 0, 0) / nominal
+                        x0[offset:offset + n_times] = ca.MX(self.interpolate(
+                            times, seed_k.times, seed_k.values, 0, 0) / nominal).to_DM().full().flatten()
                     except KeyError:
                         pass
 
