@@ -71,8 +71,8 @@ class PIMixin(SimulationProblem):
             for pi_parameter_config_basename in self.pi_parameter_config_basenames:
                 self.__parameter_config.append(pi.ParameterConfig(
                     self.__input_folder, pi_parameter_config_basename))
-        except IOError:
-            raise Exception(
+        except FileNotFoundError:
+            raise FileNotFoundError(
                 "PI: {}.xml not found in {}.".format(pi_parameter_config_basename, self.__input_folder))
 
         # Make a parameters dict for later access
@@ -88,9 +88,9 @@ class PIMixin(SimulationProblem):
         try:
             self.__timeseries_import = pi.Timeseries(
                 self.__data_config, self.__input_folder, self.timeseries_import_basename, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
-        except IOError:
-            raise Exception("PI: {}.xml not found in {}.".format(
-                basename_import, self.__input_folder))
+        except FileNotFoundError:
+            raise FileNotFoundError('PIMixin: {}.xml not found in {}'.format(
+                self.timeseries_import_basename, self.__input_folder))
 
         self.__timeseries_export = pi.Timeseries(
             self.__data_config, self.__output_folder, self.timeseries_export_basename, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
@@ -103,7 +103,7 @@ class PIMixin(SimulationProblem):
         if self.pi_validate_timeseries:
             for i in range(len(self.__timeseries_import_times) - 1):
                 if self.__timeseries_import_times[i] >= self.__timeseries_import_times[i + 1]:
-                    raise Exception(
+                    raise ValueError(
                         'PIMixin: Time stamps must be strictly increasing.')
 
         # Check if the timeseries are equidistant
@@ -111,7 +111,7 @@ class PIMixin(SimulationProblem):
         if self.pi_validate_timeseries:
             for i in range(len(self.__timeseries_import_times) - 1):
                 if self.__timeseries_import_times[i + 1] - self.__timeseries_import_times[i] != self.__dt:
-                    raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
+                    raise ValueError('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
                         self.__timeseries_import.times[i + 1]))
 
         # Stick timeseries into an AliasDict
