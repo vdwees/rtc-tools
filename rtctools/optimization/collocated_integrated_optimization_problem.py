@@ -1051,8 +1051,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
 
                 try:
                     seed_k = seed[variable]
-                    x0[offset:offset + n_times] = self.interpolate(
-                        times, seed_k.times, seed_k.values, 0, 0) / nominal
+                    # Apply nominal to seed and coerce to numpy array
+                    x0[offset:offset + n_times] = ca.MX(self.interpolate(
+                        times, seed_k.times, seed_k.values, 0, 0) / nominal).to_DM().full().flatten()
                 except KeyError:
                     pass
 
@@ -1244,16 +1245,18 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                         nominal = self.variable_nominal(variable)
                         if bound[0] is not None:
                             if isinstance(bound[0], Timeseries):
-                                lbx[offset:offset + n_times] = self.interpolate(
-                                    times, bound[0].times, bound[0].values, -np.inf, -np.inf) / nominal
+                                lower_bound = self.interpolate(times, bound[0].times, bound[0].values, -np.inf, -np.inf)
                             else:
-                                lbx[offset:offset + n_times] = ca.MX(bound[0] / nominal).to_DM().full().flatten()
+                                lower_bound = bound[0]
+                            # Apply nominal, coerce bounds to numpy array, and set it in lbx
+                            lbx[offset:offset + n_times] = ca.MX(lower_bound / nominal).to_DM().full().flatten()
                         if bound[1] is not None:
                             if isinstance(bound[1], Timeseries):
-                                ubx[offset:offset + n_times] = self.interpolate(
-                                    times, bound[1].times, bound[1].values, +np.inf, +np.inf) / nominal
+                                upper_bound = self.interpolate(times, bound[1].times, bound[1].values, +np.inf, +np.inf)
                             else:
-                                ubx[offset:offset + n_times] = ca.MX(bound[1] / nominal).to_DM().full().flatten()
+                                upper_bound = bound[1]
+                            # Apply nominal, coerce bounds to numpy array, and set it in ubx
+                            ubx[offset:offset + n_times] = ca.MX(upper_bound / nominal).to_DM().full().flatten()
 
                     offset += n_times
 
@@ -1292,6 +1295,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                     try:
                         seed_k = seed[variable]
                         nominal = self.variable_nominal(variable)
+                        # Apply nominal to seed and coerce to numpy array
                         x0[offset:offset + n_times] = ca.MX(self.interpolate(
                             times, seed_k.times, seed_k.values, 0, 0) / nominal).to_DM().full().flatten()
                     except KeyError:
