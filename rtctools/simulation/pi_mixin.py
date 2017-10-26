@@ -8,6 +8,7 @@ import rtctools.data.pi as pi
 
 from .simulation_problem import SimulationProblem
 from rtctools._internal.caching import cached
+from rtctools._internal.alias_tools import AliasDict
 
 logger = logging.getLogger("rtctools")
 
@@ -113,6 +114,13 @@ class PIMixin(SimulationProblem):
                     raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
                         self.__timeseries_import.times[i + 1]))
 
+        # Stick timeseries into an AliasDict
+        self.__timeseries_import_dict = AliasDict(self.alias_relation)
+        for variable, values in self.__timeseries_import.items():
+            if self.__timeseries_import_dict.get(variable, None) is not None:
+                logger.debug('PIMixin: Timeseries {} replaced another aliased timeseries.'.format(variable))
+            self.__timeseries_import_dict[variable] = values
+
     def initialize(self, config_file=None):
         # Set up experiment
         self.setup_experiment(0, self.__timeseries_import_times[-1], self.__dt)
@@ -131,11 +139,13 @@ class PIMixin(SimulationProblem):
         self.__input_variables = set(self.get_input_variables().keys())
 
         # Set input values
-        for variable, timeseries in self.__timeseries_import.items():
-            if variable in self.__input_variables:
-                value = timeseries[self.__timeseries_import.forecast_index]
-                if np.isfinite(value):
-                    self.set_var(variable, value)
+        for variable in self.__input_variables:
+            value = self.__timeseries_import_dict[variable][self.__timeseries_import.forecast_index]
+            if np.isfinite(value):
+                self.set_var(variable, value)
+            else:
+                logger.debug('PIMixin: Found bad value {} at index [{}] in timeseries aliased to input {}'.format(
+                    value, self.__timeseries_import.forecast_index, variable))
 
         logger.debug("Model inputs are {}".format(self.__input_variables))
 
@@ -163,11 +173,13 @@ class PIMixin(SimulationProblem):
         t_idx = bisect.bisect_left(self.__timeseries_import_times, t + dt)
 
         # Set input values
-        for variable, timeseries in self.__timeseries_import.items():
-            if variable in self.__input_variables:
-                value = timeseries[t_idx]
-                if np.isfinite(value):
-                    self.set_var(variable, value)
+        for variable in self.__input_variables:
+            value = self.__timeseries_import_dict[variable][t_idx]
+            if np.isfinite(value):
+                self.set_var(variable, value)
+            else:
+                logger.debug('PIMixin: Found bad value {} at index [{}] in timeseries aliased to input {}'.format(
+                    value, t_idx, variable))
 
         # Call super
         super().update(dt)
@@ -261,7 +273,7 @@ class PIMixin(SimulationProblem):
 
         :raises: KeyError
         """
-        values = self.__timeseries_import.get(variable)
+        values = self.__timeseries_import_dict[variable]
         t_idx = bisect.bisect_left(self.__timeseries_import_times, t)
         if self.__timeseries_import_times[t_idx] == t:
             return values[t_idx]
