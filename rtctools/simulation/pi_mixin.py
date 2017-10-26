@@ -116,8 +116,9 @@ class PIMixin(SimulationProblem):
 
         # Stick timeseries into an AliasDict
         self.__timeseries_import_dict = AliasDict(self.alias_relation)
+        debug = logger.getEffectiveLevel() == logging.DEBUG
         for variable, values in self.__timeseries_import.items():
-            if self.__timeseries_import_dict.get(variable, None) is not None:
+            if debug and self.__timeseries_import_dict.get(variable, None) is not None:
                 logger.debug('PIMixin: Timeseries {} replaced another aliased timeseries.'.format(variable))
             self.__timeseries_import_dict[variable] = values
 
