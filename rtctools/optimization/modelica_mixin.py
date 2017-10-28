@@ -182,8 +182,7 @@ class ModelicaMixin(OptimizationProblem):
         parameters = super().parameters(ensemble_member)
 
         # Return parameter values from pymola model
-        for v in self.__pymola_model.parameters:
-            parameters[v.symbol.name()] = v.value
+        parameters.update({v.symbol.name(): v.value for v in self.__pymola_model.parameters})
 
         # Done
         return parameters
