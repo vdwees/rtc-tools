@@ -1051,7 +1051,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
 
                 try:
                     seed_k = seed[variable]
-                    # Apply nominal to seed and coerce to numpy array
                     x0[offset:offset + n_times] = self.interpolate(
                         times, seed_k.times, seed_k.values, 0, 0) / nominal
                 except KeyError:
@@ -1248,14 +1247,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                                 lower_bound = self.interpolate(times, bound[0].times, bound[0].values, -np.inf, -np.inf)
                             else:
                                 lower_bound = bound[0]
-                            # Apply nominal, coerce bounds to numpy array, and set it in lbx
                             lbx[offset:offset + n_times] = lower_bound / nominal
                         if bound[1] is not None:
                             if isinstance(bound[1], Timeseries):
                                 upper_bound = self.interpolate(times, bound[1].times, bound[1].values, +np.inf, +np.inf)
                             else:
                                 upper_bound = bound[1]
-                            # Apply nominal, coerce bounds to numpy array, and set it in ubx
                             ubx[offset:offset + n_times] = upper_bound / nominal
 
                     offset += n_times
@@ -1295,7 +1292,6 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                     try:
                         seed_k = seed[variable]
                         nominal = self.variable_nominal(variable)
-                        # Apply nominal to seed and coerce to numpy array
                         x0[offset:offset + n_times] = self.interpolate(
                             times, seed_k.times, seed_k.values, 0, 0) / nominal
                     except KeyError:
