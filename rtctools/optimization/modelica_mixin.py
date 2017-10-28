@@ -334,7 +334,6 @@ class ModelicaMixin(OptimizationProblem):
         parameter_values = [parameters.get(param.name(), param) for param in self.__mx['parameters']]
 
         # Iterate over nominalizable states
-        # TODO: Why do inputs need nominals???
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
             # For type consistancy, cast to MX
