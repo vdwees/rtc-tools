@@ -77,21 +77,9 @@ class ModelicaMixin(OptimizationProblem):
 
         # Initialize nominals and types
         # These are not in @cached dictionary properties for backwards compatibility.
-        self.__nominals = AliasDict(self.alias_relation)
         self.__python_types = AliasDict(self.alias_relation)
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
-            sym_name = v.symbol.name()
-            # We need to take care to allow nominal vectors.
-            if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero() or ca.MX(v.nominal + 1).is_zero():
-                continue
-            else:
-                self.__nominals[sym_name] = ca.fabs(v.nominal)
-
-                if logger.getEffectiveLevel() == logging.DEBUG:
-                    logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
-                        sym_name, self.__nominals[sym_name]))
-
-            self.__python_types[sym_name] = v.python_type
+            self.__python_types[v.symbol.name()] = v.python_type
 
         # Initialize dae and initial residuals
         # These are not in @cached dictionary properties so that we need to create the list
@@ -333,6 +321,54 @@ class ModelicaMixin(OptimizationProblem):
                         v.symbol.name(), alias))
 
         return alias_relation
+
+
+    @property
+    @cached
+    def __nominals(self):
+
+        # Make the dict
+        nominal_dict = AliasDict(self.alias_relation)
+
+        # Grab parameters and their values
+        parameters = self.parameters(0)
+        parameter_values = [parameters.get(param.name(), param) for param in self.__mx['parameters']]
+
+        # Iterate over nominalizable states
+        # TODO: Why do inputs need nominals???
+        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
+            sym_name = v.symbol.name()
+            # For type consistancy, cast to MX
+            nominal = ca.MX(v.nominal)
+
+            # If nominal contains parameter symbols, substitute them
+            if not nominal.is_constant():
+                [nominal] = substitute_in_external([nominal], self.__mx['parameters'], parameter_values)
+
+            if nominal.is_constant():
+                # Take absolute value (nominal sign is meaningless- a nominal is a magnitude)
+                nominal = ca.fabs(nominal)
+
+                # If nominal is 0 or 1, we just use the default (1.0)
+                if nominal.is_zero() or (nominal - 1).is_zero():
+                    continue
+
+                # Cast to numpy array
+                nominal = nominal.to_DM().full().flatten()
+                try:
+                    # Attempt to cast to python scalar before storing
+                    nominal_dict[sym_name] = nominal.item()
+                except ValueError:
+                    # Nominal is numpy array- store it as such
+                    nominal_dict[sym_name] = nominal
+
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    logger.debug("ModelicaMixin: Set nominal value for variable {} to {}".format(
+                        sym_name, nominal_dict[sym_name]))
+            else:
+                logger.warning("ModelicaMixin: Could not set nominal value for {}".format(sym_name))
+
+        return nominal_dict
 
     def variable_nominal(self, variable):
         return self.__nominals.get(variable, 1)
