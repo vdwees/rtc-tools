@@ -232,19 +232,6 @@ class SimulationProblem:
                     start_val = var.python_type(var.start)
                 else:
                     start_val = 0.0
-                    # var.start is a symbol from the model, so we attempt to
-                    # set it equal to the value of that symbol
-                    # try:
-                    #     alias_start = self.get_var(var.start.name())
-                    #     if np.isfinite(alias_start):
-                    #         start_val = alias_start
-                    #     else:
-                    #         start_val = 0.0
-                    # # TODO: which Exceptions?
-                    # except Exception:
-                    #     logger.warning('Initialize: Falied to set {} guess with the start value of {}. \
-                    #         Using default of 0.0'.format(var.symbol.name(), var.start.name()))
-                    #     start_val = 0.0
 
             elif var.start == 0.0 and not var.fixed:
                 # To make initialization easier, we allow setting initial states by providing timeseries
@@ -682,7 +669,13 @@ class SimulationProblem:
         """
         Return a dictionary of parameter values extracted from the Modelica model
         """
-        return {p.symbol.name(): p.value for p in self.__pymola_model.parameters}
+        # Create AliasDict
+        parameters = AliasDict(self.alias_relation)
+
+        # Update with model parameters
+        parameters.update({p.symbol.name(): p.value for p in self.__pymola_model.parameters})
+
+        return parameters
 
     @property
     @cached

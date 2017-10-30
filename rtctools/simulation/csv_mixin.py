@@ -217,10 +217,13 @@ class CSVMixin(SimulationProblem):
         parameters = super().parameters()
 
         # Load parameters from parameter config
-        for parameter in self.__parameters:
-            logger.debug("CSVMixin: Read parameter {} ".format(parameter))
+        parameters.update(self.__parameters)
 
-        return parameters.update(self.__parameters)
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            for parameter in self.__parameters:
+                logger.debug("CSVMixin: Read parameter {} ".format(parameter))
+
+        return parameters
 
     def times(self, variable=None):
         """
