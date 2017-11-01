@@ -116,9 +116,14 @@ class OptimizationProblem(metaclass = ABCMeta):
         # Already consumed
         del options['optimized_num_dir']
 
+        # Iteration callback
+        iteration_callback = options.pop('iteration_callback', None)
+
         nlpsol_options = {my_solver: options}
         if self.__mixed_integer:
             nlpsol_options['discrete'] = discrete
+        if iteration_callback:
+            nlpsol_options['iteration_callback'] = iteration_callback
 
         solver = ca.nlpsol('nlp', my_solver, nlp, nlpsol_options)
 
