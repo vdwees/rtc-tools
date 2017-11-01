@@ -283,3 +283,26 @@ class PIMixin(SimulationProblem):
             return values[t_idx]
         else:
             return np.interp1d(t, self.__timeseries_import_times, values)
+
+    @property
+    def timeseries_import(self):
+        """
+        :class:`pi.Timeseries` object containing the input data.
+        """
+        return self.__timeseries_import
+
+    @property
+    def timeseries_import_times(self):
+        """
+        List of time stamps for which input data is specified.
+
+        The time stamps are in seconds since t0, and may be negative.
+        """
+        return self.__timeseries_import_times
+
+    @property
+    def timeseries_export(self):
+        """
+        :class:`pi.Timeseries` object for holding the output data.
+        """
+        return self.__timeseries_export
