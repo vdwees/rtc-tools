@@ -213,7 +213,7 @@ class PIMixin(SimulationProblem):
             try:
                 location_parameter_id = self.__data_config.pi_variable_ids(key)
             except KeyError:
-                logger.debug('PIMixIn: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(key))
+                logger.debug('PIMixin: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(key))
                 continue
 
             # Add series to output file
@@ -306,3 +306,19 @@ class PIMixin(SimulationProblem):
         :class:`pi.Timeseries` object for holding the output data.
         """
         return self.__timeseries_export
+
+    def set_timeseries(self, variable, values, output=True, check_consistency=True, unit=None):
+        if check_consistency:
+            if len(self.times()) != len(values):
+                raise ValueError("PIMixin: Trying to set/append values {} with a different length than the forecast length. Please make sure the values cover forecastDate through endDate with timestep {}.".format(variable, self.__timeseries_import.dt))
+
+        if output:
+            self.__output[variable] = values
+
+        if unit is None:
+            unit = self.__timeseries_import.get_unit(variable)
+        self.__timeseries_import.set(variable, values, unit=unit)
+        self.__timeseries_import_dict[variable] = values
+
+    def get_timeseries(self, variable):
+        return self.__timeseries_import_dict[variable]
