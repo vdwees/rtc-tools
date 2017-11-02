@@ -153,7 +153,8 @@ class PIMixin(SimulationProblem):
         # Empty output
         self.__output_variables = self.get_output_variables()
         n_times = len(self.__timeseries_import_times)
-        self.__output = {variable : np.full(n_times, np.nan) for variable in self.__output_variables}
+        self.__output = AliasDict(self.alias_relation)
+        self.__output.update({variable : np.full(n_times, np.nan) for variable in self.__output_variables})
 
         # Call super, which will also initialize the model itself
         super().initialize(config_file)
@@ -208,16 +209,17 @@ class PIMixin(SimulationProblem):
 
         # For all variables that are output variables the values are
         # extracted from the results.
-        for key, values in self.__output.items():
+        for variable in self.__output_variables:
+            values = self.__output[variable]
             # Check if ID mapping is present
             try:
-                location_parameter_id = self.__data_config.pi_variable_ids(key)
+                location_parameter_id = self.__data_config.pi_variable_ids(variable)
             except KeyError:
-                logger.debug('PIMixin: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(key))
+                logger.debug('PIMixin: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(variable))
                 continue
 
             # Add series to output file
-            self.__timeseries_export.set(key, values, unit=self.__timeseries_import.get_unit(key))
+            self.__timeseries_export.set(variable, values, unit=self.__timeseries_import.get_unit(variable))
 
         # Write output file to disk
         self.__timeseries_export.write()
@@ -312,11 +314,17 @@ class PIMixin(SimulationProblem):
             if len(self.times()) != len(values):
                 raise ValueError("PIMixin: Trying to set/append values {} with a different length than the forecast length. Please make sure the values cover forecastDate through endDate with timestep {}.".format(variable, self.__timeseries_import.dt))
 
-        if output:
-            self.__output[variable] = values
-
         if unit is None:
             unit = self.__timeseries_import.get_unit(variable)
+
+        if output:
+            try:
+                location_parameter_id = self.__data_config.pi_variable_ids(variable)
+            except KeyError:
+                logger.debug('PIMixin: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(variable))
+            else:
+                self.__timeseries_export.set(variable, values, unit=unit)
+
         self.__timeseries_import.set(variable, values, unit=unit)
         self.__timeseries_import_dict[variable] = values
 
