@@ -50,7 +50,7 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
         logger.addHandler(handler)
 
     # Add stream handler if it does not already exist.
-    if not any((isinstance(h, logging.StreamHandler) for h in logger.handlers)):
+    if not logger.hasHandlers() and not any((isinstance(h, logging.StreamHandler) for h in logger.handlers)):
         handler = logging.StreamHandler()
         formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         handler.setFormatter(formatter)
