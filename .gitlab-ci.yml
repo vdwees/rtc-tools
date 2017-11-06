@@ -1,43 +1,34 @@
-build:windows:
+image: python:3-jessie
+
+stages:
+  - build
+  - test
+  - deploy
+
+build:
   stage: build
-  cache:
-    paths:
-      - venv/
   script:
-    - call %PATH_VCVARSALL% x86
-    - SET DISTUTILS_USE_SDK=1
-    - SET MSSdk=1
-    - python -m virtualenv venv
-    - call venv\Scripts\activate.bat
-    - pip install -r doc\requirements.txt
-    - pip wheel .
+    - python setup.py sdist bdist_wheel
   artifacts:
     paths:
-      - '*.whl'
+      - dist/
     expire_in: 1 week
   tags:
-    - windows
+    - docker
     - python3
 
-test:windows:
+test:
   stage: test
   dependencies:
-    - build:windows
+    - build
   script:
-    - call C:\RTCTools2\system\JModelica\RTC2_setenv.bat
-    # FIXME: Explicit naming of the wheel is far from ideal, but pip nor cmd.exe support wildcards.
-    - python -m pip install --upgrade --no-deps --force-reinstall rtctools-2.0.0b6-cp27-cp27m-win32.whl
-    - python -m nose --exe -w tests
+    - python -m venv venv
+    - source venv/bin/activate
+    - pip install git+https://github.com/pymola/pymola.git
+    - pip install dist/*.whl
+    - pip install nose
+    - cd tests
+    - python -m nose
   tags:
-    - windows
+    - docker
     - python3
-
-# Temporarily disabled because the Stack Clash (CVE-2017-1000364) kernel patch breaks Java.
-# test:linux:
-#   image: jmodelica.org
-#   stage: test
-#   # FIXME: Nose fails if we do not have a USER environment variable
-#   script: python setup.py install && export USER=root && /opt/JModelica/bin/jm_python.sh -m nose --exe -w tests
-#   tags:
-#     - docker
-#     - python3
