@@ -898,7 +898,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
 
             # Path constraints
             # We need to call self.path_constraints() again here, as the bounds may change from ensemble member to member.
-            path_constraints = self.path_constraints(ensemble_member)
+            if ensemble_member > 0:
+                path_constraints = self.path_constraints(ensemble_member)
+
             if len(path_constraints) > 0:
                 # We need to evaluate the path constraints at t0, as the initial time is not included in the accumulation.
                 [initial_path_constraints] = path_constraints_function.call([parameters,
