@@ -33,7 +33,7 @@ with open('requirements.txt', 'r') as req_file:
     install_reqs = req_file.read().split('\n')
 
 setup(
-    name = 'rtctools',
+    name = 'rtc-tools',
     version = versioneer.get_version(),
     maintainer = 'Jorn Baayen',
     author = 'Jorn Baayen',
