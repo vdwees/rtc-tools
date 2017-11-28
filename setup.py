@@ -48,7 +48,5 @@ setup(
     install_requires = install_reqs,
     tests_require = ['nose'],
     test_suite = 'nose.collector',
-    cmdclass = {
-        'versioneer': versioneer.get_cmdclass(),  
-    },
+    cmdclass = versioneer.get_cmdclass(),
 )
