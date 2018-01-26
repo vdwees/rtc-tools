@@ -1377,18 +1377,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         return results
 
     def state_vector(self, variable, ensemble_member=0):
-        # Look up transcribe_problem() state.
-        X = self.solver_input
-        control_size = self.__control_size
-        ensemble_member_size = int(self.__state_size / self.ensemble_size)
-
-        # Extract state vector
         indices = self.__indices[ensemble_member][variable]
-        times = self.times(variable)
-        n_times = len(times)
-        vector = X[indices]
-
-        return vector
+        return self.solver_input[indices]
 
     def state_at(self, variable, t, ensemble_member=0, scaled=False, extrapolate=True):
         if isinstance(variable, ca.MX):
