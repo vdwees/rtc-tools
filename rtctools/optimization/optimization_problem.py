@@ -134,7 +134,7 @@ class OptimizationProblem(metaclass = ABCMeta):
 
         # Extract relevant stats
         self.__objective_value = float(results['f'])
-        self.__solver_output = results['x']
+        self.__solver_output = np.array(results['x'])
         self.__solver_stats = solver.stats()
 
         # Get the return status
