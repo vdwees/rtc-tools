@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
-from numba import jit
 from typing import Dict, Union, Tuple, List, Any, Iterator
 import casadi as ca
 import numpy as np
@@ -579,7 +578,6 @@ class OptimizationProblem(metaclass = ABCMeta):
         else:
             return self.__interpolate(t, ts, fs, f_left, f_right, mode)
 
-    @jit
     def __interpolate(self, t, ts, fs, f_left=np.nan, f_right=np.nan, mode=INTERPOLATION_LINEAR):
         """
         Linear interpolation over time.

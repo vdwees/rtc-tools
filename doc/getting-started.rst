@@ -27,8 +27,6 @@ RTC-Tools 2 requires `Python <https://www.python.org>`_ >= 3.6 (*not Python 2*) 
 
   - `numpy <https://www.numpy.org/>`_ >= 1.11.10
 
-  - `numba <https://numba.pydata.org/>`_
-
   - `pymola <https://github.com/jbaayen/pymola/>`_
 
   - `CasADi <https://github.com/casadi/casadi/>`_ >= 3.2.0
@@ -36,7 +34,7 @@ RTC-Tools 2 requires `Python <https://www.python.org>`_ >= 3.6 (*not Python 2*) 
 The dependencies can be installed using the `pip <https://pip.pypa.io/>`_ package manager::
 
     # Install dependencies using pip
-    python3 -m pip install numpy numba pymola casadi
+    python3 -m pip install numpy pymola casadi
 
 Acquiring the source
 ~~~~~~~~~~~~~~~~~~~~
