@@ -1492,30 +1492,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         return self.__variables[variable]
 
     def extra_variable(self, extra_variable, ensemble_member=0):
-        # Look up transcribe_problem() state.
-        X = self.solver_input
-        control_size = self.__control_size
-        ensemble_member_size = int(self.__state_size / self.ensemble_size)
-
-        # Compute position in state vector
-        offset = control_size + ensemble_member * ensemble_member_size
-        for variable in itertools.chain(self.differentiated_states, self.algebraic_states):
-            if variable in self.integrated_states:
-                offset += 1
-            else:
-                n_times = len(self.times(variable))
-                offset += n_times
-
-        n_collocation_times = len(self.times())
-        for variable in self.path_variables:
-            offset += n_collocation_times
-
-        for k in range(len(self.extra_variables)):
-            variable = self.extra_variables[k].name()
-            if variable == extra_variable:
-                return X[offset + k]
-
-        raise KeyError(variable)
+        indices = self.__indices[ensemble_member][extra_variable]
+        return self.solver_input[indices]
 
     def states_in(self, variable, t0=None, tf=None, ensemble_member=0):
         # Time stamps for this variale
