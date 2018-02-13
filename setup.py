@@ -16,7 +16,7 @@ CLASSIFIERS = """\
 Development Status :: 4 - Beta
 Intended Audience :: Science/Research
 Intended Audience :: Information Technology
-License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)
 Programming Language :: Python
 Programming Language :: Python :: 3
 Topic :: Scientific/Engineering :: GIS
@@ -41,7 +41,6 @@ setup(
     long_description = '\n'.join(DOCLINES[2:]),
     url = 'http://www.deltares.nl/en/software/rtc-tools/',
     download_url='http://gitlab.com/deltares/rtc-tools/',
-    license = 'GPL',
     classifiers = [_f for _f in CLASSIFIERS.split('\n') if _f],
     platforms = ['Windows', 'Linux', 'Mac OS-X', 'Unix'],
     packages = find_packages(),

@@ -61,7 +61,7 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
 
     # Log version info
     logger.info(
-        "Using RTC-Tools {}, released as open source software under the GNU General Public License.".format(__version__))
+        "Using RTC-Tools {}.".format(__version__))
     logger.debug(
         "Using CasADi {}.".format(casadi.__version__))
 
