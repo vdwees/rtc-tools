@@ -22,32 +22,27 @@ class TestSimulation(TestCase):
     def test_get_variables(self):
         all_variables = self.problem.get_variables()
         self.assertIsInstance(all_variables, collections.OrderedDict)
-        variables = []
-        for var in all_variables.items():
-            varname = var[0]
-            # method returns all variables, including internal FMUvariables, starting with '_'
-            if not re.match('_', varname):
-                variables.append(varname)
-        self.assertEqual(variables, ['alias', 'constant_input', 'constant_output', 'k', 'switched', 'u', 'u_out', 'w', 'der(w)', 'x', 'der(x)', 'x_delayed', 'x_start', 'y', 'z'] )
-        nvar = self.problem.get_var_count()
-        self.assertEqual(len(all_variables), nvar)
 
-        self.assertEqual(self.problem.get_parameter_variables().keys(), ['x_start'])
-
-        self.assertEqual(self.problem.get_input_variables().keys(), ['constant_input', 'u', 'x_delayed'])
-
-        self.assertEqual(self.problem.get_output_variables().keys(), ['constant_output', 'switched', 'u_out', 'y', 'z'])
+        self.assertEqual(set(all_variables),
+            {'time', 'constant_input', 'k', 'switched', 'u', 'u_out',
+             'w', 'der(w)', 'x', 'der(x)', 'x_start', 'y', 'z'})
+        self.assertEqual(set(self.problem.get_parameter_variables()),
+            {'x_start', 'k'})
+        self.assertEqual(set(self.problem.get_input_variables()),
+            {'constant_input', 'u'})
+        self.assertEqual(set(self.problem.get_output_variables()),
+            {'constant_output', 'switched', 'u_out', 'y', 'z'})
 
     def test_get_set_var(self):
         val = self.problem.get_var('switched')
-        self.assertEqual(val, 0.0)
+        self.assertTrue(np.isnan(val))
         self.problem.set_var('switched', 10.0)
         val_reset = self.problem.get_var('switched')
         self.assertNotEqual(val_reset, val)
 
     def test_get_var_name_and_type(self):
-        type = self.problem.get_var_type('switched')
-        self.assertEqual(type, 'float')
+        t = self.problem.get_var_type('switched')
+        self.assertTrue(t == float)
         all_variables = self.problem.get_variables()
         idx = 0
         for var in all_variables.items():
@@ -65,6 +60,9 @@ class TestSimulation(TestCase):
         stop = 10.0
         dt = 1.0
         self.problem.setup_experiment(start, stop, dt)
+        self.problem.set_var('x_start', 0.0)
+        self.problem.set_var('constant_input', 0.0)
+        self.problem.set_var('u', 0.0)
         self.problem.initialize()
         val = self.problem.get_start_time()
         self.assertAlmostEqual(self.problem.get_start_time(), start, 1e-6)
@@ -76,19 +74,6 @@ class TestSimulation(TestCase):
             curtime = self.problem.get_current_time()
         self.assertAlmostEqual(curtime, stop, 1e-6)
 
-    def test_basic_run(self):
-        # run FMU model 
-        start = 0.0
-        stop = 10.0
-        dt = 1.0
-        self.problem.setup_experiment(start, stop, dt)
-        self.problem.initialize()
-        curtime = self.problem.get_current_time()
-        while curtime < stop:
-            status = self.problem.update(dt)
-            curtime = self.problem.get_current_time()
-        self.problem.finalize()
-
     def test_set_input(self):
         # run FMU model
         expected_values = [2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0]
@@ -96,6 +81,8 @@ class TestSimulation(TestCase):
         dt = 0.1
         self.problem.setup_experiment(0.0, stop, dt)
         self.problem.set_var('x_start', 0.25)
+        self.problem.set_var('constant_input', 0.0)
+        self.problem.set_var('u', 0.0)
         self.problem.initialize()
         i = 0
         while i < int(stop/dt):
@@ -104,7 +91,6 @@ class TestSimulation(TestCase):
             val = self.problem.get_var('switched')
             self.assertEqual(val, expected_values[i])
             i += 1
-        self.problem.finalize()
 
     def test_set_input2(self):
         # run FMU model
@@ -113,6 +99,8 @@ class TestSimulation(TestCase):
         dt = 0.1
         self.problem.setup_experiment(0.0, stop, dt)
         self.problem.set_var('x_start', 0.25)
+        self.problem.set_var('constant_input', 0.0)
+        self.problem.set_var('u', 0.0)
         self.problem.initialize()
         i = 0
         while i < int(stop/dt):
@@ -123,4 +111,3 @@ class TestSimulation(TestCase):
             val = self.problem.get_var('switched')
             self.assertEqual(val, expected_values[i])
             i += 1
-        self.problem.finalize()

@@ -13,7 +13,8 @@ model TestModel
 
 	output Real z;
 
-	input Real x_delayed;
+	//TODO: Implement delayed variables and tests for them
+	//input Real x_delayed;
 
 	output Real switched;
 

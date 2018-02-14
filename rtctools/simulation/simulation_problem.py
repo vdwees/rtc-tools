@@ -99,6 +99,10 @@ class SimulationProblem:
         self.__python_types = AliasDict(self.alias_relation)
         for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
             sym_name = v.symbol.name()
+
+            # Store the types in an AliasDict
+            self.__python_types[sym_name] = v.python_type
+
             # If the nominal is 0.0 or 1.0 or -1.0, ignore: get_variable_nominal returns a default of 1.0
             # TODO: handle nominal vectors (update() will need to load them)
             if ca.MX(v.nominal).is_zero() or ca.MX(v.nominal - 1).is_zero() or ca.MX(v.nominal + 1).is_zero():
@@ -110,9 +114,6 @@ class SimulationProblem:
                 if logger.getEffectiveLevel() == logging.DEBUG:
                     logger.debug("SimulationProblem: Setting nominal value for variable {} to {}".format(
                         sym_name, self.__nominals[sym_name]))
-
-            # Store the types in an AliasDict
-            self.__python_types[sym_name] = v.python_type
 
         # Initialize DAE and initial residuals
         variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
@@ -503,21 +504,21 @@ class SimulationProblem:
 
     def get_var_count(self):
         """
-        Return the number of variables (internal FMU and user declared).
+        Return the number of variables in the model.
 
-        :returns: The number of variables supported by the FMU.
+        :returns: The number of variables in the model.
         """
-        return len(self.get_model_variables())
+        return len(self.get_variables())
 
     def get_var_name(self, i):
         """
         Returns the name of a variable.
 
-        :param i: Index in ordered dictionary returned by FMU-method get_model_variables.
+        :param i: Index in ordered dictionary returned by method get_variables.
 
         :returns: The name of the variable.
         """
-        return self.get_variables().items()[i][0]
+        return list(self.get_variables())[i]
 
     def get_var_type(self, name):
         """
@@ -529,7 +530,7 @@ class SimulationProblem:
 
         :raises: KeyError
         """
-        return self.__python_types(name)
+        return self.__python_types[name]
 
     def get_var_rank(self, name):
         """
@@ -547,7 +548,7 @@ class SimulationProblem:
         """
         Return all variables (both internal and user defined)
 
-        :returns: A list of all variables supported by the model.
+        :returns: An ordered dictionary of all variables supported by the model.
         """
         return self.__sym_dict
 
@@ -646,6 +647,12 @@ class SimulationProblem:
         """
         return self.__nominals.get(variable, 1.0)
 
+    def timeseries_at(self, variable, t):
+        """
+        Get value of timeseries variable at time t: should be overriden by pi or csv mixin
+        """
+        raise NotImplementedError
+
     @cached
     def initial_state(self) -> AliasDict:
         """
@@ -660,6 +667,8 @@ class SimulationProblem:
             try:
                 initial_state_dict[variable] = self.timeseries_at(variable, t0)
             except KeyError:
+                pass
+            except NotImplementedError:
                 pass
             else:
                 if logger.getEffectiveLevel() == logging.DEBUG:
