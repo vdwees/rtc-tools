@@ -1,9 +1,13 @@
 from rtctools.data.interpolation.bspline1d import BSpline1D
 from rtctools.data.interpolation.bspline2d import BSpline2D
+from rtctools._internal.caching import cached
+from rtctools.optimization.timeseries import Timeseries
 import rtctools.data.csv as csv
-from scipy.interpolate import splrep, bisplrep, splev, bisplev
+from scipy.interpolate import bisplrep, splev, bisplev
+from scipy.optimize import brentq
 import casadi as ca
 import numpy as np
+from typing import Tuple, List, Union
 import configparser
 import logging
 import pickle
@@ -11,9 +15,117 @@ import glob
 import os
 import sys
 
-from .optimization_problem import OptimizationProblem, LookupTable
+from .optimization_problem import OptimizationProblem
 
 logger = logging.getLogger("rtctools")
+
+
+class LookupTable:
+    """
+    Lookup table.
+    """
+
+    def __init__(self, inputs: List[ca.MX], function: ca.Function, tck: Tuple=None):
+        """
+        Create a new lookup table object.
+
+        :param inputs: List of lookup table input variables.
+        :param function: Lookup table CasADi :class:`Function`.
+        """
+        self.__inputs = inputs
+        self.__function = function
+
+        self.__t, self.__c, self.__k = [None] * 3
+
+        if tck is not None:
+            if len(tck) == 3:
+                self.__t, self.__c, self.__k = tck
+            elif len(tck) == 5:
+                self.__t = tck[:2]
+                self.__c = tck[2]
+                self.__k = tck[3:]
+
+    @property
+    @cached
+    def domain(self) -> Tuple:
+        t = self.__t
+        if t is None:
+            raise AttributeError('This lookup table was not instantiated with tck metadata. \
+                                  Domain/Range information is unavailable.')
+        if type(t) == tuple and len(t) == 2:
+            raise NotImplementedError('Domain/Range information is not yet implemented for 2D LookupTables')
+
+        return np.nextafter(t[0], np.inf), np.nextafter(t[-1], -np.inf)
+
+    @property
+    @cached
+    def range(self) -> Tuple:
+        return self(self.domain[0]), self(self.domain[1])
+
+    @property
+    def inputs(self) -> List[ca.MX]:
+        """
+        List of lookup table input variables.
+        """
+        return self.__inputs
+
+    @property
+    def function(self) -> ca.Function:
+        """
+        Lookup table CasADi :class:`Function`.
+        """
+        return self.__function
+
+    def __call__(self, *args: List[Union[float, Timeseries]]) -> Union[float, Timeseries]:
+        """
+        Evaluate the lookup table.
+
+        :param args: Input values.
+        :type args: Float, iterable of floats, or :class:`Timeseries`
+        :returns: Lookup table evaluated at input values.
+
+        Example use::
+
+            y = lookup_table(1.0)
+            [y1, y2] = lookup_table([1.0, 2.0])
+
+        """
+        if isinstance(args[0], Timeseries):
+            return Timeseries(args[0].times, self(args[0].values))
+        else:
+            if hasattr(args[0], '__iter__'):
+                evaluator = np.vectorize(
+                    lambda v: float(self.function(v)))
+                return evaluator(args[0])
+            else:
+                return float(self.function(*args))
+
+    def reverse_call(self, y, domain=(None, None), detect_range_error=True):
+        """
+        use scipy brentq optimizer to do an inverted call to this lookuptable
+        """
+        l_d, u_d = domain
+        if l_d is None:
+            l_d = self.domain[0]
+        if u_d is None:
+            u_d = self.domain[1]
+
+        if detect_range_error:
+            l_r, u_r = self.range
+
+        def function(y_target):
+            if detect_range_error and (y_target < l_r or y_target > u_r):
+                raise ValueError('Value {} is not in lookup table range ({}, {})'.format(y_target, l_r, u_r))
+            return brentq(lambda x: self(x) - y_target, l_d, u_d)
+
+        if isinstance(y, Timeseries):
+            return Timeseries(y.times, self.reverse_call(y.values))
+        else:
+            if hasattr(y, '__iter__'):
+                evaluator = np.vectorize(function)
+                return evaluator(y)
+            else:
+                return function(y)
 
 
 class CSVLookupTableMixin(OptimizationProblem):
@@ -176,7 +288,7 @@ class CSVLookupTableMixin(OptimizationProblem):
                     pylab.savefig(figure_filename)
                 symbols = [ca.SX.sym(inputs[0])]
                 function = ca.Function('f', symbols, [BSpline1D(*tck)(symbols[0])])
-                self.__lookup_tables[output] = LookupTable(symbols, function)
+                self.__lookup_tables[output] = LookupTable(symbols, function, tck)
 
             elif len(csvinput.dtype.names) == 3:
                 if tck is None:
@@ -185,7 +297,7 @@ class CSVLookupTableMixin(OptimizationProblem):
 
                     # 2D spline fitting needs (kx+1)*(ky+1) data points
                     if len(csvinput[output]) >= (kx + 1) * (ky + 1):
-                        # TODO: add curvature paramenters from curvefit_options.ini
+                        # TODO: add curvature parameters from curvefit_options.ini
                         # once 2d fit is implemented
                         tck = bisplrep(csvinput[inputs[0]], csvinput[
                                        inputs[1]], csvinput[output], kx=kx, ky=ky)
@@ -210,7 +322,7 @@ class CSVLookupTableMixin(OptimizationProblem):
                 symbols = [ca.SX.sym(inputs[0]), ca.SX.sym(inputs[1])]
                 function = ca.Function('f', 
                     symbols, [BSpline2D(*tck)(symbols[0], symbols[1])])
-                self.__lookup_tables[output] = LookupTable(symbols, function)
+                self.__lookup_tables[output] = LookupTable(symbols, function, tck)
 
             else:
                 raise Exception(

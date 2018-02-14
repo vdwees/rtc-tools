@@ -11,60 +11,6 @@ from .timeseries import Timeseries
 logger = logging.getLogger("rtctools")
 
 
-class LookupTable:
-    """
-    Lookup table.
-    """
-
-    def __init__(self, inputs: List[ca.MX], function: ca.Function):
-        """
-        Create a new lookup table object.
-
-        :param inputs: List of lookup table input variables.
-        :param function: Lookup table CasADi :class:`Function`.
-        """
-        self.__inputs = inputs
-        self.__function = function
-
-    @property
-    def inputs(self) -> List[ca.MX]:
-        """
-        List of lookup table input variables.
-        """
-        return self.__inputs
-
-    @property
-    def function(self) -> ca.Function:
-        """
-        Lookup table CasADi :class:`Function`.
-        """
-        return self.__function
-
-    def __call__(self, *args: List[Union[float, Timeseries]]) -> Union[float, Timeseries]:
-        """
-        Evaluate the lookup table.
-
-        :param args: Input values.
-        :type args: Float, iterable of floats, or :class:`Timeseries`
-        :returns: Lookup table evaluated at input values.
-
-        Example use::
-
-            y = lookup_table(1.0)
-            [y1, y2] = lookup_table([1.0, 2.0])
-
-        """
-        if isinstance(args[0], Timeseries):
-            return Timeseries(args[0].times, self(args[0].values))
-        else:
-            if hasattr(args[0], '__iter__'):
-                evaluator = np.vectorize(
-                    lambda v: float(self.function(v)))
-                return evaluator(args[0])
-            else:
-                return float(self.function(*args))
-
-
 class OptimizationProblem(metaclass = ABCMeta):
     """
     Base class for all optimization problems.
