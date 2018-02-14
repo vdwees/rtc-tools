@@ -323,7 +323,7 @@ class SimulationProblem:
 
         # Construct objective function from the input residual
         # TODO: probably can speed this up with a map() call?
-        objective_function = ca.sum1(ca.vertcat(*[ca.power(r, 2) for r in ca.vertsplit(minimized_residual)]))
+        objective_function = ca.dot(minimized_residual, minimized_residual)
 
         # Find initial state using ipopt
         parameters = ca.vertcat(*self.__mx['time'], *self.__mx['constant_inputs'], *self.__mx['parameters'])
@@ -361,13 +361,6 @@ class SimulationProblem:
         """
         pass
 
-    def get_current_residual_values(self):
-        """
-        Returns the residual values (equation error) of the current state
-        """
-        return np.array(self.__res_vals(self.__state_vector[:self.__states_end_index],
-                                        ca.vertcat(self.__dt, *self.__state_vector)))
-
     def setup_experiment(self, start, stop, dt):
         """ 
         Method for subclasses (PIMixin, CSVMixin, or user classes) to set timing information for a simulation run.
@@ -404,11 +397,21 @@ class SimulationProblem:
         # take a step
         guess = self.__state_vector[:self.__states_end_index]
         next_state = self.__do_step(guess, ca.vertcat(dt, *self.__state_vector))
-        self.__state_vector[:self.__states_end_index] = next_state.T
+
+        # make sure that the step converged sufficiently
+        largest_res = ca.norm_inf(self.__res_vals(next_state, ca.vertcat(self.__dt, *self.__state_vector)))
+        tol = self.solver_options().get('ipopt.tol', 1.0e-8)
+        if largest_res > tol:
+            raise RuntimeWarning(
+                'Simulation may have failed to converge at time {}. Residual value {} is greater than {}'.format(
+                    self.get_current_time(), largest_res, tol))
 
         if logger.getEffectiveLevel() == logging.DEBUG:
-            max_mag = np.max(np.abs(self.get_current_residual_values()))
-            logger.debug('Residual maximum magnitude: {:.2E}'.format(max_mag))
+            logger.debug('Residual maximum magnitude: {:.2E}'.format(float(largest_res)))
+
+        # Update state vector
+        self.__state_vector[:self.__states_end_index] = next_state.T
+
 
     def simulate(self):
         """ 
