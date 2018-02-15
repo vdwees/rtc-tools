@@ -227,6 +227,8 @@ class SimulationProblem:
         constrained_residuals = []
         minimized_residuals = []
         for var in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states):
+            var_name = var.symbol.name()
+            var_nominal = self.get_variable_nominal(var_name)
             if isinstance(var.start, ca.MX):
                 if var.start.is_constant():
                     # start was a float in MX form
@@ -239,15 +241,15 @@ class SimulationProblem:
                 # with names that match a symbol in the model. We only check for this matching if the start
                 # and fixed attributes were left as default
                 try:
-                    start_val = self.initial_state()[var.symbol.name()]
+                    start_val = self.initial_state()[var_name]
                 except KeyError:
                     start_val = var.start
                 else:
                     # An intitial state was found- add it to the constrained residuals
                     logger.debug('Initialize: Added {} = {} to initial equations (found matching timeseries).'.format(
-                        var.symbol.name(), start_val))
-                    self.set_var(var.symbol.name(), start_val)
-                    constrained_residuals.append(var.symbol - start_val)
+                        var_name, start_val))
+                    self.set_var(var_name, start_val)
+                    constrained_residuals.append((var.symbol - start_val) / var_nominal)
                     # residuals and state vector are already set, so skip to the next var in the for-loop
                     continue
             else:
@@ -256,18 +258,18 @@ class SimulationProblem:
 
             # Attempt to set start_val in the state vector
             try:
-                self.set_var(var.symbol.name(), start_val)
+                self.set_var(var_name, start_val)
             except KeyError:
                 logger.warning('Initialize: {} not found in state vector. Initial value of {} not set.'.format(
-                    var.symbol.name(), start_val))
+                    var_name, start_val))
 
             # add a residual for the difference between the state and its starting value
             if var.fixed:
                 # require residual = 0
-                constrained_residuals.append(var.symbol - var.start)
+                constrained_residuals.append((var.symbol - var.start) / var_nominal)
             else:
                 # minimize residual
-                minimized_residuals.append(var.symbol - var.start)
+                minimized_residuals.append((var.symbol - var.start) / var_nominal)
 
         # Default start var for ders is zero
         for der_var in self.__mx['derivatives']:
