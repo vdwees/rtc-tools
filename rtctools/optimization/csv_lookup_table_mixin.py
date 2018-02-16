@@ -256,7 +256,7 @@ class CSVLookupTableMixin(OptimizationProblem):
                     with open(tck_filename, 'rb') as f:
                         try:
                             tck = pickle.load(f)
-                        except OSError:
+                        except:
                             valid_cache = False
             if not valid_cache:
                 logger.info(
