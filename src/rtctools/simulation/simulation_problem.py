@@ -405,7 +405,7 @@ class SimulationProblem:
         largest_res = ca.norm_inf(self.__res_vals(next_state, ca.vertcat(self.__dt, *self.__state_vector)))
         tol = self.solver_options().get('ipopt.tol', 1.0e-8)
         if largest_res > tol:
-            raise RuntimeWarning(
+            logger.warning(
                 'Simulation may have failed to converge at time {}. Residual value {} is greater than {}'.format(
                     self.get_current_time(), largest_res, tol))
 
