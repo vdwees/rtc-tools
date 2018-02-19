@@ -43,7 +43,7 @@ def get_config():
     cfg.style = "pep440"
     cfg.tag_prefix = ""
     cfg.parentdir_prefix = "rtctools-"
-    cfg.versionfile_source = "rtctools/_version.py"
+    cfg.versionfile_source = "src/rtctools/_version.py"
     cfg.verbose = False
     return cfg
 

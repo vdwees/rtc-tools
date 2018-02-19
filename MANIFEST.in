@@ -1,2 +1,2 @@
 include versioneer.py
-include rtctools/_version.py
+include src/rtctools/_version.py

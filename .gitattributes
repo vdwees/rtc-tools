@@ -1,1 +1,2 @@
 rtctools/_version.py export-subst
+src/rtctools/_version.py export-subst
