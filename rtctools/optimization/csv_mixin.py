@@ -80,7 +80,8 @@ class CSVMixin(OptimizationProblem):
         self.__initial_state = []
         if self.csv_ensemble_mode:
             self.__ensemble = np.genfromtxt(os.path.join(
-                self.__input_folder, 'ensemble.csv'), delimiter=",", deletechars='', dtype=None, names=True, converters={0: str})
+                self.__input_folder, 'ensemble.csv'), delimiter=",", deletechars='', dtype=None, names=True, encoding=None)
+
             logger.debug("CSVMixin: Read ensemble description")
 
             for ensemble_member_name in self.__ensemble['name']:
