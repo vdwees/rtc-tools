@@ -1232,6 +1232,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                             else:
                                 ubx[offset] = bound[1] / nominal
 
+                    # Warn for NaNs
+                    if np.any(np.isnan(lbx[offset])):
+                        logger.error('Lower bound on variable {} contains NaN'.format(variable))
+                    if np.any(np.isnan(ubx[offset])):
+                        logger.error('Upper bound on variable {} contains NaN'.format(variable))
+
                     offset += 1
 
                 else:
@@ -1257,6 +1263,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                                 upper_bound = bound[1]
                             ubx[offset:offset + n_times] = upper_bound / nominal
 
+                    # Warn for NaNs
+                    if np.any(np.isnan(lbx[offset:offset + n_times])):
+                        logger.error('Lower bound on variable {} contains NaN'.format(variable))
+                    if np.any(np.isnan(ubx[offset:offset + n_times])):
+                        logger.error('Upper bound on variable {} contains NaN'.format(variable))
+
                     offset += n_times
 
             for k in range(len(self.extra_variables)):
@@ -1269,6 +1281,12 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                         lbx[offset + k] = bound[0]
                     if bound[1] is not None:
                         ubx[offset + k] = bound[1]
+
+                # Warn for NaNs
+                if np.any(np.isnan(lbx[offset + k])):
+                    logger.error('Lower bound on variable {} contains NaN'.format(self.extra_variables[k].name()))
+                if np.any(np.isnan(ubx[offset + k])):
+                    logger.error('Upper bound on variable {} contains NaN'.format(self.extra_variables[k].name()))
 
             # Initial guess based on provided seeds, defaulting to zero if no
             # seed is given
