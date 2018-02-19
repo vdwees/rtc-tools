@@ -619,6 +619,15 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         pass
 
+    def dynamic_parameters(self) -> List[ca.MX]:
+        """
+        Returns a list of parameter symbols that may vary from run to run.  The values
+        of these parameters are not cached.
+
+        :returns: A list of parameter symbols.
+        """
+        return []
+
     @abstractmethod
     def extract_controls(self, ensemble_member: int=0) -> Dict[str, np.ndarray]:
         """

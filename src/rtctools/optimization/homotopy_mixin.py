@@ -73,6 +73,17 @@ class HomotopyMixin(OptimizationProblem):
                 'delta_theta_min'   : 0.01,
                 'homotopy_parameter': 'theta'}
 
+    def dynamic_parameters(self):
+        dynamic_parameters = super().dynamic_parameters()
+
+        if self.__theta > 0:
+            # For theta = 0, we don't mark the homotopy parameter as being dynamic,
+            # so that the correct sparsity structure is obtained for the linear model.
+            options = self.homotopy_options()
+            dynamic_parameters.append(self.variable(options['homotopy_parameter']))
+
+        return dynamic_parameters
+
     def optimize(self, preprocessing=True, postprocessing=True, log_solver_failure_as_error=True):
         # Pre-processing
         if preprocessing:
