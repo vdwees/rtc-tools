@@ -131,7 +131,9 @@ class ParameterConfig:
         :param folder:    Folder in which the parameter configuration file is located.
         :param basename:  Basename of the parameter configuration file (e.g, 'rtcParameterConfig').
         """
-        self.__path_xml = os.path.join(folder, basename + '.xml')
+        if os.path.splitext(basename)[1] != '.xml':
+            basename = basename + '.xml'
+        self.__path_xml = os.path.join(folder, basename)
 
         self.__tree = ET.parse(self.__path_xml)
         self.__xml_root = self.__tree.getroot()
@@ -217,11 +219,43 @@ class ParameterConfig:
         raise KeyError("No such parameter ({}, {})".format(
             group_id, parameter_id))
 
-    def write(self):
+    def write(self, folder=None, basename=None):
         """
         Writes the parameter configuration to a file.
+        Default behaviour is to overwrite original file.
+
+        :param path:     Optional alternative destination folder
+        :param basename: Optional alternative basename of the file (e.g, 'rtcParameterConfig')
         """
-        self.__tree.write(self.__path_xml)
+
+        # No path changes- overwrite original file
+        if folder is None and basename is None:
+            path = self.path
+
+        # We need to reconstruct the path
+        else:
+            # Determine folder
+            if folder is not None:
+                if not os.path.exists(folder):
+                    # Make sure folder exists
+                    raise FileNotFoundError('Folder not found: {}'.format(folder))
+            else:
+                # Reuse folder of original file
+                folder = os.path.dirname(self.path)
+
+            # Determine basename
+            if basename is not None:
+                # Make sure basename ends in '.xml'
+                if os.path.splitext(basename)[1] != '.xml':
+                    basename = basename + '.xml'
+            else:
+                # Reuse basename of original file
+                basename = os.path.split(self.path)[1]
+
+            # Construct path
+            path = os.path.join(folder, basename)
+
+        self.__tree.write(path)
 
     @property
     def path(self):
