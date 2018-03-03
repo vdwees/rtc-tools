@@ -1503,8 +1503,8 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                                     f_right = history_timeseries.values[-1]
                                 sym = self.interpolate(
                                     t, history_timeseries.times, history_timeseries.values, f_left, f_right)
-                            if not scaled and nominal != 1:
-                                sym *= nominal
+                            if scaled and nominal != 1:
+                                sym /= nominal
                         else:
                             if extrapolate:
                                 f_left = variable_values[0]
