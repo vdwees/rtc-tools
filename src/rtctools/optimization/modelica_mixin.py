@@ -6,6 +6,7 @@ import numpy as np
 import itertools
 import logging
 import os
+import pkg_resources
 
 from rtctools._internal.alias_tools import AliasRelation, AliasDict
 from rtctools._internal.caching import cached
@@ -23,11 +24,11 @@ class ModelicaMixin(OptimizationProblem):
 
     During preprocessing, the Modelica files located inside the ``model`` subfolder are loaded.
 
-    :cvar modelica_library_folder: Folder in which any referenced Modelica libraries are to be found.  Default is ``mo``.
+    :cvar modelica_library_folders: Folders in which any referenced Modelica libraries are to be found. Default is an empty list.
     """
 
-    # Folder in which the referenced Modelica libraries are found
-    modelica_library_folder = os.getenv('DELTARES_LIBRARY_PATH', 'mo')
+    # Folders in which the referenced Modelica libraries are found
+    modelica_library_folders = []
 
     def __init__(self, **kwargs):
         # Check arguments
@@ -128,7 +129,14 @@ class ModelicaMixin(OptimizationProblem):
         compiler_options['expand_vectors'] = True
 
         # Where imported model libraries are located.
-        compiler_options['library_folders'] = [self.modelica_library_folder]
+        library_folders = self.modelica_library_folders.copy()
+
+        for ep in pkg_resources.iter_entry_points(group='rtctools.libraries.modelica'):
+            if ep.name == "library_folder":
+                library_folders.append(
+                    pkg_resources.resource_filename(ep.module_name, ep.attrs[0]))
+
+        compiler_options['library_folders'] = library_folders
 
         # Eliminate equations of the type 'var = const'.
         compiler_options['eliminate_constant_assignments'] = True
