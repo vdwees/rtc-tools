@@ -24,7 +24,7 @@ test:
   script:
     - python -m venv venv
     - source venv/bin/activate
-    - pip install git+https://github.com/pymola/pymola.git
+    - pip install git+https://github.com/pymoca/pymoca.git
     - pip install dist/*.whl
     - pip install nose
     - cd tests

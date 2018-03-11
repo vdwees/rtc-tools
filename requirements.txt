@@ -1,4 +1,4 @@
 casadi >= 3.2.0
 numpy >= 1.14.0
 scipy
-pymola
+pymoca

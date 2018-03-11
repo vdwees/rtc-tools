@@ -8,9 +8,9 @@ import re
 
 import casadi as ca
 import itertools
-import pymola
+import pymoca
 import rtctools.data.csv as csv
-import pymola.backends.casadi.api
+import pymoca.backends.casadi.api
 from collections import OrderedDict
 from rtctools._internal.alias_tools import AliasRelation, AliasDict
 from rtctools._internal.caching import cached
@@ -38,10 +38,10 @@ class SimulationProblem:
         # Check arguments
         assert('model_folder' in kwargs)
 
-        # Log pymola version
-        logger.debug("Using pymola {}.".format(pymola.__version__))
+        # Log pymoca version
+        logger.debug("Using pymoca {}.".format(pymoca.__version__))
 
-        # Transfer model from the Modelica .mo file to CasADi using pymola
+        # Transfer model from the Modelica .mo file to CasADi using pymoca
         if 'model_name' in kwargs:
             model_name = kwargs['model_name']
         else:
@@ -50,15 +50,15 @@ class SimulationProblem:
             else:
                 model_name = self.__class__.__name__
 
-        self.__pymola_model = pymola.backends.casadi.api.transfer_model(kwargs['model_folder'], model_name, self.compiler_options())
+        self.__pymoca_model = pymoca.backends.casadi.api.transfer_model(kwargs['model_folder'], model_name, self.compiler_options())
 
         # Extract the CasADi MX variables used in the model
         self.__mx = {}
-        self.__mx['time'] = [self.__pymola_model.time]
-        self.__mx['states'] = [v.symbol for v in self.__pymola_model.states]
-        self.__mx['derivatives'] = [v.symbol for v in self.__pymola_model.der_states]
-        self.__mx['algebraics'] = [v.symbol for v in self.__pymola_model.alg_states]
-        self.__mx['parameters'] = [v.symbol for v in self.__pymola_model.parameters]
+        self.__mx['time'] = [self.__pymoca_model.time]
+        self.__mx['states'] = [v.symbol for v in self.__pymoca_model.states]
+        self.__mx['derivatives'] = [v.symbol for v in self.__pymoca_model.der_states]
+        self.__mx['algebraics'] = [v.symbol for v in self.__pymoca_model.alg_states]
+        self.__mx['parameters'] = [v.symbol for v in self.__pymoca_model.parameters]
         self.__mx['constant_inputs'] = []
         self.__mx['lookup_tables'] = []
 
@@ -68,7 +68,7 @@ class SimulationProblem:
         # TODO: get this working
         delayed_feedback_variables = [] #map(lambda delayed_feedback: delayed_feedback[1], self.delayed_feedback())
 
-        for v in self.__pymola_model.inputs:
+        for v in self.__pymoca_model.inputs:
             if v.symbol.name() in delayed_feedback_variables:
                 # Delayed feedback variables are local to each ensemble, and
                 # therefore belong to the collection of algebraic variables,
@@ -97,7 +97,7 @@ class SimulationProblem:
         # Initialize an AliasDict for nominals and types
         self.__nominals = AliasDict(self.alias_relation)
         self.__python_types = AliasDict(self.alias_relation)
-        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
+        for v in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
             sym_name = v.symbol.name()
 
             # Store the types in an AliasDict
@@ -117,12 +117,12 @@ class SimulationProblem:
 
         # Initialize DAE and initial residuals
         variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
-        function_arguments = [self.__pymola_model.time] + \
-            [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
+        function_arguments = [self.__pymoca_model.time] + \
+            [ca.veccat(*[v.symbol for v in getattr(self.__pymoca_model, variable_list)]) for variable_list in variable_lists]
 
-        self.__dae_residual = self.__pymola_model.dae_residual_function(*function_arguments)
+        self.__dae_residual = self.__pymoca_model.dae_residual_function(*function_arguments)
 
-        self.__initial_residual = self.__pymola_model.initial_residual_function(*function_arguments)
+        self.__initial_residual = self.__pymoca_model.initial_residual_function(*function_arguments)
         if self.__initial_residual is None:
             self.__initial_residual = ca.MX()
 
@@ -201,7 +201,7 @@ class SimulationProblem:
             raise NotImplementedError
 
         # Set values of parameters defined in the model into the state vector
-        for var in self.__pymola_model.parameters:
+        for var in self.__pymoca_model.parameters:
             # First check to see if parameter is already set (this allows child classes to overide model defaults)
             if np.isfinite(self.get_var(var.symbol.name())):
                 continue
@@ -226,7 +226,7 @@ class SimulationProblem:
         # Assemble initial residuals and set values from start arributes into the state vector
         constrained_residuals = []
         minimized_residuals = []
-        for var in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states):
+        for var in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.alg_states):
             var_name = var.symbol.name()
             var_nominal = self.get_variable_nominal(var_name)
             if isinstance(var.start, ca.MX):
@@ -568,7 +568,7 @@ class SimulationProblem:
 
     @cached
     def get_output_variables(self):
-        return self.__pymola_model.outputs
+        return self.__pymoca_model.outputs
 
     @cached
     def __get_state_vector_index(self, variable):
@@ -687,7 +687,7 @@ class SimulationProblem:
         parameters = AliasDict(self.alias_relation)
 
         # Update with model parameters
-        parameters.update({p.symbol.name(): p.value for p in self.__pymola_model.parameters})
+        parameters.update({p.symbol.name(): p.value for p in self.__pymoca_model.parameters})
 
         return parameters
 
@@ -696,10 +696,10 @@ class SimulationProblem:
     def alias_relation(self):
         # Initialize aliases
         alias_relation = AliasRelation()
-        for v in itertools.chain(self.__pymola_model.states,
-                                 self.__pymola_model.der_states,
-                                 self.__pymola_model.alg_states,
-                                 self.__pymola_model.inputs):
+        for v in itertools.chain(self.__pymoca_model.states,
+                                 self.__pymoca_model.der_states,
+                                 self.__pymoca_model.alg_states,
+                                 self.__pymoca_model.inputs):
             for alias in v.aliases:
                 alias_relation.add(v.symbol.name(), alias)
                 if logger.getEffectiveLevel() == logging.DEBUG:
@@ -710,9 +710,9 @@ class SimulationProblem:
 
     def compiler_options(self):
         """
-        Subclasses can configure the `pymola <http://github.com/jgoppert/pymola>`_ compiler options here.
+        Subclasses can configure the `pymoca <http://github.com/pymoca/pymoca>`_ compiler options here.
 
-        :returns: A dictionary of pymola compiler options.  See the pymola documentation for details.
+        :returns: A dictionary of pymoca compiler options.  See the pymoca documentation for details.
         """
 
         # Default options

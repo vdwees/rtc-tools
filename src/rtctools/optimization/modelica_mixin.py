@@ -1,6 +1,6 @@
 from typing import Dict, Union
-import pymola
-import pymola.backends.casadi.api
+import pymoca
+import pymoca.backends.casadi.api
 import casadi as ca
 import numpy as np
 import itertools
@@ -33,10 +33,10 @@ class ModelicaMixin(OptimizationProblem):
         # Check arguments
         assert('model_folder' in kwargs)
 
-        # Log pymola version
-        logger.debug("Using pymola {}.".format(pymola.__version__))
+        # Log pymoca version
+        logger.debug("Using pymoca {}.".format(pymoca.__version__))
 
-        # Transfer model from the Modelica .mo file to CasADi using pymola
+        # Transfer model from the Modelica .mo file to CasADi using pymoca
         if 'model_name' in kwargs:
             model_name = kwargs['model_name']
         else:
@@ -45,15 +45,15 @@ class ModelicaMixin(OptimizationProblem):
             else:
                 model_name = self.__class__.__name__
 
-        self.__pymola_model = pymola.backends.casadi.api.transfer_model(kwargs['model_folder'], model_name, self.compiler_options())
+        self.__pymoca_model = pymoca.backends.casadi.api.transfer_model(kwargs['model_folder'], model_name, self.compiler_options())
 
         # Extract the CasADi MX variables used in the model
         self.__mx = {}
-        self.__mx['time'] = [self.__pymola_model.time]
-        self.__mx['states'] = [v.symbol for v in self.__pymola_model.states]
-        self.__mx['derivatives'] = [v.symbol for v in self.__pymola_model.der_states]
-        self.__mx['algebraics'] = [v.symbol for v in self.__pymola_model.alg_states]
-        self.__mx['parameters'] = [v.symbol for v in self.__pymola_model.parameters]
+        self.__mx['time'] = [self.__pymoca_model.time]
+        self.__mx['states'] = [v.symbol for v in self.__pymoca_model.states]
+        self.__mx['derivatives'] = [v.symbol for v in self.__pymoca_model.der_states]
+        self.__mx['algebraics'] = [v.symbol for v in self.__pymoca_model.alg_states]
+        self.__mx['parameters'] = [v.symbol for v in self.__pymoca_model.parameters]
         self.__mx['control_inputs'] = []
         self.__mx['constant_inputs'] = []
         self.__mx['lookup_tables'] = []
@@ -62,7 +62,7 @@ class ModelicaMixin(OptimizationProblem):
         delayed_feedback_variables = map(lambda delayed_feedback: delayed_feedback[
                                          1], self.delayed_feedback())
 
-        for v in self.__pymola_model.inputs:
+        for v in self.__pymoca_model.inputs:
             if v.symbol.name() in delayed_feedback_variables:
                 # Delayed feedback variables are local to each ensemble, and therefore belong to the collection of algebraic variables,
                 # rather than to the control inputs.
@@ -78,20 +78,20 @@ class ModelicaMixin(OptimizationProblem):
         # Initialize nominals and types
         # These are not in @cached dictionary properties for backwards compatibility.
         self.__python_types = AliasDict(self.alias_relation)
-        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
+        for v in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
             self.__python_types[v.symbol.name()] = v.python_type
 
         # Initialize dae and initial residuals
         # These are not in @cached dictionary properties so that we need to create the list
         # of function arguments only once.
         variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
-        function_arguments = [self.__pymola_model.time] + [ca.veccat(*[v.symbol for v in getattr(self.__pymola_model, variable_list)]) for variable_list in variable_lists]
+        function_arguments = [self.__pymoca_model.time] + [ca.veccat(*[v.symbol for v in getattr(self.__pymoca_model, variable_list)]) for variable_list in variable_lists]
 
-        self.__dae_residual = self.__pymola_model.dae_residual_function(*function_arguments)
+        self.__dae_residual = self.__pymoca_model.dae_residual_function(*function_arguments)
         if self.__dae_residual is None:
             self.__dae_residual = ca.MX()
 
-        self.__initial_residual = self.__pymola_model.initial_residual_function(*function_arguments)
+        self.__initial_residual = self.__pymoca_model.initial_residual_function(*function_arguments)
         if self.__initial_residual is None:
             self.__initial_residual = ca.MX()
 
@@ -116,9 +116,9 @@ class ModelicaMixin(OptimizationProblem):
     @cached
     def compiler_options(self) -> Dict[str, Union[str, bool]]:
         """
-        Subclasses can configure the `pymola <http://github.com/jgoppert/pymola>`_ compiler options here.
+        Subclasses can configure the `pymoca <http://github.com/pymoca/pymoca>`_ compiler options here.
 
-        :returns: A dictionary of pymola compiler options.  See the pymola documentation for details.
+        :returns: A dictionary of pymoca compiler options.  See the pymoca documentation for details.
         """
 
         # Default options
@@ -157,7 +157,7 @@ class ModelicaMixin(OptimizationProblem):
 
     def delayed_feedback(self):
         delayed_feedback = super().delayed_feedback()
-        delayed_feedback.extend([(dfb.origin, dfb.name, dfb.delay) for dfb in self.__pymola_model.delayed_states])
+        delayed_feedback.extend([(dfb.origin, dfb.name, dfb.delay) for dfb in self.__pymoca_model.delayed_states])
         return delayed_feedback
 
     @property
@@ -172,7 +172,7 @@ class ModelicaMixin(OptimizationProblem):
     @cached
     def output_variables(self):
         output_variables = [ca.MX.sym(variable)
-                            for variable in self.__pymola_model.outputs]
+                            for variable in self.__pymoca_model.outputs]
         output_variables.extend(self.__mx['control_inputs'])
         return output_variables
 
@@ -181,8 +181,8 @@ class ModelicaMixin(OptimizationProblem):
         # Call parent class first for default values.
         parameters = super().parameters(ensemble_member)
 
-        # Return parameter values from pymola model
-        parameters.update({v.symbol.name(): v.value for v in self.__pymola_model.parameters})
+        # Return parameter values from pymoca model
+        parameters.update({v.symbol.name(): v.value for v in self.__pymoca_model.parameters})
 
         # Done
         return parameters
@@ -192,10 +192,10 @@ class ModelicaMixin(OptimizationProblem):
         # Call parent class first for default values.
         constant_inputs = super().constant_inputs(ensemble_member)
 
-        # Return input values from pymola model
+        # Return input values from pymoca model
         times = self.times()
         constant_input_names = set(sym.name() for sym in self.__mx['constant_inputs'])
-        for v in self.__pymola_model.inputs:
+        for v in self.__pymoca_model.inputs:
             if v.symbol.name() in constant_input_names:
                 constant_inputs[v.symbol.name()] = Timeseries(
                     times, np.full_like(times, v.value))
@@ -210,7 +210,7 @@ class ModelicaMixin(OptimizationProblem):
         initial_state = AliasDict(self.alias_relation)
 
         # Initial conditions obtained from start attributes.
-        for v in self.__pymola_model.states:
+        for v in self.__pymoca_model.states:
             if v.fixed == True:
                 initial_state[v.symbol.name()] = v.start
 
@@ -230,7 +230,7 @@ class ModelicaMixin(OptimizationProblem):
         parameter_values = [parameters.get(param.name(), param) for param in self.__mx['parameters']]
 
         # Load additional bounds from model
-        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
+        for v in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
             sym_name = v.symbol.name()
 
             try:
@@ -273,7 +273,7 @@ class ModelicaMixin(OptimizationProblem):
         parameter_values = [parameters.get(param.name(), param) for param in self.__mx['parameters']]
 
         # Load seeds
-        for var in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states):
+        for var in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.alg_states):
             start = ca.MX(var.start)
             if not var.fixed and not start.is_zero():
                 # If start contains symbolics, try substituting parameter values
@@ -301,7 +301,7 @@ class ModelicaMixin(OptimizationProblem):
     def alias_relation(self):
         # Initialize aliases
         alias_relation = AliasRelation()
-        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.der_states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
+        for v in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.der_states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
             for alias in v.aliases:
                 alias_relation.add(v.symbol.name(), alias)
                 if logger.getEffectiveLevel() == logging.DEBUG:
@@ -323,7 +323,7 @@ class ModelicaMixin(OptimizationProblem):
         parameter_values = [parameters.get(param.name(), param) for param in self.__mx['parameters']]
 
         # Iterate over nominalizable states
-        for v in itertools.chain(self.__pymola_model.states, self.__pymola_model.alg_states, self.__pymola_model.inputs):
+        for v in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
             sym_name = v.symbol.name()
             # For type consistancy, cast to MX
             nominal = ca.MX(v.nominal)
