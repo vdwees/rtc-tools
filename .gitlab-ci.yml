@@ -4,10 +4,20 @@ before_script:
   - pip install tox
 
 stages:
+  - style
   - build
   - test
   - coverage
   - deploy
+
+# style
+flake8:
+  stage: style
+  image: python:3.6
+  script:
+    - tox -vv
+  variables:
+    TOXENV: flake8
 
 # build
 build:
