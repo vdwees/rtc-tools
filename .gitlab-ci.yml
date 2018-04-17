@@ -6,6 +6,7 @@ before_script:
 stages:
   - build
   - test
+  - coverage
   - deploy
 
 # build
@@ -43,6 +44,18 @@ py36:linux:
   tags:
     - docker
     - linux
+
+# coverage
+coverage:
+  stage: coverage
+  script:
+    - tox -vv
+    - pip install codecov
+    - codecov --token=$CODECOV_TOKEN
+  variables:
+    TOXENV: coverage
+  tags:
+    - docker
 
 # deploy
 deploy:

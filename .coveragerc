@@ -1,0 +1,15 @@
+[run]
+branch = True
+source = rtctools
+omit = src/rtctools/_version.py
+
+[report]
+show_missing = true
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+
+[paths]
+source =
+    src/rtctools
+	.tox/*/lib/python*/site-packages/rtctools
