@@ -28,10 +28,6 @@ Operating System :: Unix
 Operating System :: MacOS
 """
 
-# Install requirements
-with open('requirements.txt', 'r') as req_file:
-    install_reqs = req_file.read().split('\n')
-
 setup(
     name = 'rtc-tools',
     version = versioneer.get_version(),
@@ -45,7 +41,10 @@ setup(
     platforms = ['Windows', 'Linux', 'Mac OS-X', 'Unix'],
     packages = find_packages("src"),
     package_dir = {"": "src"},
-    install_requires = install_reqs,
+    install_requires = ["casadi >= 3.2.0",
+                        "numpy >= 1.14.0",
+                        "scipy >= 1.0.0",
+                        "pymoca >= 0.2.4"],
     tests_require = ['nose'],
     test_suite = 'nose.collector',
     python_requires='>=3.5',

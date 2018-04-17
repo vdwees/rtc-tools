@@ -1,10 +1,14 @@
-image: python:3-jessie
+image: python:3.6
+
+before_script:
+  - pip install tox
 
 stages:
   - build
   - test
   - deploy
 
+# build
 build:
   stage: build
   script:
@@ -15,20 +19,43 @@ build:
     expire_in: 1 week
   tags:
     - docker
-    - python3
 
-test:
+# test
+.job_template: &unittests
   stage: test
+  script:
+    - tox -vv
+
+py35:linux:
+  <<: *unittests
+  image: python:3.5-jessie
+  variables:
+    TOXENV: py35
+  tags:
+    - docker
+    - linux
+
+py36:linux:
+  <<: *unittests
+  image: python:3.6-jessie
+  variables:
+    TOXENV: py36
+  tags:
+    - docker
+    - linux
+
+# deploy
+deploy:
+  stage: deploy
   dependencies:
     - build
   script:
-    - python -m venv venv
-    - source venv/bin/activate
-    - pip install git+https://github.com/pymoca/pymoca.git
-    - pip install dist/*.whl
-    - pip install nose
-    - cd tests
-    - python -m nose
+    - pip install twine
+    - twine upload -u $PYPI_USER -p $PYPI_PASSWORD dist/*
+  only:
+    - tags
+  except:
+    # Do not deploy tags that do not start with 2.
+    - /^(?!2\.).*$
   tags:
     - docker
-    - python3
