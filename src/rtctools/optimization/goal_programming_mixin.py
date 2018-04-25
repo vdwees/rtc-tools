@@ -293,23 +293,40 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         self.__subproblem_constraints = []
         self.__subproblem_path_constraints = []
 
+        self.__original_constant_input_keys = {}
+
     @property
     def extra_variables(self):
         return self.__subproblem_epsilons
 
     @property
     def path_variables(self):
-        return self.__subproblem_path_epsilons + [variable for (variable, value) in self.__subproblem_path_timeseries]
+        return self.__subproblem_path_epsilons.copy()
 
     def bounds(self):
         bounds = super().bounds()
         for epsilon in self.__subproblem_epsilons + self.__subproblem_path_epsilons:
             bounds[epsilon.name()] = (0.0, 1.0)
-        for (variable, value) in self.__subproblem_path_timeseries:
-            # IPOPT will turn these variables into parameters (assuming we
-            # remain in 'make_parameter' mode)
-            bounds[variable.name()] = (value, value)
         return bounds
+
+    def constant_inputs(self, ensemble_member):
+        constant_inputs = super().constant_inputs(ensemble_member)
+
+        if not ensemble_member in self.__original_constant_input_keys:
+            self.__original_constant_input_keys[ensemble_member] = set(constant_inputs.keys())
+
+        # Remove min/max timeseries of previous priorities
+        for k in set(constant_inputs.keys()):
+            if k not in self.__original_constant_input_keys[ensemble_member]:
+                del constant_inputs[k]
+
+        # Append min/max timeseries to the constant inputs. Note that min/max
+        # timeseries are shared between all ensemble members.
+        for (variable, value) in self.__subproblem_path_timeseries:
+            if not isinstance(value, Timeseries):
+                value = Timeseries(self.times(), np.full_like(self.times(), value))
+            constant_inputs[variable] = value
+        return constant_inputs
 
     def seed(self, ensemble_member):
         if self.__first_run:
@@ -603,12 +620,12 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                 # We use a violation variable formulation, with the violation
                 # variables epsilon bounded between 0 and 1.
                 if goal.has_target_min:
-                    constraint = self.__GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: ca.if_else(problem.variable(min_series.name()) > -sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
-                        epsilon.name()) * (goal.function_range[0] - problem.variable(min_series.name())) - problem.variable(min_series.name())) / goal.function_nominal, 0.0), 0.0, np.inf, False)
+                    constraint = self.__GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: ca.if_else(problem.variable(min_series) > -sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
+                        epsilon.name()) * (goal.function_range[0] - problem.variable(min_series)) - problem.variable(min_series)) / goal.function_nominal, 0.0), 0.0, np.inf, False)
                     constraints.append(constraint)
                 if goal.has_target_max:
-                    constraint = self.__GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: ca.if_else(problem.variable(max_series.name()) < sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
-                        epsilon.name()) * (goal.function_range[1] - problem.variable(max_series.name())) - problem.variable(max_series.name())) / goal.function_nominal, 0.0), -np.inf, 0.0, False)
+                    constraint = self.__GoalConstraint(goal, lambda problem, ensemble_member=ensemble_member, goal=goal, epsilon=epsilon: ca.if_else(problem.variable(max_series) < sys.float_info.max, (goal.function(problem, ensemble_member) - problem.variable(
+                        epsilon.name()) * (goal.function_range[1] - problem.variable(max_series)) - problem.variable(max_series)) / goal.function_nominal, 0.0), -np.inf, 0.0, False)
                     constraints.append(constraint)
 
             # TODO forgetting max like this.
@@ -726,6 +743,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
         self.__subproblem_path_constraints = [OrderedDict() for ensemble_member in range(self.ensemble_size)]
         self.__first_run = True
         self.__results_are_current = False
+        self.__original_constant_input_keys = {}
         for i, (priority, goals, path_goals) in enumerate(subproblems):
             logger.info("Solving goals at priority {}".format(priority))
 
@@ -775,7 +793,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                         self.__subproblem_path_epsilons.append(epsilon)
 
                 if goal.has_target_min:
-                    min_series = ca.MX.sym('path_min_{}_{}'.format(i, j))
+                    min_series = 'path_min_{}_{}'.format(i, j)
 
                     if isinstance(goal.target_min, Timeseries):
                         target_min = Timeseries(goal.target_min.times, goal.target_min.values)
@@ -788,7 +806,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                 else:
                     min_series = None
                 if goal.has_target_max:
-                    max_series = ca.MX.sym('path_max_{}_{}'.format(i, j))
+                    max_series = 'path_max_{}_{}'.format(i, j)
 
                     if isinstance(goal.target_max, Timeseries):
                         target_max = Timeseries(goal.target_max.times, goal.target_max.values)

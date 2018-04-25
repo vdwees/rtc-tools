@@ -33,8 +33,11 @@ class TestProblem(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegratedOptim
         return parameters
 
     def constant_inputs(self, ensemble_member):
-        # Constant inputs
-        return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
+        constant_inputs = super().constant_inputs(ensemble_member)
+        constant_inputs['constant_input'] = Timeseries(
+            np.hstack(([self.initial_time, self.times()])),
+            np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))
+        return constant_inputs
 
     def bounds(self):
         bounds = super().bounds()
@@ -260,8 +263,11 @@ class TestProblemPathGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedIntegr
         return parameters
 
     def constant_inputs(self, ensemble_member):
-        # Constant inputs
-        return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
+        constant_inputs = super().constant_inputs(ensemble_member)
+        constant_inputs['constant_input'] = Timeseries(
+            np.hstack(([self.initial_time, self.times()])),
+            np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))
+        return constant_inputs
 
     def bounds(self):
         bounds = super().bounds()
@@ -389,11 +395,15 @@ class TestProblemEnsemble(TestProblem):
         return 2
 
     def constant_inputs(self, ensemble_member):
-        # Constant inputs
+        constant_inputs = super().constant_inputs(ensemble_member)
+        constant_inputs['constant_input'] = Timeseries(
+            np.hstack(([self.initial_time, self.times()])),
+            np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))
         if ensemble_member == 0:
-            return {'constant_input': Timeseries(self.times(), np.linspace(1.0, 0.0, 21))}
+            constant_inputs['constant_input'] = Timeseries(self.times(), np.linspace(1.0, 0.0, 21))
         else:
-            return {'constant_input': Timeseries(self.times(), np.linspace(1.0, 0.5, 21))}
+            constant_inputs['constant_input'] = Timeseries(self.times(), np.linspace(1.0, 0.5, 21))
+        return constant_inputs
 
 
 class TestGoalProgrammingEnsemble(TestGoalProgramming):
@@ -436,8 +446,11 @@ class TestProblemPathGoalsSmoothing(GoalProgrammingMixin, ModelicaMixin, Colloca
         return parameters
 
     def constant_inputs(self, ensemble_member):
-        # Constant inputs
-        return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
+        constant_inputs = super().constant_inputs(ensemble_member)
+        constant_inputs['constant_input'] = Timeseries(
+            np.hstack(([self.initial_time, self.times()])),
+            np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))
+        return constant_inputs
 
     def bounds(self):
         bounds = super().bounds()
@@ -506,8 +519,11 @@ class TestProblemStateGoals(GoalProgrammingMixin, ModelicaMixin, CollocatedInteg
         return parameters
 
     def constant_inputs(self, ensemble_member):
-        # Constant inputs
-        return {'constant_input': Timeseries(np.hstack(([self.initial_time, self.times()])), np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))}
+        constant_inputs = super().constant_inputs(ensemble_member)
+        constant_inputs['constant_input'] = Timeseries(
+            np.hstack(([self.initial_time, self.times()])),
+            np.hstack(([1.0], np.linspace(1.0, 0.0, 21))))
+        return constant_inputs
 
     def bounds(self):
         bounds = super().bounds()
