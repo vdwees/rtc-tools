@@ -223,53 +223,52 @@ class SimulationProblem:
                     logger.debug('SimulationProblem: Setting parameter {} = {}'.format(var.symbol.name(), val))
                     self.set_var(var.symbol.name(), val)
 
-        # Assemble initial residuals and set values from start arributes into the state vector
+        # Assemble initial residuals and set values from start attributes into the state vector
         constrained_residuals = []
         minimized_residuals = []
         for var in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.alg_states):
             var_name = var.symbol.name()
             var_nominal = self.get_variable_nominal(var_name)
-            if isinstance(var.start, ca.MX):
-                if var.start.is_constant():
-                    # start was a float in MX form
-                    start_val = var.python_type(var.start)
-                else:
-                    start_val = 0.0
 
-            elif var.start == 0.0 and not var.fixed:
+            # Attempt to cast var.start to python type
+            mx_start = ca.MX(var.start)
+            if mx_start.is_constant():
+                # cast var.start to python type
+                start_val = var.python_type(mx_start.to_DM())
+            else:
+                # var.start is a symbolic expression with unknown value
+                start_val = None
+
+            if start_val == 0.0 and not var.fixed:
                 # To make initialization easier, we allow setting initial states by providing timeseries
                 # with names that match a symbol in the model. We only check for this matching if the start
                 # and fixed attributes were left as default
                 try:
                     start_val = self.initial_state()[var_name]
                 except KeyError:
-                    start_val = var.start
+                    pass
                 else:
-                    # An intitial state was found- add it to the constrained residuals
+                    # An initial state was found- add it to the constrained residuals
                     logger.debug('Initialize: Added {} = {} to initial equations (found matching timeseries).'.format(
                         var_name, start_val))
-                    self.set_var(var_name, start_val)
-                    constrained_residuals.append((var.symbol - start_val) / var_nominal)
-                    # residuals and state vector are already set, so skip to the next var in the for-loop
-                    continue
-            else:
-                # var.start was set with a numerical value
-                start_val = var.start
+                    # Set var to be fixed
+                    var.fixed = True
 
-            # Attempt to set start_val in the state vector
+            # Attempt to set start_val in the state vector. Default to zero if unknown.
             try:
-                self.set_var(var_name, start_val)
+                self.set_var(var_name, start_val if start_val is not None else 0.0)
             except KeyError:
                 logger.warning('Initialize: {} not found in state vector. Initial value of {} not set.'.format(
                     var_name, start_val))
 
-            # add a residual for the difference between the state and its starting value
+            # Add a residual for the difference between the state and its starting expression
+            start_expr = start_val if start_val is not None else var.start
             if var.fixed:
                 # require residual = 0
-                constrained_residuals.append((var.symbol - var.start) / var_nominal)
+                constrained_residuals.append((var.symbol - start_expr) / var_nominal)
             else:
                 # minimize residual
-                minimized_residuals.append((var.symbol - var.start) / var_nominal)
+                minimized_residuals.append((var.symbol - start_expr) / var_nominal)
 
         # Default start var for ders is zero
         for der_var in self.__mx['derivatives']:
@@ -325,14 +324,17 @@ class SimulationProblem:
         ubg = np.zeros(equality_constraints.size1())
 
         # Construct objective function from the input residual
-        # TODO: probably can speed this up with a map() call?
         objective_function = ca.dot(minimized_residual, minimized_residual)
 
         # Find initial state using ipopt
         parameters = ca.vertcat(*self.__mx['time'], *self.__mx['constant_inputs'], *self.__mx['parameters'])
         nlp = dict(x = X, f = objective_function, g = equality_constraints, p = parameters)
         solver = ca.nlpsol('solver', 'ipopt', nlp, self.solver_options())
+
+        # Construct guess
         guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]))
+
+        # Find initial state
         initial_state = solver(x0 = guess,
                                lbx = lbx, ubx = ubx,
                                lbg = lbg, ubg = ubg,
