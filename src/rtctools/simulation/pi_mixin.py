@@ -330,3 +330,11 @@ class PIMixin(SimulationProblem):
 
     def get_timeseries(self, variable):
         return self.__timeseries_import_dict[variable]
+
+    def extract_results(self):
+        """
+        Extracts the results of output
+
+        :returns: An AliasDict of output variables and results array format.
+        """
+        return self.__output
