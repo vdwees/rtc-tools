@@ -169,7 +169,7 @@ class PIMixin(SimulationProblem):
             dt = self.__dt
 
         # Current time stamp
-        t = self.get_current_time()   
+        t = self.get_current_time()
 
         # Get current time index
         t_idx = bisect.bisect_left(self.__timeseries_import_times, t + dt)

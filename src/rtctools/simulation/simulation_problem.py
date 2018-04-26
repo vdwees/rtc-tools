@@ -50,7 +50,9 @@ class SimulationProblem:
             else:
                 model_name = self.__class__.__name__
 
-        self.__pymoca_model = pymoca.backends.casadi.api.transfer_model(kwargs['model_folder'], model_name, self.compiler_options())
+        # Load model from pymoca backend
+        self.__pymoca_model = pymoca.backends.casadi.api.transfer_model(
+            kwargs['model_folder'], model_name, self.compiler_options())
 
         # Extract the CasADi MX variables used in the model
         self.__mx = {}
@@ -202,7 +204,7 @@ class SimulationProblem:
 
         # Set values of parameters defined in the model into the state vector
         for var in self.__pymoca_model.parameters:
-            # First check to see if parameter is already set (this allows child classes to overide model defaults)
+            # First check to see if parameter is already set (this allows child classes to override model defaults)
             if np.isfinite(self.get_var(var.symbol.name())):
                 continue
 
@@ -326,19 +328,19 @@ class SimulationProblem:
         # Construct objective function from the input residual
         objective_function = ca.dot(minimized_residual, minimized_residual)
 
-        # Find initial state using ipopt
+        # Construct nlp and solver to find initial state using ipopt
         parameters = ca.vertcat(*self.__mx['time'], *self.__mx['constant_inputs'], *self.__mx['parameters'])
-        nlp = dict(x = X, f = objective_function, g = equality_constraints, p = parameters)
+        nlp = dict(x=X, f=objective_function, g=equality_constraints, p=parameters)
         solver = ca.nlpsol('solver', 'ipopt', nlp, self.solver_options())
 
         # Construct guess
         guess = ca.vertcat(*np.nan_to_num(self.__state_vector[:self.__states_end_index]))
 
         # Find initial state
-        initial_state = solver(x0 = guess,
-                               lbx = lbx, ubx = ubx,
-                               lbg = lbg, ubg = ubg,
-                               p = self.__state_vector[self.__states_end_index:])
+        initial_state = solver(x0=guess,
+                               lbx=lbx, ubx=ubx,
+                               lbg=lbg, ubg=ubg,
+                               p=self.__state_vector[self.__states_end_index:])
 
         # If unsuccessful, stop.
         return_status = solver.stats()['return_status']
@@ -367,25 +369,25 @@ class SimulationProblem:
         pass
 
     def setup_experiment(self, start, stop, dt):
-        """ 
+        """
         Method for subclasses (PIMixin, CSVMixin, or user classes) to set timing information for a simulation run.
 
         :param start: Start time for the simulation.
         :param stop:  Final time for the simulation.
         :param dt:    Time step size.
         """
-        
+
         # Set class vars with start/stop/dt values
         self.__start = start
         self.__stop = stop
-        self.__dt = dt    
+        self.__dt = dt
 
         # Set time in state vector
         self.set_var('time', start)
 
     def update(self, dt):
         """
-        Performs one timestep. 
+        Performs one timestep.
 
         The methods ``setup_experiment`` and ``initialize`` must have been called before.
 
@@ -395,7 +397,7 @@ class SimulationProblem:
             dt = self.__dt
 
         logger.debug("Taking a step at {} with size {}".format(self.get_current_time(), dt))
-        
+
         # increment time
         self.set_var('time', self.get_current_time() + dt)
 
@@ -419,7 +421,7 @@ class SimulationProblem:
 
 
     def simulate(self):
-        """ 
+        """
         Run model from start_time to end_time.
         """
 
@@ -653,7 +655,7 @@ class SimulationProblem:
 
     def timeseries_at(self, variable, t):
         """
-        Get value of timeseries variable at time t: should be overriden by pi or csv mixin
+        Get value of timeseries variable at time t: should be overridden by pi or csv mixin
         """
         raise NotImplementedError
 
