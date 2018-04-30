@@ -18,6 +18,8 @@ flake8:
     - tox -vv
   variables:
     TOXENV: flake8
+  tags:
+    - docker
 
 # build
 build:
