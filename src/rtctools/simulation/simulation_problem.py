@@ -136,6 +136,12 @@ class SimulationProblem:
         # A very handy index
         self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics']) + len(self.__mx['derivatives'])
 
+        # Construct arrays of state bounds (used in the initialize() nlp, but not in __do_step rootfinder)
+        self.__ubx = np.array([v.python_type(v.max) for v in itertools.chain(
+            self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.der_states)])
+        self.__lbx = np.array([v.python_type(v.min) for v in itertools.chain(
+            self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.der_states)])
+
         # Construct a dict to look up symbols by name (or iterate over)
         self.__sym_dict = OrderedDict(((sym.name(), sym) for sym in self.__sym_list))
 
@@ -316,11 +322,6 @@ class SimulationProblem:
         logger.debug('SimulationProblem: Initial Equations are ' + str(equality_constraints))
         logger.debug('SimulationProblem: Minimized Residuals are ' + str(minimized_residual))
 
-        # Construct arrays of state bounds
-        # TODO: jmodelica seems to ignore min and max terms, so we do to?
-        lbx = np.full(X.size1(), -np.inf)
-        ubx = np.full(X.size1(), np.inf)
-
         # Constrain model equation residuals to zero
         lbg = np.zeros(equality_constraints.size1())
         ubg = np.zeros(equality_constraints.size1())
@@ -338,7 +339,7 @@ class SimulationProblem:
 
         # Find initial state
         initial_state = solver(x0=guess,
-                               lbx=lbx, ubx=ubx,
+                               lbx=self.__lbx, ubx=self.__ubx,
                                lbg=lbg, ubg=ubg,
                                p=self.__state_vector[self.__states_end_index:])
 
