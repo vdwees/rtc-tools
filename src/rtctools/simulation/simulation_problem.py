@@ -136,12 +136,6 @@ class SimulationProblem:
         # A very handy index
         self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics']) + len(self.__mx['derivatives'])
 
-        # Construct arrays of state bounds (used in the initialize() nlp, but not in __do_step rootfinder)
-        self.__ubx = np.array([v.python_type(v.max) for v in itertools.chain(
-            self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.der_states)])
-        self.__lbx = np.array([v.python_type(v.min) for v in itertools.chain(
-            self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.der_states)])
-
         # Construct a dict to look up symbols by name (or iterate over)
         self.__sym_dict = OrderedDict(((sym.name(), sym) for sym in self.__sym_list))
 
@@ -321,6 +315,23 @@ class SimulationProblem:
 
         logger.debug('SimulationProblem: Initial Equations are ' + str(equality_constraints))
         logger.debug('SimulationProblem: Minimized Residuals are ' + str(minimized_residual))
+
+        # State bounds can be symbolic, written in terms of parameters. After all
+        # parameter values are known, we evaluate the numeric values of bounds.
+        symbolic_bounds = ca.vertcat(*[ca.horzcat(v.min, v.max) for v in itertools.chain(
+            self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.der_states)])
+        bound_evaluator = ca.Function('bound_evaluator', self.__mx['parameters'], [symbolic_bounds])
+
+        # Evalueate bounds using values of parameters
+        n_parameters = len(self.__mx['parameters'])
+        if n_parameters > 0:
+            [evaluated_bounds] = bound_evaluator.call(self.__state_vector[-n_parameters:])
+        else:
+            [evaluated_bounds] = bound_evaluator.call([])
+
+        # Construct arrays of state bounds (used in the initialize() nlp, but not in __do_step rootfinder)
+        self.__lbx = evaluated_bounds[:, 0]
+        self.__ubx = evaluated_bounds[:, 1]
 
         # Constrain model equation residuals to zero
         lbg = np.zeros(equality_constraints.size1())
