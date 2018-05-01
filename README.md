@@ -3,8 +3,8 @@ This is RTC-Tools 2, a toolbox for control and optimization of water systems.
 Visit our website at:
 	https://www.deltares.nl/en/software/rtc-tools/
 
-[![Pipeline](https://gitlab.com/deltares/rtc-tools/badges/casadi3/pipeline.svg)](https://gitlab.com/deltares/rtc-tools/commits/casadi3)
-[![Coverage](https://codecov.io/gl/deltares/rtc-tools/branch/casadi3/graph/badge.svg)](https://codecov.io/gl/deltares/rtc-tools)
+[![Pipeline](https://gitlab.com/deltares/rtc-tools/badges/master/pipeline.svg)](https://gitlab.com/deltares/rtc-tools/commits/master)
+[![Coverage](https://codecov.io/gl/deltares/rtc-tools/branch/master/graph/badge.svg)](https://codecov.io/gl/deltares/rtc-tools)
 
 ## Install
 
