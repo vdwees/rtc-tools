@@ -60,8 +60,8 @@ class ModelicaMixin(OptimizationProblem):
         self.__mx['lookup_tables'] = []
 
         # Merge with user-specified delayed feedback
-        delayed_feedback_variables = map(lambda delayed_feedback: delayed_feedback[
-                                         1], self.delayed_feedback())
+        delayed_feedback_variables = list(map(lambda delayed_feedback: delayed_feedback[
+                                         1], self.delayed_feedback()))
 
         for v in self.__pymoca_model.inputs:
             if v.symbol.name() in delayed_feedback_variables:
