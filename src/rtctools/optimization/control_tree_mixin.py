@@ -36,7 +36,7 @@ class ControlTreeMixin(OptimizationProblem):
 
         options = {}
 
-        options['forecast_variables'] = [var.getName()
+        options['forecast_variables'] = [var.name()
                                          for var in self.dae_variables['constant_inputs']]
         options['branching_times'] = self.times()[1:]
         options['k'] = 2
