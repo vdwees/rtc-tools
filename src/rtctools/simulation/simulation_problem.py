@@ -5,6 +5,7 @@ from datetime import timedelta
 import bisect
 import copy
 import re
+import pkg_resources
 
 import casadi as ca
 import itertools
@@ -29,10 +30,13 @@ class SimulationProblem:
     Implements the `BMI <http://csdms.colorado.edu/wiki/BMI_Description>`_ Interface.
 
     Base class for all Simulation problems. Loads the Modelica Model.
+
+    :cvar modelica_library_folders: Folders in which any referenced Modelica libraries are to be found. Default is an empty list.
+
     """
 
-    # Folder in which the referenced Modelica libraries are found
-    modelica_library_folder = os.getenv('DELTARES_LIBRARY_PATH', 'mo')
+    # Folders in which the referenced Modelica libraries are found
+    modelica_library_folders = []
 
     def __init__(self, **kwargs):
         # Check arguments
@@ -724,6 +728,7 @@ class SimulationProblem:
 
         return alias_relation
 
+    @cached
     def compiler_options(self):
         """
         Subclasses can configure the `pymoca <http://github.com/pymoca/pymoca>`_ compiler options here.
@@ -738,7 +743,14 @@ class SimulationProblem:
         compiler_options['expand_vectors'] = True
 
         # Where imported model libraries are located.
-        compiler_options['library_folders'] = [self.modelica_library_folder]
+        library_folders = self.modelica_library_folders.copy()
+
+        for ep in pkg_resources.iter_entry_points(group='rtctools.libraries.modelica'):
+            if ep.name == "library_folder":
+                library_folders.append(
+                    pkg_resources.resource_filename(ep.module_name, ep.attrs[0]))
+
+        compiler_options['library_folders'] = library_folders
 
         # Eliminate equations of the type 'var = const'.
         compiler_options['eliminate_constant_assignments'] = True
