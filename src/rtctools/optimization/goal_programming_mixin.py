@@ -257,7 +257,8 @@ class StateGoal(Goal, metaclass = ABCMeta):
         self.function_nominal = optimization_problem.variable_nominal(self.state)
 
         # Set function key
-        self.function_key = self.state
+        canonical, sign = optimization_problem.alias_relation.canonical_signed(self.state)
+        self.function_key = canonical if sign > 0.0 else '-' + canonical
 
     def function(self, optimization_problem, ensemble_member):
         return optimization_problem.state(self.state)
