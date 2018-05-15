@@ -54,6 +54,18 @@ class OptimizationProblem(metaclass = ABCMeta):
 
         logger.debug("Creating solver")
 
+        if options.pop('expand', False):
+            # NOTE: CasADi only supports the "expand" option for nlpsol. To
+            # also be able to expand with e.g. qpsol, we do the expansion
+            # ourselves here.
+            expand_f_g = ca.Function('f_g', [nlp['x']], [nlp['f'], nlp['g']]).expand()
+            X_sx = ca.SX.sym('X', *nlp['x'].shape)
+            f_sx, g_sx = expand_f_g(X_sx)
+
+            nlp['f'] = f_sx
+            nlp['g'] = g_sx
+            nlp['x'] = X_sx
+
         # Solver option
         my_solver = options['solver']
         del options['solver']
