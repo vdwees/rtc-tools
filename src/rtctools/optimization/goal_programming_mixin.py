@@ -65,6 +65,8 @@ class Goal(metaclass = ABCMeta):
     Goals with the same priority are weighted off against each other in a
     single objective function.
 
+    In the minimization goals, the function nominal is used to scale the function value in the objective function.
+
     The goal violation value is taken to the order'th power in the objective function of the final
     optimization problem.
 
@@ -774,7 +776,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                             problem.extra_variable(epsilon.name(), ensemble_member=ensemble_member), goal.order))
                     else:
                         self.__subproblem_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight * ca.constpow(
-                            goal.function(problem, ensemble_member) / (goal.function_range[1] - goal.function_range[0]) / goal.function_nominal, goal.order))
+                            goal.function(problem, ensemble_member) / goal.function_nominal, goal.order))
 
                 if goal.has_target_bounds:
                     for ensemble_member in range(self.ensemble_size):
@@ -824,7 +826,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                             ca.constpow(problem.state_vector(epsilon.name(), ensemble_member=ensemble_member), goal.order)))
                     else:
                         self.__subproblem_path_objectives.append(lambda problem, ensemble_member, goal=goal: goal.weight *
-                            ca.constpow(goal.function(problem, ensemble_member) / (goal.function_range[1] - goal.function_range[0]) / goal.function_nominal, goal.order))
+                            ca.constpow(goal.function(problem, ensemble_member) / goal.function_nominal, goal.order))
 
                 if goal.has_target_bounds:
                     for ensemble_member in range(self.ensemble_size):

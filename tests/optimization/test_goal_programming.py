@@ -108,6 +108,7 @@ class TestGoalNoMinMax(Goal):
         return optimization_problem.integral('x', ensemble_member=ensemble_member)
 
     function_range = (-1e1, 1e1)
+    function_nominal = 2e1
     priority = 1
     order = 1
 
