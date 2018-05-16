@@ -536,8 +536,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                     # Equality constraint to optimized value
                     fix_value = True
 
-                    function = Function('function', [self.solver_input], [
-                                          goal.function(self, ensemble_member)])
+                    function = ca.Function('f', [self.solver_input], [goal.function(self, ensemble_member)])
                     value = function(self.solver_output)
 
                     constraint.min = (value - goal.relaxation) / goal.function_nominal
@@ -666,8 +665,7 @@ class GoalProgrammingMixin(OptimizationProblem, metaclass = ABCMeta):
                                 variable, t, ensemble_member=ensemble_member) for variable in variables]
                             [function] = ca.substitute(
                                 [goal.function(self, ensemble_member)], variables, values)
-                            function = Function(
-                                'function', [self.solver_input], [function])
+                            function = ca.Function('f', [self.solver_input], [function])
                             value = function(self.solver_output)
 
                             m[i] = (value - goal.relaxation) / goal.function_nominal
