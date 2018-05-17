@@ -1,13 +1,14 @@
-from datetime import timedelta
-import numpy as np
-import logging
 import bisect
+import logging
 import os
+from datetime import timedelta
+
+import numpy as np
 
 import rtctools.data.csv as csv
+from rtctools._internal.caching import cached
 
 from .simulation_problem import SimulationProblem
-from rtctools._internal.caching import cached
 
 logger = logging.getLogger("rtctools")
 
@@ -16,13 +17,10 @@ class CSVMixin(SimulationProblem):
     """
     Adds reading and writing of CSV timeseries and parameters to your simulation problem.
 
-    During preprocessing, files named ``timeseries_import.csv``, ``initial_state.csv``, and ``parameters.csv`` are read from the ``input`` subfolder.
+    During preprocessing, files named ``timeseries_import.csv``, ``initial_state.csv``,
+    and ``parameters.csv`` are read from the ``input`` subfolder.
 
     During postprocessing, a file named ``timeseries_export.csv`` is written to the ``output`` subfolder.
-
-    In ensemble mode, a file named ``ensemble.csv`` is read from the ``input`` folder.  This file contains two columns.
-    The first column gives the name of the ensemble member, and the second column its probability.  Furthermore, the other XML files
-    appear one level deeper inside the filesystem hierarchy, inside subfolders with the names of the ensemble members.
 
     :cvar csv_delimiter:           Column delimiter used in CSV files.  Default is ``,``.
     :cvar csv_validate_timeseries: Check consistency of timeseries.  Default is ``True``.
@@ -61,30 +59,39 @@ class CSVMixin(SimulationProblem):
             Check length of initial state array, throw exception when larger than 1.
             """
             if initial_state.shape:
-                raise Exception("CSVMixin: Initial state file {} contains more than one row of data. Please remove the data row(s) that do not describe the initial state.".format(
-                    os.path.join(self.__input_folder, 'initial_state.csv')))
+                raise Exception(
+                    'CSVMixin: Initial state file {} contains more than one row of data. '
+                    'Please remove the data row(s) that do not describe the initial '
+                    'state.'.format(os.path.join(self.__input_folder, 'initial_state.csv')))
 
         # Read CSV files
-        _timeseries = csv.load(os.path.join(
-            self.__input_folder, self.timeseries_import_basename + '.csv'), delimiter=self.csv_delimiter, with_time=True)
+        _timeseries = csv.load(
+            os.path.join(self.__input_folder, self.timeseries_import_basename + '.csv'),
+            delimiter=self.csv_delimiter, with_time=True)
         self.__timeseries_times = _timeseries[_timeseries.dtype.names[0]]
-        self.__timeseries = {key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}
+        self.__timeseries = {
+            key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}
+
         logger.debug("CSVMixin: Read timeseries.")
 
         try:
-            _parameters = csv.load(os.path.join(
-                self.__input_folder, 'parameters.csv'), delimiter=self.csv_delimiter)
+            _parameters = csv.load(
+                os.path.join(self.__input_folder, 'parameters.csv'),
+                delimiter=self.csv_delimiter)
             logger.debug("CSVMixin: Read parameters.")
-            self.__parameters = {key: float(_parameters[key]) for key in _parameters.dtype.names}
+            self.__parameters = {
+                key: float(_parameters[key]) for key in _parameters.dtype.names}
         except IOError:
             self.__parameters = {}
 
         try:
-            _initial_state = csv.load(os.path.join(
-                self.__input_folder, 'initial_state.csv'), delimiter=self.csv_delimiter)
+            _initial_state = csv.load(
+                os.path.join(self.__input_folder, 'initial_state.csv'),
+                delimiter=self.csv_delimiter)
             logger.debug("CSVMixin: Read initial state.")
             check_initial_state_array(_initial_state)
-            self.__initial_state = {key: float(_initial_state[key]) for key in _initial_state.dtype.names}
+            self.__initial_state = {
+                key: float(_initial_state[key]) for key in _initial_state.dtype.names}
         except IOError:
             self.__initial_state = {}
 
@@ -93,7 +100,9 @@ class CSVMixin(SimulationProblem):
             if self.__initial_state[collision] == self.__timeseries[collision][0]:
                 continue
             else:
-                logger.warning("CSVMixin: Entry {} in initial_state.csv conflicts with timeseries_import.csv".format(collision))
+                logger.warning(
+                    'CSVMixin: Entry {} in initial_state.csv conflicts with '
+                    'timeseries_import.csv'.format(collision))
 
         self.__timeseries_times_sec = self.__datetime_to_sec(self.__timeseries_times)
 
@@ -110,8 +119,11 @@ class CSVMixin(SimulationProblem):
         if self.csv_validate_timeseries:
             for i in range(len(self.__timeseries_times_sec) - 1):
                 if self.__timeseries_times_sec[i + 1] - self.__timeseries_times_sec[i] != self.__dt:
-                    raise Exception('CSVMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set equidistant=False if this is intended.'.format(
-                        self.__timeseries_times[i + 1]))
+                    raise Exception(
+                        'CSVMixin: Expecting equidistant timeseries, the time step '
+                        'towards {} is not the same as the time step(s) before. '
+                        'Set equidistant=False if this is intended.'.format(
+                            self.__timeseries_times[i + 1]))
 
     def initialize(self, config_file=None):
         # Set up experiment
@@ -142,7 +154,8 @@ class CSVMixin(SimulationProblem):
         # Empty output
         self.__output_variables = self.get_output_variables()
         n_times = len(self.__timeseries_times_sec)
-        self.__output = {variable : np.full(n_times, np.nan) for variable in self.__output_variables}
+        self.__output = {
+            variable: np.full(n_times, np.nan) for variable in self.__output_variables}
 
         # Call super, which will also initialize the model itself
         super().initialize(config_file)
@@ -180,10 +193,10 @@ class CSVMixin(SimulationProblem):
         # Call parent class first for default behaviour.
         super().post()
 
-         # Write output
+        # Write output
         names = ['time'] + sorted(set(self.__output.keys()))
         formats = ['O'] + (len(names) - 1) * ['f8']
-        dtype = dict(names=names, formats=formats)
+        dtype = {'names': names, 'formats': formats}
         data = np.zeros(len(self.__timeseries_times), dtype=dtype)
         data['time'] = self.__timeseries_times
         for variable, values in self.__output.items():

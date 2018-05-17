@@ -1,7 +1,8 @@
-import sys
-import numpy as np
-from datetime import datetime
 import logging
+import sys
+from datetime import datetime
+
+import numpy as np
 
 logger = logging.getLogger("rtctools")
 
@@ -49,16 +50,20 @@ def load(fname, delimiter=',', with_time=False):
             except np.lib._iotools.ConverterError:  # value does not conform to expected date-time format
                 type, value, traceback = sys.exc_info()
                 logger.error(
-                    "CSVMixin: converter of csv reader failed on {}: {}".format(fname, value))
-                raise Exception(
-                    "CSVMixin: wrong date time or value format in {}. Should be %Y-%m-%d %H:%M:%S and numerical values everywhere.".format(fname))
+                    'CSVMixin: converter of csv reader failed on {}: {}'.format(fname, value))
+                raise ValueError(
+                    'CSVMixin: wrong date time or value format in {}. '
+                    'Should be %Y-%m-%d %H:%M:%S and numerical values everywhere.'.format(fname))
         else:
             return np.genfromtxt(fname, delimiter=delimiter, deletechars='', dtype=None, names=True)
     except ValueError:  # can occur when delimiter changes after first 1024 bytes of file, or delimiter is not , or ;
         type, value, traceback = sys.exc_info()
         logger.error(
-            "CSV: Value reader of csv reader failed on {}: {}".format(fname, value))
-        raise Exception("CSV: could not read all values from {}. Used delimiter '{}'. Please check delimiter (should be ',' or ';' throughout the file) and if all values are numbers.".format(fname, delimiter))
+            'CSV: Value reader of csv reader failed on {}: {}'.format(fname, value))
+        raise ValueError(
+            "CSV: could not read all values from {}. Used delimiter '{}'. "
+            "Please check delimiter (should be ',' or ';' throughout the file) "
+            "and if all values are numbers.".format(fname, delimiter))
 
 
 def save(fname, data, delimiter=',', with_time=False):

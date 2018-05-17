@@ -1,11 +1,6 @@
-import xml.etree.ElementTree as ET
-import numpy as np
 import logging
-import datetime
-import struct
-import io
 import os
-import logging
+import xml.etree.ElementTree as ET
 from collections import namedtuple
 
 ts_ids = namedtuple('ids', 'location_id parameter_id qualifier_id')
@@ -51,11 +46,17 @@ class DataConfig:
                     external_id = self.__pi_timeseries_id(pi_timeseries, 'fews')
 
                     if internal_id in self.__location_parameter_ids:
-                        logger.error("Found more than one external timeseries mapped to internal id {} in {}.".format(internal_id, path))
-                        raise Exception
+                        messege = (
+                            'Found more than one external timeseries '
+                            'mapped to internal id {} in {}.').format(internal_id, path)
+                        logger.error(messege)
+                        raise Exception(messege)
                     elif external_id in self.__variable_map:
-                        logger.error("Found more than one internal timeseries mapped to external id {} in {}.".format(external_id, path))
-                        raise Exception
+                        messege = (
+                            'Found more than one internal timeseries '
+                            'mapped to external id {} in {}.').format(external_id, path)
+                        logger.error(messege)
+                        raise Exception(messege)
                     else:
                         self.__location_parameter_ids[internal_id] = \
                             self.__pi_location_parameter_id(pi_timeseries, 'fews')
@@ -73,16 +74,22 @@ class DataConfig:
                 for parameter in parameters:
                     pi_parameter = parameter.find('fews:PIParameter', ns)
                     if pi_parameter is not None:
-                        internal_id   = parameter.get('id')
+                        internal_id = parameter.get('id')
                         external_id = self.__pi_parameter_id(pi_parameter, 'fews')
 
                         if internal_id in self.__model_parameter_ids:
-                            logger.error("Found more than one external parameter mapped to internal id {} in {}.".format(internal_id, path))
-                            raise Exception
+                            message = (
+                                'Found more than one external parameter mapped '
+                                'to internal id {} in {}.').format(internal_id, path)
+                            logger.error(message)
+                            raise Exception(message)
                         if external_id in self.__parameter_map:
-                            logger.error("Found more than one interal parameter mapped to external modelId {}, locationId {}, parameterId {} in {}.".format( \
-                                          external_id.model_id, external_id.location_id, external_id.parameter_id, path))
-                            raise Exception
+                            message = (
+                                'Found more than one interal parameter mapped to external '
+                                'modelId {}, locationId {}, parameterId {} in {}.').format(
+                                external_id.model_id, external_id.location_id, external_id.parameter_id, path)
+                            logger.error(message)
+                            raise Exception(message)
                         else:
                             self.__model_parameter_ids[internal_id] = self.__pi_model_parameter_id(pi_parameter, 'fews')
                             self.__parameter_map[external_id] = internal_id
@@ -116,9 +123,9 @@ class DataConfig:
         for qualifier in qualifiers:
             qualifier_ids.append(qualifier.text)
 
-        location_parameter_ids = ts_ids(location_id  = el.find(namespace + ':locationId', ns).text,
-                                        parameter_id = el.find(namespace + ':parameterId', ns).text,
-                                        qualifier_id = qualifier_ids)
+        location_parameter_ids = ts_ids(location_id=el.find(namespace + ':locationId', ns).text,
+                                        parameter_id=el.find(namespace + ':parameterId', ns).text,
+                                        qualifier_id=qualifier_ids)
         return location_parameter_ids
 
     def __pi_parameter_id(self, el, namespace):
@@ -133,9 +140,9 @@ class DataConfig:
         location_id = el.find(namespace + ':locationId', ns).text
         parameter_id = el.find(namespace + ':parameterId', ns).text
 
-        model_parameter_ids = p_ids(model_id  = (model_id if model_id is not None else ""),
-                                    location_id = (location_id if location_id is not None else ""),
-                                    parameter_id = (parameter_id if parameter_id is not None else ""))
+        model_parameter_ids = p_ids(model_id=(model_id if model_id is not None else ""),
+                                    location_id=(location_id if location_id is not None else ""),
+                                    parameter_id=(parameter_id if parameter_id is not None else ""))
 
         return model_parameter_ids
 

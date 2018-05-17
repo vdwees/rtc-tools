@@ -1,15 +1,16 @@
-import casadi
-import logging
-import sys
-import os
-import re
-import pstats
 import cProfile
+import logging
+import os
+import pstats
+import re
+import sys
 
+import casadi
+
+from . import __version__
 from ._internal.alias_tools import OrderedSet
 from .data import pi
 from .optimization.pi_mixin import PIMixin
-from . import __version__
 
 
 def run_optimization_problem(optimization_problem_class, base_folder='..', log_level=logging.INFO, profile=False):
@@ -18,7 +19,8 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
 
     This function makes the following assumptions:
 
-    1. That the ``base_folder`` contains subfolders ``input``, ``output``, and ``model``, containing input data, output data, and the model, respectively.
+    1. That the ``base_folder`` contains subfolders ``input``, ``output``, and ``model``,
+       containing input data, output data, and the model, respectively.
     2. When using :class:`CSVLookupTableMixin`, that the base folder contains a subfolder ``lookup_tables``.
     3. When using :class:`ModelicaMixin`, that the base folder contains a subfolder ``model``.
     4. When using :class:`ModelicaMixin`, that the toplevel Modelica model name equals the class name.
@@ -30,7 +32,6 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
 
     :returns: :class:`OptimizationProblem` instance.
     """
-
 
     if not os.path.isabs(base_folder):
         # Resolve base folder relative to script folder
@@ -52,7 +53,7 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
 
     # Add pi.DiagHandler, if using PIMixin. Only add it if it does not already exist.
     if (issubclass(optimization_problem_class, PIMixin) and
-        not any((isinstance(h, pi.DiagHandler) for h in logger.handlers))):
+            not any((isinstance(h, pi.DiagHandler) for h in logger.handlers))):
         handler = pi.DiagHandler(output_folder)
         logger.addHandler(handler)
 
@@ -66,7 +67,9 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
         "Using CasADi {}.".format(casadi.__version__))
 
     # Check for some common mistakes in inheritance order
-    suggested_order = OrderedSet(['HomotopyMixin', 'GoalProgrammingMixin', 'PIMixin', 'CSVMixin', 'ModelicaMixin', 'CollocatedIntegratedOptimizationProblem', 'OptimizationProblem'])
+    suggested_order = OrderedSet([
+        'HomotopyMixin', 'GoalProgrammingMixin', 'PIMixin', 'CSVMixin',
+        'ModelicaMixin', 'CollocatedIntegratedOptimizationProblem', 'OptimizationProblem'])
     base_names = OrderedSet([b.__name__ for b in optimization_problem_class.__bases__])
     if suggested_order & base_names != base_names & suggested_order:
         msg = 'Please inherit from base classes in the following order: {}'.format(list(base_names & suggested_order))
@@ -97,9 +100,11 @@ def run_optimization_problem(optimization_problem_class, base_folder='..', log_l
                     "Can't instantiate (.*) with abstract methods", str(value)).group(1)
                 abstract_method = re.search(
                     ' with abstract methods (.*)', str(value)).group(1)
-                logger.error("The {} is missing a mixin. Please add a mixin that instantiates abstract method {}, so that the optimizer can run.".format(
-                    failed_class, abstract_method))
-            except:
+                logger.error(
+                    'The {} is missing a mixin. Please add a mixin that instantiates '
+                    'abstract method {}, so that the optimizer can run.'.format(
+                        failed_class, abstract_method))
+            except Exception:
                 pass
         for handler in logger.handlers:
             handler.flush()
@@ -111,7 +116,8 @@ def run_simulation_problem(simulation_problem_class, base_folder='..', log_level
     Sets up and runs a simulation problem.
 
     :param simulation_problem_class: Optimization problem class to solve.
-    :param base_folder:              Folder within which subfolders "input", "output", and "model" exist, containing input and output data, and the model, respectively.
+    :param base_folder:              Folder within which subfolders "input", "output", and "model" exist,
+                                     containing input and output data, and the model, respectively.
     :param log_level:                The log level to use.
 
     :returns: :class:`SimulationProblem` instance.
@@ -143,9 +149,10 @@ def run_simulation_problem(simulation_problem_class, base_folder='..', log_level
     logger.setLevel(log_level)
 
     logger.info(
-        "Using RTC-Tools {}, released as open source software under the GNU General Public License.".format(__version__))
+        'Using RTC-Tools {}, released as open source software'
+        'under the GNU General Public License.'.format(__version__))
     logger.debug(
-        "Using CasADi {}.".format(casadi.__version__))
+        'Using CasADi {}.'.format(casadi.__version__))
 
     # Run
     prob = simulation_problem_class(

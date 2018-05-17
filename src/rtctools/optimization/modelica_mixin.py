@@ -1,19 +1,22 @@
-from typing import Dict, Union
-import pymoca
-import pymoca.backends.casadi.api
-import casadi as ca
-import numpy as np
 import itertools
 import logging
-import os
+from typing import Dict, Union
+
+import casadi as ca
+
+import numpy as np
+
 import pkg_resources
 
-from rtctools._internal.alias_tools import AliasRelation, AliasDict
+import pymoca
+import pymoca.backends.casadi.api
+
+from rtctools._internal.alias_tools import AliasDict, AliasRelation
 from rtctools._internal.caching import cached
 from rtctools._internal.casadi_helpers import substitute_in_external
 
-from .timeseries import Timeseries
 from .optimization_problem import OptimizationProblem
+from .timeseries import Timeseries
 
 logger = logging.getLogger("rtctools")
 
@@ -24,7 +27,8 @@ class ModelicaMixin(OptimizationProblem):
 
     During preprocessing, the Modelica files located inside the ``model`` subfolder are loaded.
 
-    :cvar modelica_library_folders: Folders in which any referenced Modelica libraries are to be found. Default is an empty list.
+    :cvar modelica_library_folders:
+        Folders in which any referenced Modelica libraries are to be found. Default is an empty list.
     """
 
     # Folders in which the referenced Modelica libraries are found
@@ -46,7 +50,8 @@ class ModelicaMixin(OptimizationProblem):
             else:
                 model_name = self.__class__.__name__
 
-        self.__pymoca_model = pymoca.backends.casadi.api.transfer_model(kwargs['model_folder'], model_name, self.compiler_options())
+        self.__pymoca_model = pymoca.backends.casadi.api.transfer_model(
+            kwargs['model_folder'], model_name, self.compiler_options())
 
         # Extract the CasADi MX variables used in the model
         self.__mx = {}
@@ -65,13 +70,14 @@ class ModelicaMixin(OptimizationProblem):
 
         for v in self.__pymoca_model.inputs:
             if v.symbol.name() in delayed_feedback_variables:
-                # Delayed feedback variables are local to each ensemble, and therefore belong to the collection of algebraic variables,
+                # Delayed feedback variables are local to each ensemble, and
+                # therefore belong to the collection of algebraic variables,
                 # rather than to the control inputs.
                 self.__mx['algebraics'].append(v.symbol)
             else:
                 if v.symbol.name() in kwargs.get('lookup_tables', []):
                     self.__mx['lookup_tables'].append(v.symbol)
-                elif v.fixed == True:
+                elif v.fixed:
                     self.__mx['constant_inputs'].append(v.symbol)
                 else:
                     self.__mx['control_inputs'].append(v.symbol)
@@ -79,14 +85,17 @@ class ModelicaMixin(OptimizationProblem):
         # Initialize nominals and types
         # These are not in @cached dictionary properties for backwards compatibility.
         self.__python_types = AliasDict(self.alias_relation)
-        for v in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
+        for v in itertools.chain(
+                    self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
             self.__python_types[v.symbol.name()] = v.python_type
 
         # Initialize dae and initial residuals
         # These are not in @cached dictionary properties so that we need to create the list
         # of function arguments only once.
         variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
-        function_arguments = [self.__pymoca_model.time] + [ca.veccat(*[v.symbol for v in getattr(self.__pymoca_model, variable_list)]) for variable_list in variable_lists]
+        function_arguments = [self.__pymoca_model.time] + [
+            ca.veccat(*[v.symbol for v in getattr(self.__pymoca_model, variable_list)])
+            for variable_list in variable_lists]
 
         self.__dae_residual = self.__pymoca_model.dae_residual_function(*function_arguments)
         if self.__dae_residual is None:
@@ -202,7 +211,7 @@ class ModelicaMixin(OptimizationProblem):
 
         # Return input values from pymoca model
         times = self.times()
-        constant_input_names = set(sym.name() for sym in self.__mx['constant_inputs'])
+        constant_input_names = {sym.name() for sym in self.__mx['constant_inputs']}
         for v in self.__pymoca_model.inputs:
             if v.symbol.name() in constant_input_names:
                 constant_inputs[v.symbol.name()] = Timeseries(
@@ -219,7 +228,7 @@ class ModelicaMixin(OptimizationProblem):
 
         # Initial conditions obtained from start attributes.
         for v in self.__pymoca_model.states:
-            if v.fixed == True:
+            if v.fixed:
                 initial_state[v.symbol.name()] = v.start
 
         return initial_state
@@ -238,7 +247,8 @@ class ModelicaMixin(OptimizationProblem):
         parameter_values = [parameters.get(param.name(), param) for param in self.__mx['parameters']]
 
         # Load additional bounds from model
-        for v in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
+        for v in itertools.chain(
+                self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
             sym_name = v.symbol.name()
 
             try:
@@ -309,7 +319,11 @@ class ModelicaMixin(OptimizationProblem):
     def alias_relation(self):
         # Initialize aliases
         alias_relation = AliasRelation()
-        for v in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.der_states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
+        for v in itertools.chain(
+                self.__pymoca_model.states,
+                self.__pymoca_model.der_states,
+                self.__pymoca_model.alg_states,
+                self.__pymoca_model.inputs):
             for alias in v.aliases:
                 alias_relation.add(v.symbol.name(), alias)
                 if logger.getEffectiveLevel() == logging.DEBUG:
@@ -317,7 +331,6 @@ class ModelicaMixin(OptimizationProblem):
                         v.symbol.name(), alias))
 
         return alias_relation
-
 
     @property
     @cached
@@ -331,7 +344,8 @@ class ModelicaMixin(OptimizationProblem):
         parameter_values = [parameters.get(param.name(), param) for param in self.__mx['parameters']]
 
         # Iterate over nominalizable states
-        for v in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
+        for v in itertools.chain(
+                self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
             sym_name = v.symbol.name()
             # For type consistancy, cast to MX
             nominal = ca.MX(v.nominal)

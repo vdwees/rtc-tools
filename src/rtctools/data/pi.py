@@ -1,10 +1,11 @@
-import xml.etree.ElementTree as ET
-import numpy as np
+import bisect
 import datetime
 import io
-import os
 import logging
-import bisect
+import os
+import xml.etree.ElementTree as ET
+
+import numpy as np
 
 ns = {'fews': 'http://www.wldelft.nl/fews',
       'pi': 'http://www.wldelft.nl/fews/PI'}
@@ -89,7 +90,7 @@ class DiagHandler(logging.Handler):
         try:
             self.__tree = ET.parse(self.__path_xml)
             self.__xml_root = self.__tree.getroot()
-        except:
+        except Exception:
             self.__xml_root = ET.Element('{%s}Diag' % (ns['pi'], ))
             self.__tree = ET.ElementTree(element=self.__xml_root)
 
@@ -198,10 +199,10 @@ class ParameterConfig:
                 raise KeyError
             for child in el:
                 if child.tag.endswith('boolValue'):
-                    if new_value == True:
+                    if new_value is True:
                         child.text = 'true'
                         return
-                    elif new_value == False:
+                    elif new_value is False:
                         child.text = 'false'
                         return
                     else:
@@ -349,12 +350,14 @@ class Timeseries:
         """
         Load the timeseries from disk.
 
-        :param data_config:             A :class:`DataConfig` object.
-        :param folder:                  The folder in which the time series is located.
-        :param basename:                The basename of the time series file.
-        :param binary:                  True if the time series data is stored in a separate binary file. Default is ``True``.
-        :param pi_validate_times        Check consistency of times.  Default is ``False``.
-        :param make_new_file            Make new XML object which can be filled and written to a new file. Default is ``False``.
+        :param data_config:       A :class:`DataConfig` object.
+        :param folder:            The folder in which the time series is located.
+        :param basename:          The basename of the time series file.
+        :param binary:            True if the time series data is stored in a separate binary file.
+                                  Default is ``True``.
+        :param pi_validate_times: Check consistency of times.  Default is ``False``.
+        :param make_new_file:     Make new XML object which can be filled and written to a new file.
+                                  Default is ``False``.
         """
         self.__data_config = data_config
 
@@ -373,13 +376,15 @@ class Timeseries:
 
             self.__xml_root.set('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
             self.__xml_root.set('version', '1.2')
-            self.__xml_root.set('xsi:schemaLocation', 'http://www.wldelft.nl/fews/PI http://fews.wldelft.nl/schemas/version1.0/pi-schemas/pi_timeseries.xsd')
+            self.__xml_root.set(
+                'xsi:schemaLocation',
+                'http://www.wldelft.nl/fews/PI http://fews.wldelft.nl/schemas/version1.0/pi-schemas/pi_timeseries.xsd')
         else:
             self.__tree = ET.parse(self.__path_xml)
             self.__xml_root = self.__tree.getroot()
 
         self.__values = [{}]
-        self.__units  = [{}]
+        self.__units = [{}]
 
         self.__binary = binary
 
@@ -415,7 +420,9 @@ class Timeseries:
                 try:
                     dt = self.__parse_time_step(header.find('pi:timeStep', ns))
                 except ValueError:
-                    raise Exception('PI: Multiplier of time step of variable {} must be a positive integer per the PI schema.'.format(variable))
+                    raise Exception(
+                        'PI: Multiplier of time step of variable {} '
+                        'must be a positive integer per the PI schema.'.format(variable))
                 if self.__dt is None:
                     self.__dt = dt
                 else:
@@ -462,11 +469,11 @@ class Timeseries:
                 el = header.find('pi:ensembleMemberIndex', ns)
                 if el is not None:
                     contains_ensemble = True
-                    if int(el.text) > self.__ensemble_size - 1: # Assume zero-based
+                    if int(el.text) > self.__ensemble_size - 1:  # Assume zero-based
                         self.__ensemble_size = int(el.text) + 1
                 else:
                     contains_ensemble = False
-                if self.__contains_ensemble == False:
+                if self.__contains_ensemble is False:
                     # Only overwrite when _contains_ensemble was False before
                     self.__contains_ensemble = contains_ensemble
 
@@ -475,9 +482,8 @@ class Timeseries:
             if self.__dt:
                 t_len = int(round(
                     (self.__end_datetime - self.__start_datetime).total_seconds() / self.__dt.total_seconds() + 1))
-                self.__times = [self.__start_datetime + i *
-                               self.__dt for i in range(0, t_len)]
-            else: # Timeseries are non-equidistant
+                self.__times = [self.__start_datetime + i * self.__dt for i in range(t_len)]
+            else:  # Timeseries are non-equidistant
                 self.__times = []
                 for series in self.__xml_root.findall('pi:series', ns):
                     events = series.findall('pi:event', ns)
@@ -494,7 +500,9 @@ class Timeseries:
                     events = series.findall('pi:event', ns)
                     times = [self.__parse_date_time(e) for e in events]
                     if not set(self.__times).issuperset(set(times)):
-                        raise Exception('PI: Not all timeseries share the same time step spacing. Make sure the time steps of all series are a subset of the global time steps.')
+                        raise ValueError(
+                            'PI: Not all timeseries share the same time step spacing. Make sure '
+                            'the time steps of all series are a subset of the global time steps.')
 
             if self.__forecast_datetime is not None:
                 if self.__dt:
@@ -529,7 +537,7 @@ class Timeseries:
                         self.__units.append({})
                 else:
                     ensemble_member = 0
-                if el is None and self.contains_ensemble == True:
+                if el is None and self.contains_ensemble is True:
                     # Expand values dict to accomodate referencing of (virtual)
                     # ensemble series to the input values. This is e.g. needed
                     # for initial states that have a single historical values.
@@ -541,7 +549,8 @@ class Timeseries:
                     n_values = int(
                         round((end_datetime - start_datetime).total_seconds() / dt.total_seconds() + 1))
                 else:
-                    n_values = bisect.bisect_left(self.__times, end_datetime) - bisect.bisect_left(self.__times, start_datetime) + 1
+                    n_values = (bisect.bisect_left(self.__times, end_datetime) -
+                                bisect.bisect_left(self.__times, start_datetime) + 1)
 
                 if self.__binary:
                     if f is not None:
@@ -574,17 +583,20 @@ class Timeseries:
                 if make_virtual_ensemble:
                     # Make references to the original input series for the virtual
                     # ensemble members.
-                    for i in range(1, self.ensemble_size):
+                    for _i in range(1, self.ensemble_size):
                         self.__values[ensemble_member][variable] = self.__values[0][variable]
 
                 # Prepend empty space, if start_datetime > self.__start_datetime.
                 if start_datetime > self.__start_datetime:
                     if self.__dt:
-                        filler = np.empty(int(round(
-                            (start_datetime - self.__start_datetime).total_seconds() / dt.total_seconds())), dtype=self.__internal_dtype)
+                        filler = np.empty(
+                            int(round((start_datetime - self.__start_datetime).total_seconds() / dt.total_seconds())),
+                            dtype=self.__internal_dtype)
                     else:
-                        filler = np.empty(int(round(
-                            bisect.bisect_left(self.__times, start_datetime) - bisect.bisect_left(self.__times, self.__start_datetime))), dtype=self.__internal_dtype)
+                        filler = np.empty(
+                            int(round(bisect.bisect_left(self.__times, start_datetime) -
+                                      bisect.bisect_left(self.__times, self.__start_datetime))),
+                            dtype=self.__internal_dtype)
 
                     filler.fill(np.nan)
                     self.__values[ensemble_member][variable] = np.hstack(
@@ -593,11 +605,14 @@ class Timeseries:
                 # Append empty space, if end_datetime < self.__end_datetime
                 if end_datetime < self.__end_datetime:
                     if self.__dt:
-                        filler = np.empty(int(round(
-                            (self.__end_datetime - end_datetime).total_seconds() / dt.total_seconds())), dtype=self.__internal_dtype)
+                        filler = np.empty(
+                            int(round((self.__end_datetime - end_datetime).total_seconds() / dt.total_seconds())),
+                            dtype=self.__internal_dtype)
                     else:
-                        filler = np.empty(int(round(
-                            bisect.bisect_left(self.__times, self.__end_datetime) - bisect.bisect_left(self.__times, end_datetime))), dtype=self.__internal_dtype)
+                        filler = np.empty(
+                            int(round(bisect.bisect_left(self.__times, self.__end_datetime) -
+                                      bisect.bisect_left(self.__times, end_datetime))),
+                            dtype=self.__internal_dtype)
 
                     filler.fill(np.nan)
                     self.__values[ensemble_member][variable] = np.hstack(
@@ -607,7 +622,8 @@ class Timeseries:
                 # Remove time values outside the start/end datetimes.
                 # Only needed for non-equidistant, because we can't build the
                 # times automatically from global start/end datetime.
-                self.__times = self.__times[bisect.bisect_left(self.__times, self.__start_datetime) : bisect.bisect_left(self.__times, self.__end_datetime)+1]
+                self.__times = self.__times[bisect.bisect_left(self.__times, self.__start_datetime):
+                                            bisect.bisect_left(self.__times, self.__end_datetime) + 1]
 
             if f is not None and self.__binary:
                 f.close()
@@ -625,8 +641,7 @@ class Timeseries:
         else:
             raise Exception('Unsupported unit type: ' + el.get('unit'))
 
-
-    def __floor_date_time(self, dt=datetime.datetime.now(), tdel=datetime.timedelta(minutes=1)):
+    def __floor_date_time(self, dt, tdel):
         # Floor a PI date time based on a PI time step
         roundTo = tdel.total_seconds()
 
@@ -643,8 +658,13 @@ class Timeseries:
         now = datetime.datetime.now()
 
         # Define the basic structure of the header
-        header_elements       = ['type', 'locationId', 'parameterId', 'timeStep', 'startDate', 'endDate', 'missVal', 'stationName', 'units', 'creationDate', 'creationTime']
-        header_element_texts  = ['instantaneous', location_parameter_id.location_id, location_parameter_id.parameter_id, '', '', '', str(miss_val), location_parameter_id.location_id, unit, now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')]
+        header_elements = [
+            'type', 'locationId', 'parameterId', 'timeStep', 'startDate', 'endDate',
+            'missVal', 'stationName', 'units', 'creationDate', 'creationTime']
+        header_element_texts = [
+            'instantaneous', location_parameter_id.location_id, location_parameter_id.parameter_id,
+            '', '', '', str(miss_val), location_parameter_id.location_id, unit,
+            now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')]
 
         # Add ensembleMemberIndex, forecastDate and qualifierId if necessary.
         if self.__forecast_datetime != self.__start_datetime:
@@ -714,7 +734,9 @@ class Timeseries:
                 for variable in sorted(self.__values[ensemble_member].keys()):
                     location_parameter_id = self.__data_config.pi_variable_ids(variable)
                     unit = self.get_unit(variable, ensemble_member)
-                    self.__add_header(variable, location_parameter_id, ensemble_member=ensemble_member, miss_val=-999, unit=unit)
+                    self.__add_header(
+                        variable, location_parameter_id,
+                        ensemble_member=ensemble_member, miss_val=-999, unit=unit)
 
         for ensemble_member in range(len(self.__values)):
             for series in self.__xml_root.findall('pi:series', ns):
@@ -739,7 +761,7 @@ class Timeseries:
                 variable = self.__data_config.variable(header)
 
                 miss_val = float(header.find('pi:missVal', ns).text)
-                l = self.__values[ensemble_member][variable]
+                values = self.__values[ensemble_member][variable]
 
                 # Update the header, which may have changed
                 el = header.find('pi:units', ns)
@@ -747,22 +769,22 @@ class Timeseries:
 
                 # No values to be written, so the entire element is removed from
                 # the XML, and the loop restarts.
-                if len(l) == 0:
+                if len(values) == 0:
                     self.__xml_root.remove(series)
                     continue
 
                 # Replace NaN with missing value
-                nans = np.isnan(l)
-                l[nans] = miss_val
+                nans = np.isnan(values)
+                values[nans] = miss_val
 
                 # Write output
                 if self.__binary:
-                    f.write(l.astype(self.__pi_dtype).tostring())
+                    f.write(values.astype(self.__pi_dtype).tostring())
                 else:
                     events = series.findall('pi:event', ns)
 
                     t = self.__start_datetime
-                    for i in range(min(len(events), len(l))):
+                    for i in range(min(len(events), len(values))):
                         if self.dt is None:
                             t = self.times[i]
                         # Set the date/time, so that any date/time steps that
@@ -771,27 +793,27 @@ class Timeseries:
                         events[i].set('time', t.strftime('%H:%M:%S'))
 
                         # Set the value
-                        events[i].set('value', str(l[i]))
+                        events[i].set('value', str(values[i]))
                         if self.dt:
                             t += self.dt
-                    for i in range(len(events), len(l)):
+                    for i in range(len(events), len(values)):
                         if self.dt is None:
                             t = self.times[i]
                         event = ET.Element('pi:event')
                         event.set('date', t.strftime('%Y-%m-%d'))
                         event.set('time', t.strftime('%H:%M:%S'))
-                        event.set('value', str(l[i]))
+                        event.set('value', str(values[i]))
                         series.append(event)
                         if self.dt:
                             t += self.dt
 
                     # Remove superfluous elements
-                    if len(events) > len(l):
-                        for i in range(len(l), len(events)):
+                    if len(events) > len(values):
+                        for i in range(len(values), len(events)):
                             series.remove(events[i])
 
                 # Restore NaN
-                l[nans] = np.nan
+                values[nans] = np.nan
 
         if self.__binary:
             f.close()
@@ -857,7 +879,7 @@ class Timeseries:
         """
         Forecast time (t0) index.
         """
-        return self.__forecast_index    
+        return self.__forecast_index
 
     @property
     def dt(self):
@@ -926,7 +948,7 @@ class Timeseries:
         :param variable:        Time series ID.
         :param ensemble_member: Ensemble member index.
 
-        :returns: A :string: containing the unit. If this has not been set for the variable, it will return 'unit_unknown'.
+        :returns: A :string: containing the unit. If not set for the variable, returns 'unit_unknown'.
         """
         try:
             return self.__units[ensemble_member][variable]
@@ -959,7 +981,9 @@ class Timeseries:
                 n_delta_s = bisect.bisect_left(self.__times, start_datetime) - \
                     bisect.bisect_left(self.__times, self.__start_datetime)
             else:
-                raise Exception("PI: Resizing a non-equidistant timeseries to stretch outside of the global range of times is not allowed.")
+                raise ValueError(
+                    'PI: Resizing a non-equidistant timeseries to stretch '
+                    'outside of the global range of times is not allowed.')
 
         for ensemble_member in range(len(self.__values)):
             if n_delta_s > 0:
@@ -984,7 +1008,9 @@ class Timeseries:
                 n_delta_e = bisect.bisect_left(self.__times, end_datetime) - \
                     bisect.bisect_left(self.__times, self.__end_datetime)
             else:
-                raise Exception("PI: Resizing a non-equidistant timeseries to stretch outside of the global range of times is not allowed.")
+                raise ValueError(
+                    'PI: Resizing a non-equidistant timeseries to stretch '
+                    'outside of the global range of times is not allowed.')
 
         for ensemble_member in range(len(self.__values)):
             if n_delta_e > 0:

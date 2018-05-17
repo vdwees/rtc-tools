@@ -1,12 +1,14 @@
+import numpy as np
+
 from rtctools.optimization.collocated_integrated_optimization_problem \
     import CollocatedIntegratedOptimizationProblem
-from rtctools.optimization.goal_programming_mixin \
-    import GoalProgrammingMixin, Goal, StateGoal
-from rtctools.optimization.modelica_mixin import ModelicaMixin
-from rtctools.optimization.csv_mixin import CSVMixin
 from rtctools.optimization.csv_lookup_table_mixin import CSVLookupTableMixin
+from rtctools.optimization.csv_mixin import CSVMixin
+from rtctools.optimization.goal_programming_mixin \
+    import GoalProgrammingMixin, StateGoal
+from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.util import run_optimization_problem
-import numpy as np
+
 
 class WaterVolumeRangeGoal(StateGoal):
     # We want to add a water volume range goal to our optimization. However, at
@@ -103,6 +105,7 @@ class Example(GoalProgrammingMixin, CSVLookupTableMixin, CSVMixin,
         options = super().solver_options()
         options['print_level'] = 1
         return options
+
 
 # Run
 run_optimization_problem(Example)

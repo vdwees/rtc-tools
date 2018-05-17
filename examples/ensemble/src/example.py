@@ -1,13 +1,14 @@
+import numpy as np
+
 from rtctools.optimization.collocated_integrated_optimization_problem \
     import CollocatedIntegratedOptimizationProblem
-from rtctools.optimization.goal_programming_mixin \
-    import GoalProgrammingMixin, Goal, StateGoal
-from rtctools.optimization.modelica_mixin import ModelicaMixin
-from rtctools.optimization.csv_mixin import CSVMixin
 from rtctools.optimization.control_tree_mixin import ControlTreeMixin
 from rtctools.optimization.csv_lookup_table_mixin import CSVLookupTableMixin
+from rtctools.optimization.csv_mixin import CSVMixin
+from rtctools.optimization.goal_programming_mixin \
+    import GoalProgrammingMixin, StateGoal
+from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.util import run_optimization_problem
-import numpy as np
 
 
 class WaterVolumeRangeGoal(StateGoal):
@@ -130,6 +131,7 @@ class Example(GoalProgrammingMixin, ControlTreeMixin, CSVLookupTableMixin,
         options['mumps_scaling'] = 0
         options['print_level'] = 1
         return options
+
 
 # Run
 run_optimization_problem(Example)

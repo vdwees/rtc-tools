@@ -1,5 +1,6 @@
 from typing import List, Tuple, Union
-from .goal_programming_mixin import GoalProgrammingMixin, Goal
+
+from .goal_programming_mixin import Goal, GoalProgrammingMixin
 
 
 class _MeasurementGoal(Goal):
@@ -11,8 +12,10 @@ class _MeasurementGoal(Goal):
         self.function_nominal = 1.0
 
     def function(self, optimization_problem, ensemble_member):
-        return optimization_problem.state_at(self.__state, optimization_problem.initial_time, ensemble_member) - \
-            optimization_problem.timeseries_at(self.__measurement_id, optimization_problem.initial_time, ensemble_member)
+        op = optimization_problem
+        return (
+            op.state_at(self.__state, op.initial_time, ensemble_member) -
+            op.timeseries_at(self.__measurement_id, op.initial_time, ensemble_member))
 
     order = 2
     priority = -2
@@ -27,8 +30,10 @@ class _SmoothingGoal(Goal):
         self.function_nominal = 1.0
 
     def function(self, optimization_problem, ensemble_member):
-        return optimization_problem.state_at(self.__state1, optimization_problem.initial_time, ensemble_member) - \
-            optimization_problem.state_at(self.__state2, optimization_problem.initial_time, ensemble_member)
+        op = optimization_problem
+        return (
+            op.state_at(self.__state1, op.initial_time, ensemble_member) -
+            op.state_at(self.__state2, op.initial_time, ensemble_member))
 
     order = 2
     priority = -1
@@ -38,17 +43,21 @@ class InitialStateEstimationMixin(GoalProgrammingMixin):
     """
     Adds initial state estimation to your optimization problem *using goal programming*.
 
-    Before any other goals are evaluated, first, the deviation between initial state measurements and 
-    their respective model states is minimized in the least squares sense (1DVAR, priority -2).  
-    Secondly, the distance between pairs of states is minimized, again in the least squares sense, so that
-    "smooth" initial guesses are provided for states without measurements (priority -1).
+    Before any other goals are evaluated, first, the deviation between initial
+    state measurements and their respective model states is minimized in the
+    least squares sense (1DVAR, priority -2). Secondly, the distance between
+    pairs of states is minimized, again in the least squares sense, so that
+    "smooth" initial guesses are provided for states without measurements
+    (priority -1).
 
     .. note::
 
-        There are types of problems where, in addition to minimizing differences between states and
-        measurements, it is advisable to perform a steady-state initialization using additional
-        initial-time model equations.  For hydraulic models, for instance, it is often helpful
-        to require that the time-derivative of the flow variables vanishes at the initial time.
+        There are types of problems where, in addition to minimizing
+        differences between states and measurements, it is advisable to
+        perform a steady-state initialization using additional initial-time
+        model equations.  For hydraulic models, for instance, it is often
+        helpful to require that the time-derivative of the flow variables
+        vanishes at the initial time.
 
     """
 

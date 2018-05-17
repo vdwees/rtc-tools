@@ -1,5 +1,5 @@
-from typing import Dict, Union
 import logging
+from typing import Dict, Union
 
 from .optimization_problem import OptimizationProblem
 from .timeseries import Timeseries
@@ -69,8 +69,8 @@ class HomotopyMixin(OptimizationProblem):
         :returns: A dictionary of homotopy options.
         """
 
-        return {'delta_theta_0'     : 1.0,
-                'delta_theta_min'   : 0.01,
+        return {'delta_theta_0': 1.0,
+                'delta_theta_min': 0.01,
                 'homotopy_parameter': 'theta'}
 
     def dynamic_parameters(self):
@@ -100,7 +100,8 @@ class HomotopyMixin(OptimizationProblem):
 
             success = super().optimize(preprocessing=False, postprocessing=False, log_solver_failure_as_error=False)
             if success:
-                self.__results = [self.extract_results(ensemble_member) for ensemble_member in range(self.ensemble_size)]
+                self.__results = [
+                    self.extract_results(ensemble_member) for ensemble_member in range(self.ensemble_size)]
 
                 if self.__theta == 0.0:
                     self.check_collocation_linearity = False
@@ -117,12 +118,16 @@ class HomotopyMixin(OptimizationProblem):
                 delta_theta /= 2
 
                 if delta_theta < options['delta_theta_min']:
+                    failure_message = (
+                        'Solver failed with homotopy parameter theta = {}. Theta cannot '
+                        'be decreased further, as that would violate the minimum delta '
+                        'theta of {}.'.format(self.__theta, options['delta_theta_min']))
                     if log_solver_failure_as_error:
-                        logger.error("Solver failed with homotopy parameter theta = {}. Theta cannot be decreased further, as that would violate the minimum delta theta of {}.".format(self.__theta, options['delta_theta_min']))
+                        logger.error(failure_message)
                     else:
                         # In this case we expect some higher level process to deal
                         # with the solver failure, so we only log it as info here.
-                        logger.info("Solver failed with homotopy parameter theta = {}. Theta cannot be decreased further, as that would violate the minimum delta theta of {}.".format(self.__theta, options['delta_theta_min']))
+                        logger.info(failure_message)
                     break
 
             self.__theta += delta_theta

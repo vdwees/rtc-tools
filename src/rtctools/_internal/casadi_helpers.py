@@ -1,6 +1,6 @@
-import casadi as ca
-import numpy as np
 import logging
+
+import casadi as ca
 
 logger = logging.getLogger("rtctools")
 
@@ -47,7 +47,7 @@ def substitute_in_external(expr, symbols, values):
 
 
 def interpolate(ts, xs, t, equidistant, mode=0):
-    if interp1d != None:
+    if interp1d is not None:
         if mode == 0:
             mode_str = 'linear'
         elif mode == 1:
@@ -57,9 +57,9 @@ def interpolate(ts, xs, t, equidistant, mode=0):
         return interp1d(ts, xs, t, mode_str, equidistant)
     else:
         if mode == 1:
-            xs = xs[:-1] # block-forward
+            xs = xs[:-1]  # block-forward
         else:
-            xs = xs[1:] # block-backward
+            xs = xs[1:]  # block-backward
         t = ca.MX(t)
         if t.size1() > 1:
             t_ = ca.MX.sym('t')

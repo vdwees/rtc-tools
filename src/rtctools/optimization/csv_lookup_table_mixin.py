@@ -1,19 +1,22 @@
+import configparser
+import glob
+import logging
+import os
+import pickle
+from typing import List, Tuple, Union
+
+import casadi as ca
+
+import numpy as np
+
+import rtctools.data.csv as csv
+from rtctools._internal.caching import cached
 from rtctools.data.interpolation.bspline1d import BSpline1D
 from rtctools.data.interpolation.bspline2d import BSpline2D
-from rtctools._internal.caching import cached
 from rtctools.optimization.timeseries import Timeseries
-import rtctools.data.csv as csv
-from scipy.interpolate import bisplrep, splev, bisplev
+
+from scipy.interpolate import bisplev, bisplrep, splev
 from scipy.optimize import brentq
-import casadi as ca
-import numpy as np
-from typing import Tuple, List, Union
-import configparser
-import logging
-import pickle
-import glob
-import os
-import sys
 
 from .optimization_problem import OptimizationProblem
 
@@ -138,8 +141,8 @@ class CSVLookupTableMixin(OptimizationProblem):
 
     Cubic B-Splines are used to turn the data points into continuous lookup tables.
 
-    Optionally, a file ``curvefit_options.ini`` may be included inside the ``lookup_tables`` folder. This file contains,
-    grouped per lookup table, the following options:
+    Optionally, a file ``curvefit_options.ini`` may be included inside the ``lookup_tables`` folder.
+    This file contains, grouped per lookup table, the following options:
 
     * monotonicity:
         * is an integer, magnitude is ignored
@@ -153,7 +156,10 @@ class CSVLookupTableMixin(OptimizationProblem):
         * if negative, causes spline curvature to be negative (concave)
         * if 0, leaves spline curvature unconstrained
 
-    .. note:: Currently only one-dimensional lookup tables are fully supported.  Support for two-dimensional lookup tables is experimental.
+    .. note::
+
+        Currently only one-dimensional lookup tables are fully supported.  Support for two-
+        dimensional lookup tables is experimental.
 
     :cvar csv_delimiter:                 Column delimiter used in CSV files.  Default is ``,``.
     :cvar csv_lookup_table_debug:        Whether to generate plots of the spline fits.  Default is ``false``.
@@ -211,7 +217,8 @@ class CSVLookupTableMixin(OptimizationProblem):
                     prop = 0
                 except ValueError:
                     raise Exception(
-                        "CSVLookupTableMixin: Invalid {0} constraint for {1}. {0} should be either -1, 0, or 1.".format(prop_name, curve_name))
+                        'CSVLookupTableMixin: Invalid {0} constraint for {1}. {0} should '
+                        'be either -1, 0, or 1.'.format(prop_name, curve_name))
                 return prop
 
             for prop_name in ['monotonicity', 'monotonicity2', 'curvature']:
@@ -256,7 +263,7 @@ class CSVLookupTableMixin(OptimizationProblem):
                     with open(tck_filename, 'rb') as f:
                         try:
                             tck = pickle.load(f)
-                        except:
+                        except Exception:
                             valid_cache = False
             if not valid_cache:
                 logger.info(
@@ -271,7 +278,8 @@ class CSVLookupTableMixin(OptimizationProblem):
                                             output], k=k, monotonicity=mono, curvature=curv)
                     else:
                         raise Exception(
-                            "CSVLookupTableMixin: Too few data points in {} to do spline fitting. Need at least {} points.".format(filename, k + 1))
+                            'CSVLookupTableMixin: Too few data points in {} to do spline fitting. '
+                            'Need at least {} points.'.format(filename, k + 1))
 
                 if self.csv_lookup_table_debug:
                     import pylab
@@ -302,8 +310,9 @@ class CSVLookupTableMixin(OptimizationProblem):
                         tck = bisplrep(csvinput[inputs[0]], csvinput[
                                        inputs[1]], csvinput[output], kx=kx, ky=ky)
                     else:
-                        raise Exception("CSVLookupTableMixin: Too few data points in {} to do spline fitting. Need at least {} points.".format(
-                            filename, (kx + 1) * (ky + 1)))
+                        raise Exception(
+                            'CSVLookupTableMixin: Too few data points in {} to do spline fitting. '
+                            'Need at least {} points.'.format(filename, (kx + 1) * (ky + 1)))
 
                 if self.csv_lookup_table_debug:
                     import pylab
@@ -320,13 +329,13 @@ class CSVLookupTableMixin(OptimizationProblem):
                     figure_filename = filename.replace('.csv', '.png')
                     pylab.savefig(figure_filename)
                 symbols = [ca.SX.sym(inputs[0]), ca.SX.sym(inputs[1])]
-                function = ca.Function('f', 
-                    symbols, [BSpline2D(*tck)(symbols[0], symbols[1])])
+                function = ca.Function('f', symbols, [BSpline2D(*tck)(symbols[0], symbols[1])])
                 self.__lookup_tables[output] = LookupTable(symbols, function, tck)
 
             else:
                 raise Exception(
-                    "CSVLookupTableMixin: {}-dimensional lookup tables not implemented yet.".format(len(csvinput.dtype.names)))
+                    'CSVLookupTableMixin: {}-dimensional lookup tables not implemented yet.'.format(
+                        len(csvinput.dtype.names)))
 
             if not valid_cache:
                 pickle.dump(tck, open(filename.replace('.csv', '.tck'), 'wb'), protocol=pickle.HIGHEST_PROTOCOL)

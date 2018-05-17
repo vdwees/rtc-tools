@@ -19,7 +19,9 @@
 
 import os
 import re
-import sys
+
+from rtctools._version import get_versions
+
 import sphinx_rtd_theme
 
 
@@ -65,7 +67,6 @@ author = 'Jorn Baayen, Matthijs den Toom, et al.'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-from rtctools._version import get_versions
 release = get_versions()['version']
 del get_versions
 
@@ -356,11 +357,7 @@ MODELICA_EXAMPLES = ['basic', 'ensemble', 'goal_programming', 'mixed_integer', '
 
 MODELICA_STRIPPED_EXAMPLE_FOLDER = '_build/mo'
 
-try:
-    os.makedirs(MODELICA_STRIPPED_EXAMPLE_FOLDER)
-except:
-    # Folder already exists
-    pass
+os.makedirs(MODELICA_STRIPPED_EXAMPLE_FOLDER, exist_ok=True)
 
 for example in MODELICA_EXAMPLES:
     mo_in = os.path.join(MODELICA_EXAMPLE_BASE_FOLDER, example, 'model', 'Example.mo')

@@ -1,6 +1,7 @@
-from typing import Dict, List, Union
-import numpy as np
 import logging
+from typing import Dict, List, Union
+
+import numpy as np
 
 from .optimization_problem import OptimizationProblem
 from .timeseries import Timeseries
@@ -51,7 +52,6 @@ class ControlTreeMixin(OptimizationProblem):
         # presence of these is assumed below.
         times = self.times()
         t0 = self.initial_time
-        tf = times[-1]
         branching_times = options['branching_times']
         n_branching_times = len(branching_times)
         if n_branching_times > len(times) - 1:
@@ -115,7 +115,7 @@ class ControlTreeMixin(OptimizationProblem):
             # Keep track of ensemble members that have not yet been allocated
             # to a new branch
             available = set(branches[current_branch])
-            
+
             idx = 0
             for i in range(options['k']):
                 if idx >= 0:
@@ -125,8 +125,12 @@ class ControlTreeMixin(OptimizationProblem):
                     available.remove(branches[current_branch][idx])
 
                     # We select the scenario with the max min distance to the other branches
-                    min_distances = np.array([min([np.inf] + [distances[j, k] for j, member_j in enumerate(
-                        branches[current_branch]) if member_j not in available and member_k in available]) for k, member_k in enumerate(branches[current_branch])], dtype=np.float64)
+                    min_distances = np.array([
+                        min([np.inf] + [distances[j, k]
+                            for j, member_j in enumerate(branches[current_branch])
+                            if member_j not in available and member_k in available])
+                        for k, member_k in enumerate(branches[current_branch])
+                        ], dtype=np.float64)
                     min_distances[np.where(min_distances == np.inf)] = -np.inf
 
                     idx = np.argmax(min_distances)

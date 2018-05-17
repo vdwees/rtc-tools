@@ -1,13 +1,18 @@
+from typing import Dict
+
 from .optimization_problem import OptimizationProblem
 
 
 class LinearizationMixin(OptimizationProblem):
     """
-    Adds linearized equation parameter bookkeeping to your optimization aproblem.  If your model contains 
-    linearized equations, this mixin will set the parameters of these equations based on the t0 value of an associated
+    Adds linearized equation parameter bookkeeping to your optimization aproblem.
+
+    If your model contains linearized equations, this mixin will set the
+    parameters of these equations based on the t0 value of an associated
     timeseries.
 
-    The mapping between linearization parameters and time series is provided in the ``linearization_parameters`` method.
+    The mapping between linearization parameters and time series is provided
+    in the ``linearization_parameters`` method.
     """
 
     def parameters(self, ensemble_member):

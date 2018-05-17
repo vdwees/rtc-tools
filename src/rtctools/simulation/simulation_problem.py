@@ -1,28 +1,22 @@
-import os
-import logging
-import numpy as np
-from datetime import timedelta
-import bisect
 import copy
-import re
-import pkg_resources
+import itertools
+import logging
+from collections import OrderedDict
 
 import casadi as ca
-import itertools
+
+import numpy as np
+
+import pkg_resources
+
 import pymoca
-import rtctools.data.csv as csv
 import pymoca.backends.casadi.api
-from collections import OrderedDict
-from rtctools._internal.alias_tools import AliasRelation, AliasDict
+
+
+from rtctools._internal.alias_tools import AliasDict, AliasRelation
 from rtctools._internal.caching import cached
-from rtctools._internal.casadi_helpers import substitute_in_external
-
-
 
 logger = logging.getLogger("rtctools")
-
-import rtctools.data.rtc as rtc
-import rtctools.data.pi as pi
 
 
 class SimulationProblem:
@@ -31,7 +25,7 @@ class SimulationProblem:
 
     Base class for all Simulation problems. Loads the Modelica Model.
 
-    :cvar modelica_library_folders: Folders in which any referenced Modelica libraries are to be found. Default is an empty list.
+    :cvar modelica_library_folders: Folders containing any referenced Modelica libraries. Default is an empty list.
 
     """
 
@@ -68,11 +62,8 @@ class SimulationProblem:
         self.__mx['constant_inputs'] = []
         self.__mx['lookup_tables'] = []
 
-        # TODO: output the variables with the output tag, and not one of their aliases
-
-        # Merge with user-specified delayed feedback
-        # TODO: get this working
-        delayed_feedback_variables = [] #map(lambda delayed_feedback: delayed_feedback[1], self.delayed_feedback())
+        # TODO: implement delayed feedback
+        delayed_feedback_variables = []
 
         for v in self.__pymoca_model.inputs:
             if v.symbol.name() in delayed_feedback_variables:
@@ -103,7 +94,8 @@ class SimulationProblem:
         # Initialize an AliasDict for nominals and types
         self.__nominals = AliasDict(self.alias_relation)
         self.__python_types = AliasDict(self.alias_relation)
-        for v in itertools.chain(self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
+        for v in itertools.chain(
+                self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
             sym_name = v.symbol.name()
 
             # Store the types in an AliasDict
@@ -123,8 +115,9 @@ class SimulationProblem:
 
         # Initialize DAE and initial residuals
         variable_lists = ['states', 'der_states', 'alg_states', 'inputs', 'constants', 'parameters']
-        function_arguments = [self.__pymoca_model.time] + \
-            [ca.veccat(*[v.symbol for v in getattr(self.__pymoca_model, variable_list)]) for variable_list in variable_lists]
+        function_arguments = [self.__pymoca_model.time] + [
+            ca.veccat(*[v.symbol for v in getattr(self.__pymoca_model, variable_list)])
+            for variable_list in variable_lists]
 
         self.__dae_residual = self.__pymoca_model.dae_residual_function(*function_arguments)
 
@@ -134,11 +127,12 @@ class SimulationProblem:
 
         # Construct state vector
         self.__sym_list = self.__mx['states'] + self.__mx['algebraics'] + self.__mx['derivatives'] + \
-                          self.__mx['time'] + self.__mx['constant_inputs'] + self.__mx['parameters']
+            self.__mx['time'] + self.__mx['constant_inputs'] + self.__mx['parameters']
         self.__state_vector = np.full(len(self.__sym_list), np.nan)
 
         # A very handy index
-        self.__states_end_index = len(self.__mx['states']) + len(self.__mx['algebraics']) + len(self.__mx['derivatives'])
+        self.__states_end_index = len(self.__mx['states']) + \
+            len(self.__mx['algebraics']) + len(self.__mx['derivatives'])
 
         # Construct a dict to look up symbols by name (or iterate over)
         self.__sym_dict = OrderedDict(((sym.name(), sym) for sym in self.__sym_list))
@@ -189,7 +183,8 @@ class SimulationProblem:
         self.__res_vals = ca.Function("res_vals", [X, parameters], [dae_residual])
 
         # Use rootfinder() to make a function that takes a step forward in time by trying to zero res_vals()
-        self.__do_step = ca.rootfinder("next_state", "nlpsol", self.__res_vals, {'nlpsol':'ipopt', 'nlpsol_options':self.solver_options()})
+        options = {'nlpsol': 'ipopt', 'nlpsol_options': self.solver_options()}
+        self.__do_step = ca.rootfinder("next_state", "nlpsol", self.__res_vals, options)
 
         # Call parent class for default behaviour.
         super().__init__()
@@ -346,7 +341,7 @@ class SimulationProblem:
 
         # Construct nlp and solver to find initial state using ipopt
         parameters = ca.vertcat(*self.__mx['time'], *self.__mx['constant_inputs'], *self.__mx['parameters'])
-        nlp = dict(x=X, f=objective_function, g=equality_constraints, p=parameters)
+        nlp = {'x': X, 'f': objective_function, 'g': equality_constraints, 'p': parameters}
         solver = ca.nlpsol('solver', 'ipopt', nlp, self.solver_options())
 
         # Construct guess
@@ -434,7 +429,6 @@ class SimulationProblem:
 
         # Update state vector
         self.__state_vector[:self.__states_end_index] = next_state.T
-
 
     def simulate(self):
         """
@@ -576,15 +570,21 @@ class SimulationProblem:
 
     @cached
     def get_state_variables(self):
-        return AliasDict(self.alias_relation, {sym.name(): sym for sym in (self.__mx['states'] + self.__mx['algebraics'])})
+        return AliasDict(
+            self.alias_relation,
+            {sym.name(): sym for sym in (self.__mx['states'] + self.__mx['algebraics'])})
 
     @cached
     def get_parameter_variables(self):
-        return AliasDict(self.alias_relation, {sym.name(): sym for sym in self.__mx['parameters']})
+        return AliasDict(
+            self.alias_relation,
+            {sym.name(): sym for sym in self.__mx['parameters']})
 
     @cached
     def get_input_variables(self):
-        return AliasDict(self.alias_relation, {sym.name(): sym for sym in self.__mx['constant_inputs']})
+        return AliasDict(
+            self.alias_relation,
+            {sym.name(): sym for sym in self.__mx['constant_inputs']})
 
     @cached
     def get_output_variables(self):
@@ -618,7 +618,7 @@ class SimulationProblem:
         # TODO: sanitize input
 
         # Get the canonical name, adjust sign if needed
-        name, sign  = self.alias_relation.canonical_signed(name)
+        name, sign = self.alias_relation.canonical_signed(name)
         if sign < 0:
             value *= sign
 
@@ -661,7 +661,7 @@ class SimulationProblem:
 
         :returns: A dictionary of CasADi :class:`root_finder` options.  See the CasADi documentation for details.
         """
-        return {'ipopt.print_level':0, 'print_time':False}
+        return {'ipopt.print_level': 0, 'print_time': False}
 
     def get_variable_nominal(self, variable):
         """

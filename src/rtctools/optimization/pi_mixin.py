@@ -1,12 +1,13 @@
-from datetime import timedelta
-import casadi as ca
-import numpy as np
-import logging
 import bisect
+import logging
+from datetime import timedelta
 
-import rtctools.data.rtc as rtc
+import casadi as ca
+
+import numpy as np
+
 import rtctools.data.pi as pi
-
+import rtctools.data.rtc as rtc
 from rtctools._internal.alias_tools import AliasDict
 from rtctools._internal.caching import cached
 
@@ -18,7 +19,9 @@ logger = logging.getLogger("rtctools")
 
 class PIMixin(OptimizationProblem):
     """
-    Adds `Delft-FEWS Published Interface <https://publicwiki.deltares.nl/display/FEWSDOC/The+Delft-Fews+Published+Interface>`_ I/O to your optimization problem.
+    Adds `Delft-FEWS Published Interface
+    <https://publicwiki.deltares.nl/display/FEWSDOC/The+Delft-Fews+Published+Interface>`_
+    I/O to your optimization problem.
 
     During preprocessing, files named ``rtcDataConfig.xml``, ``timeseries_import.xml``, ``rtcParameterConfig.xml``,
     and ``rtcParameterConfig_Numerical.xml`` are read from the ``input`` subfolder.  ``rtcDataConfig.xml`` maps
@@ -26,19 +29,24 @@ class PIMixin(OptimizationProblem):
 
     During postprocessing, a file named ``timeseries_export.xml`` is written to the ``output`` subfolder.
 
-    :cvar pi_binary_timeseries: Whether to use PI binary timeseries format.  Default is ``False``.
-    :cvar pi_parameter_config_basenames: List of parameter config file basenames to read. Default is [``rtcParameterConfig``].
-    :cvar pi_parameter_config_numerical_basename: Numerical config file basename to read. Default is ``rtcParameterConfig_Numerical``.
-    :cvar pi_check_for_duplicate_parameters: Check if duplicate parameters are read. Default is ``False``.
-    :cvar pi_validate_timeseries: Check consistency of timeseries.  Default is ``True``.
+    :cvar pi_binary_timeseries:
+        Whether to use PI binary timeseries format. Default is ``False``.
+    :cvar pi_parameter_config_basenames:
+        List of parameter config file basenames to read. Default is [``rtcParameterConfig``].
+    :cvar pi_parameter_config_numerical_basename:
+        Numerical config file basename to read. Default is ``rtcParameterConfig_Numerical``.
+    :cvar pi_check_for_duplicate_parameters:
+        Check if duplicate parameters are read. Default is ``False``.
+    :cvar pi_validate_timeseries:
+        Check consistency of timeseries. Default is ``True``.
     """
 
     #: Whether to use PI binary timeseries format
     pi_binary_timeseries = False
 
     #: Location of rtcParameterConfig files
-    pi_parameter_config_basenames           = ['rtcParameterConfig']
-    pi_parameter_config_numerical_basename  = 'rtcParameterConfig_Numerical'
+    pi_parameter_config_basenames = ['rtcParameterConfig']
+    pi_parameter_config_numerical_basename = 'rtcParameterConfig_Numerical'
 
     #: Check consistency of timeseries
     pi_validate_timeseries = True
@@ -91,13 +99,15 @@ class PIMixin(OptimizationProblem):
 
         try:
             self.__timeseries_import = pi.Timeseries(
-                self.__data_config, self.__input_folder, self.timeseries_import_basename, binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
+                self.__data_config, self.__input_folder, self.timeseries_import_basename,
+                binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
         except IOError:
             raise Exception("PI: {}.xml not found in {}.".format(
                 self.timeseries_import_basename, self.__input_folder))
 
         self.__timeseries_export = pi.Timeseries(
-            self.__data_config, self.__output_folder, self.timeseries_export_basename, binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
+            self.__data_config, self.__output_folder, self.timeseries_export_basename,
+            binary=self.pi_binary_timeseries, pi_validate_times=False, make_new_file=True)
 
         # Convert timeseries timestamps to seconds since t0 for internal use
         self.__timeseries_import_times = self.__datetime_to_sec(
@@ -117,11 +127,15 @@ class PIMixin(OptimizationProblem):
                     1] - self.__timeseries_import_times[0]
                 for i in range(len(self.__timeseries_import_times) - 1):
                     if self.__timeseries_import_times[i + 1] - self.__timeseries_import_times[i] != dt:
-                        raise Exception('PIMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set unit to nonequidistant if this is intended.'.format(
-                            self.__timeseries_import.times[i + 1]))
+                        raise Exception(
+                            'PIMixin: Expecting equidistant timeseries, the time step '
+                            'towards {} is not the same as the time step(s) before. Set '
+                            'unit to nonequidistant if this is intended.'.format(
+                                self.__timeseries_import.times[i + 1]))
 
         # Stick timeseries into an AliasDict
-        self.__timeseries_import_dict = [AliasDict(self.alias_relation) for ensemble_member in range(self.ensemble_size)]
+        self.__timeseries_import_dict = [
+            AliasDict(self.alias_relation) for ensemble_member in range(self.ensemble_size)]
         for ensemble_member in range(self.ensemble_size):
             for key, value in self.__timeseries_import.items(ensemble_member):
                 self.__timeseries_import_dict[ensemble_member][key] = value
@@ -146,7 +160,7 @@ class PIMixin(OptimizationProblem):
             return options
 
         # Load solver options from parameter config
-        for location_id, model, option, value in self.__parameter_config_numerical:
+        for _location_id, _model, option, value in self.__parameter_config_numerical:
             options[option] = value
 
         # Done
@@ -167,7 +181,10 @@ class PIMixin(OptimizationProblem):
 
                 if self.pi_check_for_duplicate_parameters:
                     if parameter in parameters.keys():
-                        logger.warning("PIMixin: parameter {} defined in file {} was already present. Using value {}.".format(parameter, parameter_config.path, value))
+                        logger.warning(
+                            'PIMixin: parameter {} defined in file {} was already '
+                            'present. Using value {}.'.format(
+                                parameter, parameter_config.path, value))
 
                 parameters[parameter] = value
 
@@ -245,11 +262,17 @@ class PIMixin(OptimizationProblem):
     def history(self, ensemble_member):
         # Load history
         history = AliasDict(self.alias_relation)
-        for variable in self.dae_variables['states'] + self.dae_variables['algebraics'] + self.dae_variables['control_inputs'] + self.dae_variables['constant_inputs']:
+
+        end_index = self.__timeseries_import.forecast_index + 1
+        variable_list = self.dae_variables['states'] + self.dae_variables['algebraics'] + \
+            self.dae_variables['control_inputs'] + self.dae_variables['constant_inputs']
+
+        for variable in variable_list:
             variable = variable.name()
             try:
-                history[variable] = Timeseries(self.__timeseries_import_times[:self.__timeseries_import.forecast_index + 1],
-                                                        self.__timeseries_import_dict[ensemble_member][variable][:self.__timeseries_import.forecast_index + 1])
+                history[variable] = Timeseries(
+                    self.__timeseries_import_times[:end_index],
+                    self.__timeseries_import_dict[ensemble_member][variable][:end_index])
             except KeyError:
                 pass
             else:
@@ -264,7 +287,9 @@ class PIMixin(OptimizationProblem):
     @cached
     def initial_state(self, ensemble_member):
         history = self.history(ensemble_member)
-        return AliasDict(self.alias_relation, {variable: timeseries.values[-1] for variable, timeseries in history.items()})
+        return AliasDict(
+            self.alias_relation,
+            {variable: timeseries.values[-1] for variable, timeseries in history.items()})
 
     @cached
     def seed(self, ensemble_member):
@@ -275,7 +300,9 @@ class PIMixin(OptimizationProblem):
         for variable in self.dae_variables['free_variables']:
             variable = variable.name()
             try:
-                s = Timeseries(self.__timeseries_import_times, self.__timeseries_import_dict[ensemble_member][variable])
+                s = Timeseries(
+                    self.__timeseries_import_times,
+                    self.__timeseries_import_dict[ensemble_member][variable])
             except KeyError:
                 pass
             else:
@@ -295,7 +322,7 @@ class PIMixin(OptimizationProblem):
         self.__timeseries_export.times = self.__timeseries_import.times[self.__timeseries_import.forecast_index:]
 
         # Write other time settings
-        self.__timeseries_export.forecast_datetime  = self.__timeseries_import.forecast_datetime
+        self.__timeseries_export.forecast_datetime = self.__timeseries_import.forecast_datetime
         self.__timeseries_export.dt = self.__timeseries_import.dt
         self.__timeseries_export.timezone = self.__timeseries_import.timezone
 
@@ -326,18 +353,24 @@ class PIMixin(OptimizationProblem):
                             values = ts.values
                     except KeyError:
                         logger.error(
-                            'PIMixin: Output requested for non-existent variable {}. Will not be in output file.'.format(variable))
+                            'PIMixin: Output requested for non-existent variable {}. '
+                            'Will not be in output file.'.format(variable))
                         continue
 
                 # Check if ID mapping is present
                 try:
-                    location_parameter_id = self.__data_config.pi_variable_ids(variable)
+                    self.__data_config.pi_variable_ids(variable)
                 except KeyError:
-                    logger.debug('PIMixIn: variable {} has no mapping defined in rtcDataConfig so cannot be added to the output file.'.format(variable))
+                    logger.debug(
+                        'PIMixIn: variable {} has no mapping defined in rtcDataConfig '
+                        'so cannot be added to the output file.'.format(variable))
                     continue
 
                 # Add series to output file
-                self.__timeseries_export.set(variable, values, unit=self.__timeseries_import.get_unit(variable, ensemble_member=ensemble_member), ensemble_member=ensemble_member)
+                self.__timeseries_export.set(
+                    variable, values,
+                    unit=self.__timeseries_import.get_unit(variable, ensemble_member=ensemble_member),
+                    ensemble_member=ensemble_member)
 
         # Write output file to disk
         self.__timeseries_export.write()
@@ -374,12 +407,20 @@ class PIMixin(OptimizationProblem):
             try:
                 assert(len(timeseries.values) == len(timeseries.times))
             except AssertionError:
-                raise Exception("PI: Trying to set timeseries with times and values that are of different length (lengths of {} and {}, respectively).".format(len(timeseries.times), len(timeseries.values)))
+                raise Exception(
+                    'PI: Trying to set timeseries with times and values that are of '
+                    'different length (lengths of {} and {}, respectively).'.format(
+                        len(timeseries.times), len(timeseries.values)))
 
             if not np.array_equal(self.__timeseries_import_times, timeseries.times):
                 if check_consistency:
                     if not set(self.__timeseries_import_times).issuperset(timeseries.times):
-                        raise Exception("PI: Trying to set/append timeseries {} with different times (in seconds) than the imported timeseries. Please make sure the timeseries covers startDate through endDate of the longest imported timeseries with timestep {}..".format(variable, self.__timeseries_import.dt))
+                        raise Exception(
+                            'PI: Trying to set/append timeseries {} with different times '
+                            '(in seconds) than the imported timeseries. Please make sure '
+                            'the timeseries covers startDate through endDate of the longest '
+                            'imported timeseries with timestep {}.'.format(
+                                variable, self.__timeseries_import.dt))
 
                 # Determine position of first times of added timeseries within the
                 # import times. For this we assume that both time ranges are ordered,
@@ -395,7 +436,11 @@ class PIMixin(OptimizationProblem):
                 try:
                     assert(len(self.times()) == len(timeseries))
                 except AssertionError:
-                    raise Exception("PI: Trying to set/append values {} with a different length than the forecast length. Please make sure the values cover forecastDate through endDate with timestep {}.".format(variable, self.__timeseries_import.dt))
+                    raise Exception(
+                        'PI: Trying to set/append values {} with a different '
+                        'length than the forecast length. Please make sure the '
+                        'values cover forecastDate through endDate with '
+                        'timestep {}.'.format(variable, self.__timeseries_import.dt))
 
             # If times is not supplied with the timeseries, we add the
             # forecast times range to a new Timeseries object. Hereby
@@ -415,7 +460,8 @@ class PIMixin(OptimizationProblem):
         return self.__timeseries_import.forecast_index
 
     def timeseries_at(self, variable, t, ensemble_member=0):
-        return self.interpolate(t, self.__timeseries_import_times, self.__timeseries_import_dict[ensemble_member][variable])
+        return self.interpolate(
+            t, self.__timeseries_import_times, self.__timeseries_import_dict[ensemble_member][variable])
 
     @property
     def ensemble_size(self):

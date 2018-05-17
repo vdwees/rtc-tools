@@ -1,7 +1,7 @@
 from rtctools.optimization.collocated_integrated_optimization_problem \
     import CollocatedIntegratedOptimizationProblem
-from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.optimization.csv_mixin import CSVMixin
+from rtctools.optimization.modelica_mixin import ModelicaMixin
 from rtctools.util import run_optimization_problem
 
 
@@ -21,6 +21,7 @@ class Example(CSVMixin, ModelicaMixin, CollocatedIntegratedOptimizationProblem):
         # Constrain the volume of storage between 380000 and 420000 m^3
         constraints.append((self.state('storage.V'), 380000, 420000))
         return constraints
+
 
 # Run
 run_optimization_problem(Example)

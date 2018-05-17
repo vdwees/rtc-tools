@@ -1,5 +1,7 @@
+from casadi import Function, SX, if_else, inf, jacobian, logic_and, nlpsol, sum2, vertcat
+
 import numpy as np
-from casadi import if_else, logic_and, Function, nlpsol, SX, vertcat, inf, sum2, jacobian
+
 from .bspline import BSpline
 
 
@@ -39,7 +41,8 @@ class BSpline1D(BSpline):
         return y
 
     @classmethod
-    def fit(cls, x, y, k=3, monotonicity=0, curvature=0, num_test_points=100, epsilon=1e-7, delta=1e-4, interior_pts=None):
+    def fit(cls, x, y, k=3, monotonicity=0, curvature=0,
+            num_test_points=100, epsilon=1e-7, delta=1e-4, interior_pts=None):
         """
         fit() returns a tck tuple like scipy.interpolate.splrep, but adjusts
         the weights to meet the desired constraints to the curvature of the spline curve.
@@ -99,7 +102,7 @@ class BSpline1D(BSpline):
         free_vars = [c, x_sym]
         bspline = Function('bspline', free_vars, [expr])
         J = jacobian(expr, x_sym)
-        bspline_prime = Function('bspline_prime', free_vars, [J])
+        # bspline_prime = Function('bspline_prime', free_vars, [J])
         H = jacobian(J, x_sym)
         bspline_prime_prime = Function('bspline_prime_prime', free_vars, [H])
 

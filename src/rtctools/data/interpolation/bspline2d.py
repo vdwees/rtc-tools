@@ -1,4 +1,5 @@
 from casadi import if_else, logic_and
+
 from .bspline import BSpline
 
 

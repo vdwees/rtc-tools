@@ -1,16 +1,17 @@
-from datetime import datetime, timedelta
-import casadi as ca
-import numpy as np
 import logging
 import os
+from datetime import timedelta
+
+import casadi as ca
+
+import numpy as np
 
 import rtctools.data.csv as csv
-
 from rtctools._internal.alias_tools import AliasDict
 from rtctools._internal.caching import cached
 
-from .timeseries import Timeseries
 from .optimization_problem import OptimizationProblem
+from .timeseries import Timeseries
 
 logger = logging.getLogger("rtctools")
 
@@ -19,13 +20,15 @@ class CSVMixin(OptimizationProblem):
     """
     Adds reading and writing of CSV timeseries and parameters to your optimization problem.
 
-    During preprocessing, files named ``timeseries_import.csv``, ``initial_state.csv``, and ``parameters.csv`` are read from the ``input`` subfolder.
+    During preprocessing, files named ``timeseries_import.csv``, ``initial_state.csv``,
+    and ``parameters.csv`` are read from the ``input`` subfolder.
 
     During postprocessing, a file named ``timeseries_export.csv`` is written to the ``output`` subfolder.
 
-    In ensemble mode, a file named ``ensemble.csv`` is read from the ``input`` folder.  This file contains two columns.
-    The first column gives the name of the ensemble member, and the second column its probability.  Furthermore, the other XML files
-    appear one level deeper inside the filesystem hierarchy, inside subfolders with the names of the ensemble members.
+    In ensemble mode, a file named ``ensemble.csv`` is read from the ``input`` folder.  This file
+    contains two columns. The first column gives the name of the ensemble member, and the second
+    column its probability.  Furthermore, the other XML files appear one level deeper inside the
+    filesystem hierarchy, inside subfolders with the names of the ensemble members.
 
     :cvar csv_delimiter:           Column delimiter used in CSV files.  Default is ``,``.
     :cvar csv_equidistant:         Whether or not the timeseries data is equidistant.  Default is ``True``.
@@ -71,25 +74,31 @@ class CSVMixin(OptimizationProblem):
             Check length of initial state array, throw exception when larger than 1.
             """
             if initial_state.shape:
-                raise Exception("CSVMixin: Initial state file {} contains more than one row of data. Please remove the data row(s) that do not describe the initial state.".format(
-                    os.path.join(self.__input_folder, 'initial_state.csv')))
+                raise Exception(
+                    'CSVMixin: Initial state file {} contains more than one row of data. '
+                    'Please remove the data row(s) that do not describe the initial state.'.format(
+                        os.path.join(self.__input_folder, 'initial_state.csv')))
 
         # Read CSV files
         self.__timeseries = []
         self.__parameters = []
         self.__initial_state = []
         if self.csv_ensemble_mode:
-            self.__ensemble = np.genfromtxt(os.path.join(
-                self.__input_folder, 'ensemble.csv'), delimiter=",", deletechars='', dtype=None, names=True, encoding=None)
+            self.__ensemble = np.genfromtxt(
+                os.path.join(self.__input_folder, 'ensemble.csv'),
+                delimiter=",", deletechars='', dtype=None, names=True, encoding=None)
 
             logger.debug("CSVMixin: Read ensemble description")
 
             for ensemble_member_name in self.__ensemble['name']:
-                _timeseries = csv.load(os.path.join(self.__input_folder, ensemble_member_name,
-                                                    'timeseries_import.csv'), delimiter=self.csv_delimiter, with_time=True)
+                _timeseries = csv.load(
+                    os.path.join(self.__input_folder, ensemble_member_name, 'timeseries_import.csv'),
+                    delimiter=self.csv_delimiter, with_time=True)
                 self.__timeseries_times = _timeseries[_timeseries.dtype.names[0]]
                 self.__timeseries.append(
-                    AliasDict(self.alias_relation, {key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}))
+                    AliasDict(
+                        self.alias_relation,
+                        {key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}))
             logger.debug("CSVMixin: Read timeseries")
 
             for ensemble_member_name in self.__ensemble['name']:
@@ -117,7 +126,9 @@ class CSVMixin(OptimizationProblem):
                 self.__input_folder, 'timeseries_import.csv'), delimiter=self.csv_delimiter, with_time=True)
             self.__timeseries_times = _timeseries[_timeseries.dtype.names[0]]
             self.__timeseries.append(
-                AliasDict(self.alias_relation, {key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}))
+                AliasDict(
+                    self.alias_relation,
+                    {key: np.asarray(_timeseries[key], dtype=np.float64) for key in _timeseries.dtype.names[1:]}))
             logger.debug("CSVMixin: Read timeseries.")
 
             try:
@@ -156,8 +167,10 @@ class CSVMixin(OptimizationProblem):
                     1] - self.__timeseries_times_sec[0]
                 for i in range(len(self.__timeseries_times_sec) - 1):
                     if self.__timeseries_times_sec[i + 1] - self.__timeseries_times_sec[i] != dt:
-                        raise Exception('CSVMixin: Expecting equidistant timeseries, the time step towards {} is not the same as the time step(s) before. Set equidistant=False if this is intended.'.format(
-                            self.__timeseries_times[i + 1]))
+                        raise Exception(
+                            'CSVMixin: Expecting equidistant timeseries, the time step towards '
+                            '{} is not the same as the time step(s) before. Set equidistant=False '
+                            'if this is intended.'.format(self.__timeseries_times[i + 1]))
 
     def times(self, variable=None):
         return self.__timeseries_times_sec
@@ -308,12 +321,12 @@ class CSVMixin(OptimizationProblem):
 
         def write_output(ensemble_member, folder):
             results = self.extract_results(ensemble_member)
-            names = ['time'] + sorted(set([sym.name() for sym in self.output_variables]))
+            names = ['time'] + sorted({sym.name() for sym in self.output_variables})
             formats = ['O'] + (len(names) - 1) * ['f8']
-            dtype = dict(names=names, formats=formats)
+            dtype = {'names': names, 'formats': formats}
             data = np.zeros(len(self.__timeseries_times), dtype=dtype)
             data['time'] = self.__timeseries_times
-            for i, output_variable in enumerate(self.output_variables):
+            for output_variable in self.output_variables:
                 output_variable = output_variable.name()
                 try:
                     values = results[output_variable]
@@ -369,7 +382,11 @@ class CSVMixin(OptimizationProblem):
             # TODO: add better check on timeseries.times?
             if check_consistency:
                 if not np.array_equal(self.times(), timeseries.times):
-                    raise Exception("CSV: Trying to set/append timeseries {} with different times (in seconds) than the imported timeseries. Please make sure the timeseries covers startDate through endData of the longest imported timeseries.".format(variable))
+                    raise Exception(
+                        'CSV: Trying to set/append timeseries {} with different times '
+                        '(in seconds) than the imported timeseries. Please make sure the '
+                        'timeseries covers startDate through endData of the longest '
+                        'imported timeseries.'.format(variable))
         else:
             timeseries = Timeseries(self.times(), timeseries)
             assert(len(timeseries.times) == len(timeseries.values))

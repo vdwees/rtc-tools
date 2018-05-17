@@ -1,8 +1,10 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
-from typing import Dict, Union, Tuple, List, Any, Iterator
-import casadi as ca
-import numpy as np
 import logging
+from abc import ABCMeta, abstractmethod, abstractproperty
+from typing import Any, Dict, Iterator, List, Tuple, Union
+
+import casadi as ca
+
+import numpy as np
 
 from rtctools._internal.alias_tools import AliasDict, AliasRelation
 
@@ -11,7 +13,7 @@ from .timeseries import Timeseries
 logger = logging.getLogger("rtctools")
 
 
-class OptimizationProblem(metaclass = ABCMeta):
+class OptimizationProblem(metaclass=ABCMeta):
     """
     Base class for all optimization problems.
     """
@@ -19,7 +21,8 @@ class OptimizationProblem(metaclass = ABCMeta):
     def __init__(self, **kwargs):
         self.__mixed_integer = False
 
-    def optimize(self, preprocessing: bool=True, postprocessing: bool=True, log_solver_failure_as_error: bool=True) -> bool:
+    def optimize(self, preprocessing: bool=True, postprocessing: bool=True,
+                 log_solver_failure_as_error: bool=True) -> bool:
         """
         Perform one initialize-transcribe-solve-finalize cycle.
 
@@ -50,7 +53,7 @@ class OptimizationProblem(metaclass = ABCMeta):
 
         self.__mixed_integer = np.any(discrete)
         options = {}
-        options.update(self.solver_options()) # Create a copy
+        options.update(self.solver_options())  # Create a copy
 
         logger.debug("Creating solver")
 
@@ -87,7 +90,7 @@ class OptimizationProblem(metaclass = ABCMeta):
         # Solve NLP
         logger.info("Calling solver")
 
-        results = solver(x0 = x0, lbx = lbx, ubx = ubx, lbg = ca.veccat(*lbg), ubg = ca.veccat(*ubg))
+        results = solver(x0=x0, lbx=lbx, ubx=ubx, lbg=ca.veccat(*lbg), ubg=ca.veccat(*ubg))
 
         # Extract relevant stats
         self.__objective_value = float(results['f'])
@@ -95,7 +98,8 @@ class OptimizationProblem(metaclass = ABCMeta):
         self.__solver_stats = solver.stats()
 
         # Get the return status
-        if self.__solver_stats['return_status'] in ['Solve_Succeeded', 'Solved_To_Acceptable_Level', 'User_Requested_Stop', 'SUCCESS']:
+        successful_retvals = ['Solve_Succeeded', 'Solved_To_Acceptable_Level', 'User_Requested_Stop', 'SUCCESS']
+        if self.__solver_stats['return_status'] in successful_retvals:
             logger.info("Solver succeeded with status {}".format(
                 self.__solver_stats['return_status']))
 
@@ -140,7 +144,8 @@ class OptimizationProblem(metaclass = ABCMeta):
                     "OptimizationProblem: control input {} has no bounds.".format(variable))
 
     @abstractmethod
-    def transcribe(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict[str, ca.MX]]:
+    def transcribe(self) -> Tuple[
+            np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict[str, ca.MX]]:
         """
         Transcribe the continuous optimization problem to a discretized, solver-ready
         optimization problem.
@@ -151,9 +156,11 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         Returns a dictionary of CasADi optimization problem solver options.
 
-        The default solver for continuous problems is `Ipopt <https://projects.coin-or.org/Ipopt/>`_.  The default solver for mixed integer problems is `Bonmin <http://projects.coin-or.org/Bonmin/>`_.
+        The default solver for continuous problems is `Ipopt <https://projects.coin-or.org/Ipopt/>`_.
+        The default solver for mixed integer problems is `Bonmin <http://projects.coin-or.org/Bonmin/>`_.
 
-        :returns: A dictionary of CasADi :class:`NlpSolver` options.  See the CasADi, Ipopt, and Bonmin documentation for details.
+        :returns: A dictionary of CasADi :class:`NlpSolver` options.  See the CasADi,
+                  Ipopt, and Bonmin documentation for details.
         """
         options = {'optimized_num_dir': 3}
         if self.__mixed_integer:
@@ -327,7 +334,8 @@ class OptimizationProblem(metaclass = ABCMeta):
         Returns variable bounds as a dictionary mapping variable names to a pair of bounds.
         A bound may be a constant, or a time series.
 
-        :returns: A dictionary of variable names and ``(upper, lower)`` bound pairs. The bounds may be numbers or :class:`Timeseries` objects.
+        :returns: A dictionary of variable names and ``(upper, lower)`` bound pairs.
+                  The bounds may be numbers or :class:`Timeseries` objects.
 
         Example::
 
@@ -346,7 +354,10 @@ class OptimizationProblem(metaclass = ABCMeta):
         :returns: A dictionary of variable names and historical time series (up to and including t0).
         """
         initial_state = self.initial_state(ensemble_member)
-        return AliasDict(self.alias_relation, {variable: Timeseries(np.array([self.initial_time]), np.array([state])) for variable, state in initial_state.items()})
+        return AliasDict(
+            self.alias_relation,
+            {variable: Timeseries(np.array([self.initial_time]), np.array([state]))
+             for variable, state in initial_state.items()})
 
     @abstractproperty
     def alias_relation(self) -> AliasRelation:
@@ -392,7 +403,9 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         t0 = self.initial_time
         history = self.history(ensemble_member)
-        return AliasDict({variable: self.interpolate(t0, timeseries.times, timeseries.values) for variable, timeseries in history.items()})
+        return AliasDict(
+            {variable: self.interpolate(t0, timeseries.times, timeseries.values)
+             for variable, timeseries in history.items()})
 
     @property
     def initial_residual(self) -> ca.MX:
@@ -437,11 +450,14 @@ class OptimizationProblem(metaclass = ABCMeta):
 
     def path_objective(self, ensemble_member: int) -> ca.MX:
         """
-        Returns a path objective the given ensemble member.  Path objectives apply to all times and ensemble members simultaneously.
+        Returns a path objective the given ensemble member.
 
-        Call :func:`OptimizationProblem.state` to return a time- and ensemble-member-independent symbol representing a model variable.
+        Path objectives apply to all times and ensemble members simultaneously.
+        Call :func:`OptimizationProblem.state` to return a time- and ensemble-member-independent
+        symbol representing a model variable.
 
-        :param ensemble_member: The ensemble member index.  This index is currently unused, and here for future use only.
+        :param ensemble_member: The ensemble member index. This index is currently unused,
+                                and here for future use only.
 
         :returns: A :class:`MX` object representing the path objective.
 
@@ -454,7 +470,8 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         return ca.MX()
 
-    def constraints(self, ensemble_member: int) -> List[Tuple[ca.MX, Union[float, np.ndarray], Union[float, np.ndarray]]]:
+    def constraints(self, ensemble_member: int) -> List[
+            Tuple[ca.MX, Union[float, np.ndarray], Union[float, np.ndarray]]]:
         """
         Returns a list of constraints for the given ensemble member.
 
@@ -462,28 +479,40 @@ class OptimizationProblem(metaclass = ABCMeta):
 
         :param ensemble_member: The ensemble member index.
 
-        :returns: A list of triples ``(f, m, M)``, with an :class:`MX` object representing the constraint function ``f``, lower bound ``m``, and upper bound ``M``. The bounds must be numbers.
+        :returns: A list of triples ``(f, m, M)``, with an :class:`MX` object representing
+                  the constraint function ``f``, lower bound ``m``, and upper bound ``M``.
+                  The bounds must be numbers.
 
         Example::
 
             def constraints(self, ensemble_member):
                 t = 1.0
-                constraint1 = (2 * self.state_at('x', t, ensemble_member), 2.0, 4.0)
-                constraint2 = (self.state_at('x', t, ensemble_member) + self.state_at('y', t, ensemble_member), 2.0, 3.0)
+                constraint1 = (
+                    2 * self.state_at('x', t, ensemble_member),
+                    2.0, 4.0)
+                constraint2 = (
+                    self.state_at('x', t, ensemble_member) + self.state_at('y', t, ensemble_member),
+                    2.0, 3.0)
                 return [constraint1, constraint2]
 
         """
         return []
 
-    def path_constraints(self, ensemble_member: int) -> List[Tuple[ca.MX, Union[float, np.ndarray], Union[float, np.ndarray]]]:
+    def path_constraints(self, ensemble_member: int) -> List[
+            Tuple[ca.MX, Union[float, np.ndarray], Union[float, np.ndarray]]]:
         """
-        Returns a list of path constraints.  Path constraints apply to all times and ensemble members simultaneously.
+        Returns a list of path constraints.
 
-        Call :func:`OptimizationProblem.state` to return a time- and ensemble-member-independent symbol representing a model variable.
+        Path constraints apply to all times and ensemble members simultaneously.
+        Call :func:`OptimizationProblem.state` to return a time- and ensemble-member-independent
+        symbol representing a model variable.
 
-        :param ensemble_member: The ensemble member index.  This index may only be used to supply member-dependent bounds.
+        :param ensemble_member: The ensemble member index. This index may only
+                                be used to supply member-dependent bounds.
 
-        :returns: A list of triples ``(f, m, M)``, with an :class:`MX` object representing the path constraint function ``f``, lower bound ``m``, and upper bound ``M``.  The bounds may be numbers or :class:`Timeseries` objects.
+        :returns: A list of triples ``(f, m, M)``, with an :class:`MX` object representing
+                  the path constraint function ``f``, lower bound ``m``, and upper bound ``M``.
+                  The bounds may be numbers or :class:`Timeseries` objects.
 
         Example::
 
@@ -514,7 +543,14 @@ class OptimizationProblem(metaclass = ABCMeta):
     INTERPOLATION_PIECEWISE_CONSTANT_FORWARD = 1
     INTERPOLATION_PIECEWISE_CONSTANT_BACKWARD = 2
 
-    def interpolate(self, t: Union[float, np.ndarray], ts: np.ndarray, fs: np.ndarray, f_left: float=np.nan, f_right: float=np.nan, mode: int=INTERPOLATION_LINEAR) -> Union[float, np.ndarray]:
+    def interpolate(
+            self,
+            t: Union[float, np.ndarray],
+            ts: np.ndarray,
+            fs: np.ndarray,
+            f_left: float=np.nan,
+            f_right: float=np.nan,
+            mode: int=INTERPOLATION_LINEAR) -> Union[float, np.ndarray]:
         """
         Linear interpolation over time.
 
@@ -618,16 +654,19 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractmethod
-    def discretize_controls(self, resolved_bounds: AliasDict) -> Tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def discretize_controls(self, resolved_bounds: AliasDict) -> Tuple[
+            int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Performs the discretization of the control inputs, filling lower and upper
         bound vectors for the resulting optimization variables, as well as an initial guess.
 
-        :param resolved_bounds: :class:`AliasDict` of numerical bound values.  This is the same dictionary as returned by :func:`bounds`,
-        but with all parameter symbols replaced with their numerical values.
+        :param resolved_bounds: :class:`AliasDict` of numerical bound values. This is the
+                                same dictionary as returned by :func:`bounds`, but with all
+                                parameter symbols replaced with their numerical values.
 
-        :returns: The number of control variables in the optimization problem, a lower bound vector, an upper bound vector, a seed vector,
-        and a dictionary of offset values.
+        :returns: The number of control variables in the optimization problem, a lower
+                  bound vector, an upper bound vector, a seed vector, and a dictionary
+                  of offset values.
         """
         pass
 
@@ -709,16 +748,21 @@ class OptimizationProblem(metaclass = ABCMeta):
         pass
 
     @abstractmethod
-    def discretize_states(self, resolved_bounds: AliasDict) -> Tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def discretize_states(self, resolved_bounds: AliasDict) -> Tuple[
+            int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Perform the discretization of the states, filling lower and upper
-        bound vectors for the resulting optimization variables, as well as an initial guess.
+        Perform the discretization of the states.
 
-        :param resolved_bounds: :class:`AliasDict` of numerical bound values.  This is the same dictionary as returned by :func:`bounds`,
-        but with all parameter symbols replaced with their numerical values.
+        Fills lower and upper bound vectors for the resulting optimization
+        variables, as well as an initial guess.
 
-        :returns: The number of control variables in the optimization problem, a lower bound vector, an upper bound vector, a seed vector,
-        and a dictionary of vector offset values.
+        :param resolved_bounds: :class:`AliasDict` of numerical bound values.
+            This is the same dictionary as returned by :func:`bounds`, but
+            with all parameter symbols replaced with their numerical values.
+
+        :returns: The number of control variables in the optimization problem,
+                  a lower bound vector, an upper bound vector, a seed vector,
+                  and a dictionary of vector offset values.
         """
         pass
 
@@ -863,7 +907,13 @@ class OptimizationProblem(metaclass = ABCMeta):
         """
         raise NotImplementedError
 
-    def set_timeseries(self, variable: str, timeseries: Timeseries, ensemble_member: int=0, output: bool=True, check_consistency: bool=True) -> None:
+    def set_timeseries(
+            self,
+            variable: str,
+            timeseries: Timeseries,
+            ensemble_member: int=0,
+            output: bool=True,
+            check_consistency: bool=True) -> None:
         """
         Sets a timeseries in the internal data store.
 
@@ -872,7 +922,8 @@ class OptimizationProblem(metaclass = ABCMeta):
         :type timeseries:         iterable of floats, or :class:`Timeseries`
         :param ensemble_member:   The ensemble member index.
         :param output:            Whether to include this time series in output data files.
-        :param check_consistency: Whether to check consistency between the time stamps on the new timeseries object and any existing time stamps.
+        :param check_consistency: Whether to check consistency between the time stamps on
+                                  the new timeseries object and any existing time stamps.
         """
         raise NotImplementedError
 
