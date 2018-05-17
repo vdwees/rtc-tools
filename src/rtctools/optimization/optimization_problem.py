@@ -404,6 +404,7 @@ class OptimizationProblem(metaclass=ABCMeta):
         t0 = self.initial_time
         history = self.history(ensemble_member)
         return AliasDict(
+            self.alias_relation,
             {variable: self.interpolate(t0, timeseries.times, timeseries.values)
              for variable, timeseries in history.items()})
 
