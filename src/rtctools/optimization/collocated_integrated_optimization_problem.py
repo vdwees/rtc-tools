@@ -1828,6 +1828,9 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                                                      (accumulation_states[i, 1:] - accumulation_states[i, :-1]) / dt)
         accumulation_derivatives = ca.vertcat(*accumulation_derivatives)
 
+        # Parameter symbols
+        symbolic_parameters = ca.vertcat(*self.dae_variables['parameters'])
+
         # Prepare constant inputs
         constant_inputs = self.constant_inputs(ensemble_member)
         accumulation_constant_inputs = [None] * \
@@ -1846,7 +1849,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                 elif np.any([isinstance(value, ca.MX) and not value.is_constant() for value in values]):
                     values = ca.vertcat(*values)
                     [values] = substitute_in_external(
-                        [values], symoblic_parameters, self.__parameter_values_ensemble_member_0)
+                        [values], symbolic_parameters, self.__parameter_values_ensemble_member_0)
                     values = ca.vertsplit(values)
                 accumulation_constant_inputs[i] = self.interpolate(
                     collocation_times, constant_input.times, values, 0.0, 0.0)
