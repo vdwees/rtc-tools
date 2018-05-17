@@ -538,7 +538,7 @@ class Timeseries:
                 else:
                     ensemble_member = 0
                 if el is None and self.contains_ensemble is True:
-                    # Expand values dict to accomodate referencing of (virtual)
+                    # Expand values dict to accommodate referencing of (virtual)
                     # ensemble series to the input values. This is e.g. needed
                     # for initial states that have a single historical values.
                     while self.ensemble_size > len(self.__values):

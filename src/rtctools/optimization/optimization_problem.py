@@ -26,7 +26,7 @@ class OptimizationProblem(metaclass=ABCMeta):
         """
         Perform one initialize-transcribe-solve-finalize cycle.
 
-        :param preprocessing:  True to enable a call to ``pre`` preceding the opimization.
+        :param preprocessing:  True to enable a call to ``pre`` preceding the optimization.
         :param postprocessing: True to enable a call to ``post`` following the optimization.
 
         :returns: True on success.

@@ -48,7 +48,7 @@ class ControlTreeMixin(OptimizationProblem):
         # Collect options
         options = self.control_tree_options()
 
-        # Make sure braching times contain initial and final time.  The
+        # Make sure branching times contain initial and final time.  The
         # presence of these is assumed below.
         times = self.times()
         t0 = self.initial_time

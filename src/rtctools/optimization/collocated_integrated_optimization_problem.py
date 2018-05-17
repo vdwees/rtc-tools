@@ -512,7 +512,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                     self.linear_collocation = False
 
                     logger.warning(
-                        'The DAE residual containts equations that are not affine. '
+                        'The DAE residual contains equations that are not affine. '
                         'There is therefore no guarantee that the optimization problem is convex. '
                         'This will, in general, result in the existence of multiple local optima '
                         'and trouble finding a feasible initial solution.')
@@ -1553,7 +1553,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         # We bundle all integrations into a single Function, so that subexpressions
         # are evaluated only once.
         if len(self.integrated_states) > 0:
-            # Use integrators_mx to facilicate common subexpression
+            # Use integrators_mx to facilitate common subexpression
             # elimination.
             f = ca.Function('f', [self.solver_input], [
                 ca.vertcat(*self.integrators_mx)])
@@ -1725,7 +1725,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         return self.solver_input[indices]
 
     def states_in(self, variable, t0=None, tf=None, ensemble_member=0):
-        # Time stamps for this variale
+        # Time stamps for this variable
         times = self.times(variable)
 
         # Set default values
@@ -1776,7 +1776,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
         return x
 
     def integral(self, variable, t0=None, tf=None, ensemble_member=0):
-        # Time stamps for this variale
+        # Time stamps for this variable
         times = self.times(variable)
 
         # Set default values
@@ -1863,7 +1863,7 @@ class CollocatedIntegratedOptimizationProblem(OptimizationProblem, metaclass=ABC
                     (ensemble_member + 1) * ensemble_member_size -
                     len(self.dae_variables['derivatives']) + i]
 
-        # Time stamps for this variale
+        # Time stamps for this variable
         times = self.times(variable)
 
         if t <= self.initial_time:

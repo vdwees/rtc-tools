@@ -124,7 +124,7 @@ class Goal(metaclass=ABCMeta):
     #: Desired upper bound for goal function
     target_max = np.nan
 
-    #: Lower priority gols take precedence over higher priority goals.
+    #: Lower priority goals take precedence over higher priority goals.
     priority = 1
 
     #: Goals with the same priority are weighted off against each other in a

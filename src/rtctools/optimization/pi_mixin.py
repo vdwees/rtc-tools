@@ -89,7 +89,7 @@ class PIMixin(OptimizationProblem):
                     self.__input_folder, pi_parameter_config_basename))
         except IOError:
             raise Exception(
-                "PI: {}.xml not found in {}.".format(pi_parameter_config_basename, self.__input_folder))
+                "PIMixin: {}.xml not found in {}.".format(pi_parameter_config_basename, self.__input_folder))
 
         try:
             self.__parameter_config_numerical = pi.ParameterConfig(
@@ -102,7 +102,7 @@ class PIMixin(OptimizationProblem):
                 self.__data_config, self.__input_folder, self.timeseries_import_basename,
                 binary=self.pi_binary_timeseries, pi_validate_times=self.pi_validate_timeseries)
         except IOError:
-            raise Exception("PI: {}.xml not found in {}.".format(
+            raise Exception("PIMixin: {}.xml not found in {}.".format(
                 self.timeseries_import_basename, self.__input_folder))
 
         self.__timeseries_export = pi.Timeseries(
@@ -362,7 +362,7 @@ class PIMixin(OptimizationProblem):
                     self.__data_config.pi_variable_ids(variable)
                 except KeyError:
                     logger.debug(
-                        'PIMixIn: variable {} has no mapping defined in rtcDataConfig '
+                        'PIMixin: variable {} has no mapping defined in rtcDataConfig '
                         'so cannot be added to the output file.'.format(variable))
                     continue
 
@@ -408,7 +408,7 @@ class PIMixin(OptimizationProblem):
                 assert(len(timeseries.values) == len(timeseries.times))
             except AssertionError:
                 raise Exception(
-                    'PI: Trying to set timeseries with times and values that are of '
+                    'PIMixin: Trying to set timeseries with times and values that are of '
                     'different length (lengths of {} and {}, respectively).'.format(
                         len(timeseries.times), len(timeseries.values)))
 
@@ -416,7 +416,7 @@ class PIMixin(OptimizationProblem):
                 if check_consistency:
                     if not set(self.__timeseries_import_times).issuperset(timeseries.times):
                         raise Exception(
-                            'PI: Trying to set/append timeseries {} with different times '
+                            'PIMixin: Trying to set/append timeseries {} with different times '
                             '(in seconds) than the imported timeseries. Please make sure '
                             'the timeseries covers startDate through endDate of the longest '
                             'imported timeseries with timestep {}.'.format(
@@ -437,7 +437,7 @@ class PIMixin(OptimizationProblem):
                     assert(len(self.times()) == len(timeseries))
                 except AssertionError:
                     raise Exception(
-                        'PI: Trying to set/append values {} with a different '
+                        'PIMixin: Trying to set/append values {} with a different '
                         'length than the forecast length. Please make sure the '
                         'values cover forecastDate through endDate with '
                         'timestep {}.'.format(variable, self.__timeseries_import.dt))
@@ -447,7 +447,7 @@ class PIMixin(OptimizationProblem):
             # we assume that the supplied values stretch from T0 to end.
             t_pos = self.get_forecast_index()
 
-            # Construct a new values range and construct the Timeseries objet
+            # Construct a new values range and construct the Timeseries object
             timeseries = Timeseries(self.__timeseries_import_times, stretch_values(timeseries, t_pos))
 
         if unit is None:

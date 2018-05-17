@@ -196,7 +196,7 @@ class SimulationProblem:
         :param config_file: Path to an initialization file.
         """
         if config_file:
-            # TODO read start and stop time from configfile and call:
+            # TODO read start and stop time from config_file and call:
             # self.setup_experiment(start,stop)
             # for now, assume that setup_experiment was called beforehand
             raise NotImplementedError
@@ -321,7 +321,7 @@ class SimulationProblem:
             self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.der_states)])
         bound_evaluator = ca.Function('bound_evaluator', self.__mx['parameters'], [symbolic_bounds])
 
-        # Evalueate bounds using values of parameters
+        # Evaluate bounds using values of parameters
         n_parameters = len(self.__mx['parameters'])
         if n_parameters > 0:
             [evaluated_bounds] = bound_evaluator.call(self.__state_vector[-n_parameters:])

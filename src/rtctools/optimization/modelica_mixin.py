@@ -347,7 +347,7 @@ class ModelicaMixin(OptimizationProblem):
         for v in itertools.chain(
                 self.__pymoca_model.states, self.__pymoca_model.alg_states, self.__pymoca_model.inputs):
             sym_name = v.symbol.name()
-            # For type consistancy, cast to MX
+            # For type consistency, cast to MX
             nominal = ca.MX(v.nominal)
 
             # If nominal contains parameter symbols, substitute them

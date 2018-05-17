@@ -67,7 +67,7 @@ class CSVMixin(OptimizationProblem):
         # Call parent class first for default behaviour.
         super().pre()
 
-        # Helper function to check if initiale state array actually defines
+        # Helper function to check if initial state array actually defines
         # only the initial state
         def check_initial_state_array(initial_state):
             """

@@ -46,17 +46,17 @@ class DataConfig:
                     external_id = self.__pi_timeseries_id(pi_timeseries, 'fews')
 
                     if internal_id in self.__location_parameter_ids:
-                        messege = (
+                        message = (
                             'Found more than one external timeseries '
                             'mapped to internal id {} in {}.').format(internal_id, path)
-                        logger.error(messege)
-                        raise Exception(messege)
+                        logger.error(message)
+                        raise Exception(message)
                     elif external_id in self.__variable_map:
-                        messege = (
+                        message = (
                             'Found more than one internal timeseries '
                             'mapped to external id {} in {}.').format(external_id, path)
-                        logger.error(messege)
-                        raise Exception(messege)
+                        logger.error(message)
+                        raise Exception(message)
                     else:
                         self.__location_parameter_ids[internal_id] = \
                             self.__pi_location_parameter_id(pi_timeseries, 'fews')
@@ -211,6 +211,6 @@ class DataConfig:
 
         :returns: A named tuple with fields model_id, location_id and parameter_id.
         :rtype: namedtuple
-        :raises KeyError: If the paramter ID has no mapping in rtcDataConfig.
+        :raises KeyError: If the parameter ID has no mapping in rtcDataConfig.
         """
         return self.__model_parameter_ids[parameter]

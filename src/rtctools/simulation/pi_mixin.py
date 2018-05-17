@@ -45,7 +45,7 @@ class PIMixin(SimulationProblem):
     #: Check for duplicate parameters
     pi_check_for_duplicate_parameters = True
 
-    # Default names for timseries I/O
+    # Default names for timeseries I/O
     timeseries_import_basename = 'timeseries_import'
     timeseries_export_basename = 'timeseries_export'
 
@@ -77,7 +77,7 @@ class PIMixin(SimulationProblem):
                     self.__input_folder, pi_parameter_config_basename))
         except FileNotFoundError:
             raise FileNotFoundError(
-                "PI: {}.xml not found in {}.".format(pi_parameter_config_basename, self.__input_folder))
+                "PIMixin: {}.xml not found in {}.".format(pi_parameter_config_basename, self.__input_folder))
 
         # Make a parameters dict for later access
         self.__parameters = {}

@@ -72,7 +72,7 @@ def save(fname, data, delimiter=',', with_time=False):
 
     :param fname:     Filename.
     :param data:      A named numpy array with the data to write.
-    :param delimiter: CSV colum delimiter.
+    :param delimiter: CSV column delimiter.
     :param with_time: Whether to output the first column of the data as time stamps.
     """
     if with_time:

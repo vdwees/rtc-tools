@@ -5,7 +5,6 @@ import casadi as ca
 logger = logging.getLogger("rtctools")
 
 try:
-    # interp1d is only available in the yacoda1 branch at the moment.
     from casadi import interp1d
 except ImportError:
     logger.warning('interp1d not available in this version of CasADi.  Linear interpolation will not work.')
